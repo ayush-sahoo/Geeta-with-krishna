@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Gita with Krishna",
+    "slug": "gita-with-krishna",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.ayushsahoo.gitawithkrishna",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0C1811"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.ayushsahoo.gitawithkrishna",
+      "supportsTablet": true
+    },
+    "extra": {
+      "supabaseUrl": "https://bkwvuckznpaawmqrjjgk.supabase.co",
+      "supabasePublishableKey": "sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW"
+    }
+  }
+}
