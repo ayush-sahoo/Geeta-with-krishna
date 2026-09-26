@@ -76,10 +76,16 @@
     .topbar{
       position:sticky;top:0;z-index:20;
       display:flex;justify-content:space-between;align-items:center;
-      padding:14px 0;
-      background:rgba(8,13,27,.88);
-      backdrop-filter:blur(14px);
-      border-bottom:1px solid rgba(232,189,103,.17);
+      padding:12px 16px;
+      margin:0 -2px 14px;
+      border:1px solid rgba(255,196,92,.22);
+      border-top:0;
+      border-radius:0 0 22px 22px;
+      background:
+        radial-gradient(circle at 15% 0%,rgba(255,209,102,.12),transparent 30%),
+        linear-gradient(145deg,rgba(94,31,5,.94),rgba(49,14,2,.96));
+      backdrop-filter:blur(16px);
+      box-shadow:0 12px 34px rgba(49,10,0,.22), inset 0 -1px 0 rgba(255,209,102,.05);
     }
     .brand{display:flex;align-items:center;gap:10px}
     .mark{
@@ -88,17 +94,19 @@
       background:radial-gradient(circle at 35% 30%,#ffe9b4 0%,#e8bd67 48%,#b96f22 100%);
       color:#241608;font-weight:900;font-size:20px;box-shadow:0 0 24px rgba(232,189,103,.24);
     }
-    .brand strong{display:block;font-size:15px}
-    .brand small{color:var(--muted)}
+    .brand strong{display:block;font-size:15px;color:#fff4dc}
+    .brand small{color:#eac9a8}
     .nav{display:flex;gap:8px}
     .nav button,.ghost{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,196,92,.24);
+      background:linear-gradient(145deg,rgba(255,138,31,.10),rgba(255,255,255,.025));
       border-radius:999px;
       padding:10px 14px;
       cursor:pointer;
+      color:#ffe9bd;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
     }
-    .nav button.active{background:var(--gold);color:#151b2a;border-color:transparent;font-weight:800}
+    .nav button.active{background:linear-gradient(145deg,#ffd96f,#ff9f1c);color:#2b1604;border-color:rgba(255,221,138,.5);font-weight:900;box-shadow:0 8px 22px rgba(255,138,31,.24)}
     .screen{display:none}
     .screen.active{display:block}
     .hero{
