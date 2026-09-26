@@ -880,6 +880,9 @@
       background:#e8f5e8;color:#2f6c32;border-radius:999px;
       padding:7px 11px;font-size:12px;font-weight:900;display:inline-flex;align-items:center;gap:6px;
     }
+
+    .password-login-block{margin-top:4px}
+    .password-login-block .email-input{margin-bottom:10px}
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1101,6 +1104,17 @@
           </button>
 
           <div class="auth-or"><span>or continue with email</span></div>
+
+          <div id="passwordLoginStep" class="password-login-block">
+            <label class="phone-label">Email</label>
+            <input id="passwordEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
+            <label class="phone-label">Password</label>
+            <input id="passwordPassword" class="email-input" type="password" autocomplete="current-password" placeholder="Enter password">
+            <button id="passwordLoginBtn" class="auth-main-btn">Sign in with Email & Password</button>
+            <div class="email-help">Use this for password-based accounts. You can still use Google or a magic link below.</div>
+          </div>
+
+          <div class="auth-or"><span>or use a magic link</span></div>
 
           <div id="emailStep">
             <label class="phone-label">Email address</label>
@@ -1376,6 +1390,42 @@
       const redirectTo=location.origin+location.pathname;
       const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
       location.href=url;
+    }
+
+    async function signInWithPassword(){
+      $('authPageError').textContent='';
+      const email=$('passwordEmail').value.trim();
+      const password=$('passwordPassword').value;
+
+      if(!/^\S+@\S+\.\S+$/.test(email)){
+        $('authPageError').textContent='Enter a valid email address';
+        return;
+      }
+      if(!password){
+        $('authPageError').textContent='Enter your password';
+        return;
+      }
+
+      const btn=$('passwordLoginBtn');
+      try{
+        btn.disabled=true;btn.textContent='Signing in…';
+        const r=await fetch(SUPA+'/auth/v1/token?grant_type=password',{
+          method:'POST',
+          headers:{apikey:KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({email,password})
+        });
+        const data=await r.json();
+        if(!r.ok) throw new Error(data.msg||data.error_description||data.message||'Could not sign in');
+
+        saveSession(data);
+        await loadAccountProfile();
+        showScreen('accountScreen');
+        toast('Signed in');
+      }catch(e){
+        $('authPageError').textContent=e.message||'Could not sign in';
+      }finally{
+        btn.disabled=false;btn.textContent='Sign in with Email & Password';
+      }
     }
 
     async function sendEmailMagicLink(){
@@ -2117,6 +2167,8 @@
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
     $('googleLogin').addEventListener('click',startGoogleLogin);
+    $('passwordLoginBtn').addEventListener('click',signInWithPassword);
+    $('passwordPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signInWithPassword()});
     $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
     $('changeEmail').addEventListener('click',resetEmailStep);
     $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
