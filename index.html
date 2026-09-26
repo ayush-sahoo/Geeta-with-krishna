@@ -1519,6 +1519,85 @@
       }
       .nav{flex-wrap:wrap;justify-content:flex-end}
     }
+
+    .bubble.assistant{
+      max-width:min(760px,92%);
+      line-height:1.55;
+    }
+    .krishna-chat-label{
+      display:inline-flex;
+      padding:5px 9px;
+      border-radius:999px;
+      background:rgba(255,183,3,.16);
+      color:#a84200;
+      font-size:10px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+    .krishna-chat-title{
+      margin:0 0 8px;
+      color:#4a1900;
+      font-size:21px;
+      line-height:1.2;
+    }
+    .krishna-chat-opening{
+      margin:0 0 12px;
+      font-weight:700;
+      color:#6b2c08;
+    }
+    .krishna-chat-explanation{
+      padding:14px 15px;
+      border-radius:16px;
+      background:rgba(255,248,231,.72);
+      border:1px solid rgba(143,62,0,.10);
+      color:#5f2a0c;
+      margin-bottom:12px;
+    }
+    .krishna-chat-actions{
+      margin:12px 0 10px;
+      color:#4a1900;
+    }
+    .krishna-chat-actions ul{
+      margin:8px 0 0 18px;
+      padding:0;
+    }
+    .krishna-chat-actions li{
+      margin:5px 0;
+    }
+    .krishna-chat-verses{
+      margin:14px 0 8px;
+      color:#4a1900;
+    }
+    .chat-verse-card{
+      display:block;
+      width:100%;
+      text-align:left;
+      margin:7px 0;
+      padding:11px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(143,62,0,.10);
+      cursor:pointer;
+    }
+    .chat-verse-card span{
+      display:block;
+      font-weight:900;
+      color:#a84200;
+      margin-bottom:3px;
+    }
+    .chat-verse-card small{
+      display:block;
+      color:#6b2c08;
+      line-height:1.45;
+    }
+    .krishna-chat-note{
+      margin-top:10px;
+      color:#8a5a2b;
+      font-size:11px;
+      font-style:italic;
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -2935,12 +3014,33 @@
           body:JSON.stringify({question:q})
         });
         const d=await r.json();
-        a.textContent=d.answer||d.error||'No response';
-        if(d.citations?.length){
-          const c=document.createElement('div');
-          c.className='cite';
-          c.textContent=d.citations.join(' · ');
-          a.appendChild(c);
+        if(d.error){
+          a.textContent=d.error;
+        }else if(d.style==='krishna_inspired'){
+          a.innerHTML=
+            '<div class="krishna-chat-label">Krishna-inspired guidance</div>'+
+            '<h3 class="krishna-chat-title">'+d.title+'</h3>'+
+            '<p class="krishna-chat-opening">'+d.opening+'</p>'+
+            '<div class="krishna-chat-explanation">'+d.explanation+'</div>'+
+            '<div class="krishna-chat-actions"><strong>What to do now</strong>'+
+              '<ul>'+((d.actions||[]).map(x=>'<li>'+x+'</li>').join(''))+'</ul>'+
+            '</div>'+
+            '<div class="krishna-chat-verses"><strong>Verses connected to this</strong></div>';
+
+          (d.verses||[]).forEach(v=>{
+            const card=document.createElement('button');
+            card.className='chat-verse-card';
+            card.innerHTML='<span>'+v.ref+'</span><small>'+((v.translation||'').slice(0,150))+(v.translation?.length>150?'…':'')+'</small>';
+            card.addEventListener('click',()=>openVerseReference(v.chapter,v.verse));
+            a.appendChild(card);
+          });
+
+          const note=document.createElement('div');
+          note.className='krishna-chat-note';
+          note.textContent=d.disclaimer||'Krishna-inspired devotional guidance grounded in the Bhagavad Gita.';
+          a.appendChild(note);
+        }else{
+          a.textContent=d.answer||'No response';
         }
       }catch(e){
         a.textContent='Could not reach the guide. Please try again.';
