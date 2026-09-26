@@ -89,6 +89,35 @@
     .meta{color:var(--muted);font-size:13px}
     .section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:24px 0 12px}
     .section-head h2{margin:0;font-size:26px}
+    .topic-grid{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 34px}
+    .topic-chip{
+      border:1px solid var(--border);
+      background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
+      color:var(--text);border-radius:999px;padding:11px 15px;cursor:pointer;
+      font-weight:800;display:flex;align-items:center;gap:7px;transition:.16s;
+    }
+    .topic-chip:hover{transform:translateY(-2px);border-color:rgba(231,189,103,.5);background:rgba(231,189,103,.09)}
+    .topic-chip span{color:var(--gold)}
+    .topic-hero{
+      border:1px solid var(--border);
+      background:linear-gradient(145deg,#202e4f,#151f39);
+      border-radius:28px;padding:24px;margin:6px 0 18px;
+    }
+    .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em}
+    .topic-hero p{margin:0;color:#e0e5ed;line-height:1.75;font-size:17px}
+    .topic-verses{display:grid;gap:11px}
+    .topic-verse{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.055);
+      border-radius:20px;padding:17px;
+    }
+    .topic-verse-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .topic-ref{color:var(--gold);font-weight:900}
+    .topic-verse p{margin:9px 0 14px;color:#e5e9f0;line-height:1.65}
+    .topic-read{
+      border:1px solid rgba(231,189,103,.4);background:rgba(231,189,103,.10);
+      color:var(--gold-soft);border-radius:999px;padding:9px 12px;font-weight:800;cursor:pointer;
+    }
     .chapters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .chapter{
       text-align:left;
@@ -320,8 +349,27 @@
         <div class="daily-ref meta"></div>
       </div>
 
+      <div class="section-head">
+        <div><div class="daily-label">Explore by life topic</div><h2>What are you dealing with?</h2></div>
+        <span class="meta">Gita guidance across multiple shlokas</span>
+      </div>
+      <div id="topicGrid" class="topic-grid"></div>
+
       <div class="section-head"><h2>18 Chapters</h2><span class="meta">701 verses</span></div>
       <div id="chapters" class="chapters"></div>
+    </section>
+
+    <section id="topicScreen" class="screen">
+      <div class="reader-top">
+        <button id="backTopics" class="back">← Life topics</button>
+        <span class="meta">Curated from the Bhagavad Gita</span>
+      </div>
+      <div class="topic-hero">
+        <div id="topicEyebrow" class="eyebrow"></div>
+        <h2 id="topicTitle"></h2>
+        <p id="topicIntro"></p>
+      </div>
+      <div id="topicVerses" class="topic-verses"></div>
     </section>
 
     <section id="chapterScreen" class="screen">
@@ -452,6 +500,155 @@
       return t.replace(/^\d+\.\d+\.?\s*/,'').trim();
     }
 
+    const LIFE_TOPICS={
+      love:{
+        label:'Love',icon:'♥',kicker:'Love without possession',
+        intro:'The Gita rarely treats love as romance alone. It points toward a steadier love: compassion without hatred, seeing oneself in others, and devotion that does not demand possession or control.',
+        verses:[
+          {c:12,v:13,n:'Love begins with non-hatred and compassion toward every being.'},
+          {c:6,v:32,n:'A mature heart learns to recognize another person’s joy and pain as deeply as its own.'},
+          {c:9,v:29,n:'Divine love is impartial; closeness grows through sincere devotion rather than status or privilege.'},
+          {c:18,v:65,n:'Krishna brings love, remembrance, devotion and surrender together as a personal relationship with the Divine.'}
+        ]
+      },
+      lust:{
+        label:'Lust & Desire',icon:'◆',kicker:'When desire starts controlling you',
+        intro:'The Gita does not say every desire is evil. It warns about desire that becomes compulsive — when wanting turns into attachment, frustration, anger and loss of judgment.',
+        verses:[
+          {c:3,v:37,n:'Krishna identifies uncontrolled desire and anger as powerful inner enemies born of restless passion.'},
+          {c:2,v:62,n:'Repeatedly dwelling on an object can grow into attachment, and attachment into craving.'},
+          {c:2,v:63,n:'Frustrated craving can become anger, confusion and ultimately poor judgment.'},
+          {c:3,v:41,n:'The practical response is to regulate the senses early, before desire becomes overpowering.'}
+        ]
+      },
+      anger:{
+        label:'Anger',icon:'⚡',kicker:'Interrupt anger before it owns the mind',
+        intro:'The Gita traces anger back to frustrated attachment and desire. Its solution is not suppression alone, but awareness, self-mastery and reducing the inner demand that life must go exactly as we want.',
+        verses:[
+          {c:2,v:62,n:'Attachment creates the conditions from which anger can arise.'},
+          {c:2,v:63,n:'Anger clouds memory and judgment, making wise action harder.'},
+          {c:5,v:23,n:'Freedom grows when one can withstand the surge of desire and anger before acting on it.'},
+          {c:16,v:21,n:'Desire, anger and greed are described as three forces that can destroy inner clarity.'}
+        ]
+      },
+      fear:{
+        label:'Fear & Anxiety',icon:'◌',kicker:'Steadiness when the future is uncertain',
+        intro:'The Gita does not promise a life without uncertainty. It teaches steadiness inside uncertainty — through perspective, disciplined action, trust and freedom from being ruled by imagined outcomes.',
+        verses:[
+          {c:2,v:56,n:'Steady wisdom is marked by a mind not shattered by sorrow or intoxicated by pleasure.'},
+          {c:4,v:10,n:'Many have moved beyond fear by taking refuge in deeper understanding and devotion.'},
+          {c:6,v:5,n:'The mind can become either your ally or your enemy; self-training changes that relationship.'},
+          {c:18,v:66,n:'The closing teaching asks for surrender of obsessive control and trust beyond fear.'}
+        ]
+      },
+      attachment:{
+        label:'Attachment',icon:'∞',kicker:'Care deeply without clinging',
+        intro:'Non-attachment in the Gita does not mean not caring. It means acting with full sincerity while refusing to make your peace dependent on one result, person, possession or identity.',
+        verses:[
+          {c:2,v:47,n:'You are responsible for action, but you cannot own every outcome.'},
+          {c:2,v:48,n:'Yoga is steadiness in success and failure rather than emotional dependence on either.'},
+          {c:3,v:19,n:'Perform necessary action without attachment to the fruit.'},
+          {c:5,v:10,n:'One who offers action without attachment is compared to a lotus untouched by water.'}
+        ]
+      },
+      ego:{
+        label:'Ego',icon:'◎',kicker:'You are not the sole doer',
+        intro:'The Gita challenges the ego’s belief that “I alone am the doer.” It asks us to recognize nature, circumstance, other people and deeper forces participating in every action.',
+        verses:[
+          {c:3,v:27,n:'Actions arise through the qualities of nature, while ego claims complete authorship.'},
+          {c:13,v:29,n:'Clear seeing includes recognizing nature as the field in which action unfolds.'},
+          {c:18,v:58,n:'When action is centred in the Divine rather than ego, difficulties are faced differently.'},
+          {c:18,v:59,n:'Acting from egoic refusal does not free us from the deeper forces shaping our duty.'}
+        ]
+      },
+      grief:{
+        label:'Grief & Loss',icon:'☾',kicker:'How to hold loss without collapsing',
+        intro:'The Gita begins in grief. Krishna does not mock Arjuna’s pain; he widens Arjuna’s perspective on life, death, identity and responsibility so grief does not become paralysis.',
+        verses:[
+          {c:2,v:11,n:'Krishna begins by challenging the assumptions underneath Arjuna’s grief.'},
+          {c:2,v:20,n:'The Self is described as unborn and undying, deeper than bodily change.'},
+          {c:2,v:27,n:'Whatever is born will die; mortality is treated as part of the structure of embodied life.'},
+          {c:2,v:30,n:'The indwelling Self is described as beyond destruction, offering a wider frame for loss.'}
+        ]
+      },
+      mind:{
+        label:'Mind & Overthinking',icon:'≈',kicker:'Train the mind instead of fighting it',
+        intro:'The Gita treats the mind as trainable. Overthinking is not solved by one perfect thought, but by repeatedly returning attention, strengthening discipline and becoming less identified with every mental movement.',
+        verses:[
+          {c:6,v:5,n:'The trained mind can lift you; the untrained mind can work against you.'},
+          {c:6,v:26,n:'Whenever the mind wanders, the practice is simply to bring it back again.'},
+          {c:6,v:35,n:'Krishna acknowledges that the mind is difficult to control, but says practice and detachment make it possible.'},
+          {c:2,v:64,n:'Moving through life without compulsive attraction and aversion creates greater inner clarity.'}
+        ]
+      },
+      duty:{
+        label:'Duty & Career',icon:'→',kicker:'What is mine to do?',
+        intro:'The Gita’s language of dharma is broader than career, but it is highly relevant to work: identify the responsibility that is genuinely yours, perform it well, and do not let comparison or obsession with rewards corrupt the action.',
+        verses:[
+          {c:2,v:31,n:'Arjuna is asked to look clearly at the duty arising from his actual role and situation.'},
+          {c:3,v:8,n:'Necessary action is better than withdrawal from responsibility.'},
+          {c:3,v:19,n:'Work fully without becoming attached to the reward.'},
+          {c:18,v:47,n:'Imperfectly living one’s own path is preferable to perfectly imitating another’s.'}
+        ]
+      },
+      devotion:{
+        label:'Devotion & Faith',icon:'✦',kicker:'A relationship, not just a belief',
+        intro:'Bhakti in the Gita is not blind belief. It is a reorientation of attention, action and identity toward the Divine, expressed through remembrance, offering, trust, humility and compassion.',
+        verses:[
+          {c:9,v:22,n:'Krishna describes care for those who remain steadily devoted and centred in Him.'},
+          {c:9,v:26,n:'Even a simple offering is meaningful when given with sincere devotion.'},
+          {c:12,v:13,n:'Devotion shows up ethically as compassion, friendliness and freedom from hatred.'},
+          {c:18,v:65,n:'Remember, love, worship and surrender are woven together in Krishna’s closing personal teaching.'}
+        ]
+      }
+    };
+
+    function renderTopicGrid(){
+      const grid=$('topicGrid');
+      if(!grid)return;
+      grid.innerHTML='';
+      Object.entries(LIFE_TOPICS).forEach(([key,t])=>{
+        const b=document.createElement('button');
+        b.className='topic-chip';
+        b.innerHTML='<span>'+t.icon+'</span>'+t.label;
+        b.addEventListener('click',()=>openTopic(key));
+        grid.appendChild(b);
+      });
+    }
+
+    function openTopic(key){
+      const t=LIFE_TOPICS[key];
+      if(!t)return;
+      $('topicEyebrow').textContent=t.kicker;
+      $('topicTitle').textContent=t.label;
+      $('topicIntro').textContent=t.intro;
+      $('topicVerses').innerHTML='';
+
+      t.verses.forEach(item=>{
+        const card=document.createElement('div');
+        card.className='topic-verse';
+        card.innerHTML='<div class="topic-verse-top"><div class="topic-ref">Bhagavad Gita '+item.c+'.'+item.v+'</div><button class="topic-read">Read verse →</button></div><p>'+item.n+'</p>';
+        card.querySelector('button').addEventListener('click',()=>openVerseReference(item.c,item.v));
+        $('topicVerses').appendChild(card);
+      });
+      showScreen('topicScreen');
+    }
+
+    async function openVerseReference(chapterId,verseNumber){
+      stopSpeech();
+      const chapter=chapters.find(c=>Number(c.id)===Number(chapterId));
+      if(!chapter)return;
+      currentChapter=chapter;
+      currentVerses=await api('gita_verses?select=*&chapter_id=eq.'+chapterId+'&order=verse_number.asc');
+      const idx=currentVerses.findIndex(v=>Number(v.verse_number)===Number(verseNumber));
+      if(idx<0)return;
+      currentVerseIndex=idx;
+      currentTab='meaning';
+      showScreen('verseScreen');
+      renderVerse();
+      renderTab('meaning');
+    }
+
     function themeOf(v){
       const t=(v.translation_english||'').toLowerCase();
       if(/action|work|duty|fruit|result/.test(t))return 'action';
@@ -540,6 +737,7 @@
 
     async function load(){
       chapters=await api('gita_chapters?select=*&order=id.asc');
+      renderTopicGrid();
       $('chapters').innerHTML='';
 
       chapters.forEach(c=>{
@@ -889,6 +1087,7 @@
     $('askHero').addEventListener('click',()=>showScreen('chatScreen'));
     $('startReading').addEventListener('click',()=>document.querySelector('.section-head').scrollIntoView({behavior:'smooth'}));
     $('backHome').addEventListener('click',()=>showScreen('home'));
+    $('backTopics').addEventListener('click',()=>showScreen('home'));
     $('backChapter').addEventListener('click',()=>showScreen('chapterScreen'));
     $('audioBtn').addEventListener('click',speak);
     $('saveVerse').addEventListener('click',toggleSave);
