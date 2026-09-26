@@ -844,6 +844,19 @@
       .auth-page-card,.account-page-card{padding:22px;border-radius:24px}
       .auth-page{margin-top:12px}
     }
+
+    .email-input{
+      width:100%;border:1px solid rgba(120,60,20,.15);background:white;color:#4a1900;
+      border-radius:15px;padding:14px 13px;font-size:16px;outline:none;margin-bottom:12px;
+    }
+    .email-input:focus{border-color:#ff9f1c;box-shadow:0 0 0 3px rgba(255,159,28,.12)}
+    .email-help{margin-top:10px;color:#8a6a57;font-size:12px;line-height:1.5}
+    .email-sent-icon{
+      width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;
+      background:#dff4df;color:#2f7d32;font-size:26px;font-weight:900;
+    }
+    #emailSentStep h3{margin:0 0 7px;color:#4a1900;font-size:24px}
+    #emailSentStep p{color:#6b2c08;line-height:1.5}
 </style>
 </head>
 <body>
@@ -1049,25 +1062,18 @@
 
           <div class="auth-or"><span>or continue with mobile</span></div>
 
-          <div id="phoneStep">
-            <label class="phone-label">Mobile number</label>
-            <div class="phone-input-wrap">
-              <span class="country-code">+91</span>
-              <input id="phoneNumber" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="9876543210">
-            </div>
-            <button id="sendOtp" class="auth-main-btn">Send OTP</button>
+          <div id="emailStep">
+            <label class="phone-label">Email address</label>
+            <input id="emailAddress" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
+            <button id="sendEmailLink" class="auth-main-btn">Continue with Email</button>
+            <div class="email-help">We’ll send you a secure sign-in link. No password needed.</div>
           </div>
 
-          <div id="otpStep" class="hidden">
-            <div class="otp-meta">
-              <span>OTP sent to</span>
-              <strong id="otpPhoneDisplay"></strong>
-              <button id="changePhone" type="button">Change</button>
-            </div>
-            <label class="phone-label">Enter 6-digit OTP</label>
-            <input id="otpCode" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
-            <button id="verifyOtp" class="auth-main-btn">Verify & Continue</button>
-            <button id="resendOtp" class="auth-link-btn">Resend OTP</button>
+          <div id="emailSentStep" class="hidden">
+            <div class="email-sent-icon">✓</div>
+            <h3>Check your inbox</h3>
+            <p id="emailSentCopy">We sent a secure sign-in link to your email.</p>
+            <button id="changeEmail" class="auth-link-btn">Use a different email</button>
           </div>
 
           <div id="authPageError" class="auth-page-error"></div>
@@ -1088,7 +1094,6 @@
         <div class="daily-label">Account</div>
         <h2>Namaste 🙏</h2>
         <div class="account-row"><span>Email</span><strong id="accountEmail">—</strong></div>
-        <div class="account-row"><span>Mobile</span><strong id="accountPhone">—</strong></div>
         <div class="account-row"><span>Sign-in method</span><strong id="accountProvider">—</strong></div>
         <div class="account-row"><span>Plan</span><strong id="accountPlan" class="plan-pill">Free</strong></div>
         <div class="account-row"><span>Payment</span><strong id="accountPayment">Unpaid</strong></div>
@@ -1114,7 +1119,6 @@
     let speaking=false;
     let authSession=null;
     let accountProfile=null;
-    let pendingPhone='';
     const saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'));
 
     const $=id=>document.getElementById(id);
@@ -1223,14 +1227,12 @@
 
       if(loggedIn){
         const email=authSession.user?.email||accountProfile?.email||'—';
-        const phone=authSession.user?.phone||accountProfile?.phone||'—';
         const provider=accountProfile?.auth_provider||authSession.user?.app_metadata?.provider||'—';
         const plan=accountProfile?.plan_status||'free';
         const payment=accountProfile?.payment_status||'unpaid';
 
         $('accountEmail').textContent=email||'—';
-        $('accountPhone').textContent=phone||'—';
-        $('accountProvider').textContent=provider==='google'?'Google':provider==='phone'?'Mobile OTP':provider;
+        $('accountProvider').textContent=provider==='google'?'Google':provider==='email'?'Email':provider;
         $('accountPlan').textContent=plan==='lifetime'?'Lifetime':'Free';
         $('accountPlan').classList.toggle('lifetime',plan==='lifetime');
         $('accountPayment').textContent=payment.charAt(0).toUpperCase()+payment.slice(1);
@@ -1252,70 +1254,46 @@
       location.href=url;
     }
 
-    function normalizeIndianPhone(raw){
-      const digits=String(raw||'').replace(/\D/g,'').replace(/^91(?=\d{10}$)/,'');
-      if(!/^\d{10}$/.test(digits)) throw new Error('Enter a valid 10-digit mobile number');
-      return '+91'+digits;
-    }
-
-    async function sendPhoneOtp(){
+    async function sendEmailMagicLink(){
       $('authPageError').textContent='';
-      const btn=$('sendOtp');
+      const email=$('emailAddress').value.trim();
+      if(!/^\S+@\S+\.\S+$/.test(email)){
+        $('authPageError').textContent='Enter a valid email address';
+        return;
+      }
+
+      const btn=$('sendEmailLink');
       try{
-        pendingPhone=normalizeIndianPhone($('phoneNumber').value);
-        btn.disabled=true;btn.textContent='Sending…';
+        btn.disabled=true;btn.textContent='Sending link…';
+        const redirectTo=location.origin+location.pathname;
         const r=await fetch(SUPA+'/auth/v1/otp',{
           method:'POST',
           headers:{apikey:KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({phone:pendingPhone,create_user:true})
+          body:JSON.stringify({
+            email,
+            create_user:true,
+            options:{email_redirect_to:redirectTo}
+          })
         });
         const data=await r.json().catch(()=>({}));
-        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Could not send OTP');
+        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Could not send sign-in link');
 
-        $('phoneStep').classList.add('hidden');
-        $('otpStep').classList.remove('hidden');
-        $('otpPhoneDisplay').textContent=pendingPhone;
-        $('otpCode').value='';
-        $('otpCode').focus();
-        toast('OTP sent');
+        $('emailStep').classList.add('hidden');
+        $('emailSentStep').classList.remove('hidden');
+        $('emailSentCopy').textContent='We sent a secure sign-in link to '+email+'.';
+        toast('Sign-in link sent');
       }catch(e){
-        $('authPageError').textContent=e.message||'Could not send OTP';
+        $('authPageError').textContent=e.message||'Could not send sign-in link';
       }finally{
-        btn.disabled=false;btn.textContent='Send OTP';
+        btn.disabled=false;btn.textContent='Continue with Email';
       }
     }
 
-    async function verifyPhoneOtp(){
+    function resetEmailStep(){
+      $('emailSentStep').classList.add('hidden');
+      $('emailStep').classList.remove('hidden');
       $('authPageError').textContent='';
-      const token=$('otpCode').value.replace(/\D/g,'');
-      if(token.length!==6){$('authPageError').textContent='Enter the 6-digit OTP';return}
-      const btn=$('verifyOtp');
-      try{
-        btn.disabled=true;btn.textContent='Verifying…';
-        const r=await fetch(SUPA+'/auth/v1/verify',{
-          method:'POST',
-          headers:{apikey:KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({type:'sms',phone:pendingPhone,token})
-        });
-        const data=await r.json();
-        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Invalid OTP');
-
-        saveSession(data);
-        await loadAccountProfile();
-        showScreen('accountScreen');
-        toast('Mobile verified');
-      }catch(e){
-        $('authPageError').textContent=e.message||'Could not verify OTP';
-      }finally{
-        btn.disabled=false;btn.textContent='Verify & Continue';
-      }
-    }
-
-    function resetPhoneStep(){
-      $('otpStep').classList.add('hidden');
-      $('phoneStep').classList.remove('hidden');
-      $('authPageError').textContent='';
-      pendingPhone='';
+      setTimeout(()=>$('emailAddress').focus(),50);
     }
 
     async function signOut(){
@@ -1336,7 +1314,6 @@
       localStorage.setItem('pendingLifetimePurchase',JSON.stringify({
         user_id:authSession.user?.id,
         email:authSession.user?.email||null,
-        phone:authSession.user?.phone||null,
         started_at:new Date().toISOString()
       }));
       window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
@@ -1963,10 +1940,9 @@
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
     $('googleLogin').addEventListener('click',startGoogleLogin);
-    $('sendOtp').addEventListener('click',sendPhoneOtp);
-    $('verifyOtp').addEventListener('click',verifyPhoneOtp);
-    $('resendOtp').addEventListener('click',sendPhoneOtp);
-    $('changePhone').addEventListener('click',resetPhoneStep);
+    $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
+    $('changeEmail').addEventListener('click',resetEmailStep);
+    $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
     $('signOutBtn').addEventListener('click',signOut);
     $('accountUpgrade').addEventListener('click',startLifetimePurchase);
     $('askHero').addEventListener('click',()=>showScreen('chatScreen'));
