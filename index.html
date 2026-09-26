@@ -1053,14 +1053,7 @@
           <div class="auth-brand-mark">ॐ</div>
           <div class="daily-label">Welcome to Gita with Krishna</div>
           <h2>Begin your journey</h2>
-          <p class="auth-lead">Create your account to save your access, purchases and plan across devices.</p>
-
-          <button id="googleLogin" class="google-btn">
-            <span class="google-g">G</span>
-            Continue with Google
-          </button>
-
-          <div class="auth-or"><span>or continue with mobile</span></div>
+          <p class="auth-lead">Enter your email and we’ll send you a secure sign-in link. No password needed.</p>
 
           <div id="emailStep">
             <label class="phone-label">Email address</label>
@@ -1232,7 +1225,7 @@
         const payment=accountProfile?.payment_status||'unpaid';
 
         $('accountEmail').textContent=email||'—';
-        $('accountProvider').textContent=provider==='google'?'Google':provider==='email'?'Email':provider;
+        $('accountProvider').textContent=provider==='email'?'Email':provider;
         $('accountPlan').textContent=plan==='lifetime'?'Lifetime':'Free';
         $('accountPlan').classList.toggle('lifetime',plan==='lifetime');
         $('accountPayment').textContent=payment.charAt(0).toUpperCase()+payment.slice(1);
@@ -1246,12 +1239,6 @@
     function openAccount(){
       if(authSession?.access_token) showScreen('accountScreen');
       else showScreen('authScreen');
-    }
-
-    async function startGoogleLogin(){
-      const redirectTo=location.origin+location.pathname;
-      const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
-      location.href=url;
     }
 
     async function sendEmailMagicLink(){
@@ -1939,7 +1926,6 @@
     $('navAccount').addEventListener('click',openAccount);
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
-    $('googleLogin').addEventListener('click',startGoogleLogin);
     $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
     $('changeEmail').addEventListener('click',resetEmailStep);
     $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
