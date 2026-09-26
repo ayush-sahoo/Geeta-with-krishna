@@ -677,6 +677,10 @@
         name:'सञ्जय',
         image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Dhritarastra%20sanjaya.jpg'
       },
+      duryodhana:{
+        name:'दुर्योधन',
+        image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Duryodhana%2C%20Raja%20Ravi%20Varma%20%28cropped%29.jpg'
+      },
       arjuna:{
         name:'अर्जुन',
         image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Arjuna%20standing%20in%20a%20hilly%20landscape.jpg'
@@ -700,7 +704,7 @@
       // Known opening speech by Duryodhana in Chapter 1.
       const v=currentVerses[index];
       if(Number(v?.chapter_id)===1 && Number(v?.verse_number)>=3 && Number(v?.verse_number)<=11){
-        return 'sanjaya';
+        return 'duryodhana';
       }
       for(let i=index;i>=0;i--){
         const found=speakerFromText(currentVerses[i]);
