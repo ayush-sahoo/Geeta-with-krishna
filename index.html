@@ -547,12 +547,17 @@
       $('wave').classList.remove('playing');
     }
 
-    async function fetchTTS(text,kind){
+    async function fetchTTS(text,kind,verse){
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
         headers:{apikey:KEY,'Content-Type':'application/json'},
         cache:'no-store',
-        body:JSON.stringify({text,kind})
+        body:JSON.stringify({
+          text,
+          kind,
+          chapter_id:verse?.chapter_id,
+          verse_number:verse?.verse_number
+        })
       });
       if(!r.ok){
         let msg='Voice generation failed';
@@ -588,7 +593,7 @@
       startAmbient();
 
       try{
-        const verseAudio=await fetchTTS(v.sanskrit,'verse');
+        const verseAudio=await fetchTTS(v.sanskrit,'verse',v);
         if(!speaking)return;
         await playBlob(verseAudio);
         if(!speaking)return;
