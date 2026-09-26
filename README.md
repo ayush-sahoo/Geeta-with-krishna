@@ -1,4 +1,4 @@
-# Gita with Krishna
+# Gita Verse
 
 A devotional Bhagavad Gita mobile app built with Expo + React Native and Supabase.
 
