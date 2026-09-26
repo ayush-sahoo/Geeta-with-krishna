@@ -159,7 +159,7 @@
       border-radius:999px;padding:13px 18px;font-weight:800;cursor:pointer;
     }
     .primary{border:0;background:linear-gradient(145deg,#fff3a8,#ffb703);color:#241708;box-shadow:0 12px 34px rgba(255,138,31,.28)}
-    .secondary{border:1px solid rgba(232,189,103,.24);background:linear-gradient(145deg,rgba(232,189,103,.08),rgba(255,255,255,.035));color:var(--gold-soft)}
+    .secondary{border:1px solid rgba(140,58,0,.20);background:rgba(255,255,255,.58);color:#6d2a00;box-shadow:0 6px 16px rgba(171,70,0,.10)}
     .daily{
       border:1px solid rgba(156,62,0,.18);
       background:
@@ -206,8 +206,8 @@
       display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px;
     }
     .guide-card{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.05);
+      border:1px solid rgba(158,64,0,.15);
+      background:linear-gradient(145deg,rgba(255,249,231,.96),rgba(255,218,145,.94));
       border-radius:20px;padding:18px;
     }
     .guide-card h3{margin:0 0 10px;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
@@ -215,11 +215,16 @@
     .guide-card.dont h3{color:#b53a20}
     .guide-card ul{margin:0;padding-left:18px;display:grid;gap:8px;color:#5d2708;line-height:1.55}
     .daily-practice{
-      margin:0 0 18px;border:1px solid rgba(231,189,103,.32);
-      background:rgba(231,189,103,.08);border-radius:18px;padding:16px;
-      color:#f3e8c9;line-height:1.65;
+      margin:0 0 18px;
+      border:1px solid rgba(157,64,0,.16);
+      background:linear-gradient(145deg,rgba(255,249,231,.96),rgba(255,221,151,.94));
+      border-radius:18px;
+      padding:16px;
+      color:#5a2100;
+      line-height:1.65;
+      box-shadow:0 8px 20px rgba(165,65,0,.08);
     }
-    .daily-practice strong{color:var(--gold);display:block;margin-bottom:4px}
+    .daily-practice strong{color:#a94000;display:block;margin-bottom:4px}
     .artifact-layer{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
     .artifact{position:absolute;color:rgba(255,255,255,.30);filter:drop-shadow(0 0 12px rgba(255,138,31,.10));animation:artifactFloat 12s ease-in-out infinite}
     .artifact.a1{left:3%;top:16%;font-size:42px;animation-delay:0s}
@@ -238,24 +243,27 @@
     .hero-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
     .hero-badge{
       display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;
-      border:1px solid rgba(255,209,102,.22);background:rgba(255,138,31,.08);
-      color:#ffe7b0;font-size:12px;font-weight:800;letter-spacing:.04em;
+      border:1px solid rgba(144,58,0,.16);background:rgba(255,255,255,.45);
+      color:#6b2c08;font-size:12px;font-weight:900;letter-spacing:.04em;
     }
-    .sacred-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0;color:rgba(255,209,102,.62);font-size:14px}
+    .sacred-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0;color:rgba(122,48,0,.55);font-size:14px}
     .sacred-divider::before,.sacred-divider::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(255,209,102,.28),transparent)}
     @media(max-width:680px){.topic-guide{grid-template-columns:1fr}}
     .topic-verses{display:grid;gap:11px}
     .topic-verse{
-      border:1px solid var(--border);
-      background:linear-gradient(145deg,rgba(30,39,67,.92),rgba(17,23,43,.92));
-      border-radius:20px;padding:17px;
+      border:1px solid rgba(159,64,0,.15);
+      background:linear-gradient(145deg,rgba(255,248,229,.97),rgba(255,215,137,.95));
+      border-radius:20px;
+      padding:17px;
+      color:#4a1900;
+      box-shadow:0 8px 20px rgba(165,65,0,.08);
     }
     .topic-verse-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .topic-ref{color:var(--gold);font-weight:900}
+    .topic-ref{color:#a94000;font-weight:900}
     .topic-verse p{margin:9px 0 14px;color:#6b2c08;line-height:1.65}
     .topic-read{
-      border:1px solid rgba(231,189,103,.4);background:rgba(231,189,103,.10);
-      color:var(--gold-soft);border-radius:999px;padding:9px 12px;font-weight:800;cursor:pointer;
+      border:1px solid rgba(145,58,0,.18);background:rgba(255,255,255,.62);
+      color:#7a3008;border-radius:999px;padding:9px 12px;font-weight:900;cursor:pointer;
     }
     .chapters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .chapter{
@@ -393,20 +401,21 @@
       align-items:center;
       justify-content:center;
       overflow:hidden;
-      border:1px solid rgba(231,189,103,.28);
+      border:1px solid rgba(158,64,0,.16);
       border-radius:30px;
       background:
-        radial-gradient(circle at 50% 26%,rgba(73,126,210,.22),transparent 36%),
-        linear-gradient(155deg,#4d1c07,#231006 60%,#160803);
-      box-shadow:0 22px 70px rgba(0,0,0,.26);
+        radial-gradient(circle at 50% 26%,rgba(255,255,255,.62),transparent 38%),
+        linear-gradient(155deg,#fff3c7,#ffc866 60%,#ffb344);
+      box-shadow:0 18px 42px rgba(165,65,0,.14);
       transition:opacity .25s ease,transform .25s ease;
+      color:#4a1900;
     }
     .krishna-avatar.hidden{display:none}
     .krishna-aura{
       position:absolute;
       top:30px;
       width:245px;height:245px;border-radius:50%;
-      background:radial-gradient(circle,rgba(244,213,138,.38) 0%,rgba(231,189,103,.15) 36%,rgba(87,121,190,.07) 58%,transparent 74%);
+      background:radial-gradient(circle,rgba(255,214,102,.42) 0%,rgba(255,138,31,.18) 36%,rgba(255,255,255,.10) 58%,transparent 74%);
       filter:blur(3px);
     }
     .speaker-image-wrap{
@@ -459,7 +468,7 @@
     .krishna-avatar.playing .avatar-bars i:nth-child(5){animation-delay:.32s}
     .krishna-avatar.playing .avatar-bars i:nth-child(6){animation-delay:.40s}
     .krishna-avatar.playing .avatar-bars i:nth-child(7){animation-delay:.48s}
-    .krishna-avatar.explaining .krishna-aura{background:radial-gradient(circle,rgba(120,177,240,.38) 0%,rgba(75,126,211,.17) 38%,transparent 72%)}
+    .krishna-avatar.explaining .krishna-aura{background:radial-gradient(circle,rgba(255,214,102,.42) 0%,rgba(255,138,31,.18) 38%,transparent 72%)}
     @keyframes speakerBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     @keyframes krishnaAura{0%,100%{transform:scale(.96);opacity:.72}50%{transform:scale(1.07);opacity:1}}
     @keyframes krishnaOrbit{to{transform:rotate(360deg)}}
@@ -471,7 +480,24 @@
       .verse-hero{padding:19px}
       .brand small{display:none}
     }
-  </style>
+  
+    /* Bright-theme contrast safety overrides */
+    .hero,.daily,.chapter,.topic-chip,.topic-hero,.topic-verse,.guide-card,.daily-practice,.verse-row,.verse-hero,.panel,.chat-head{
+      color:#4a1900;
+    }
+    .hero h1,.hero h2,.hero h3,.daily h1,.daily h2,.daily h3,
+    .chapter h1,.chapter h2,.chapter h3,.topic-hero h1,.topic-hero h2,.topic-hero h3,
+    .verse-hero h1,.verse-hero h2,.verse-hero h3,.panel h1,.panel h2,.panel h3{
+      color:#4a1900;
+    }
+    .hero p,.daily p,.chapter p,.topic-hero p,.topic-verse p,.guide-card p,
+    .daily-practice p,.verse-row p,.verse-hero p,.panel p{
+      color:#6b2c08;
+    }
+    .topic-chip,.hero-badge,.secondary,.topic-read,.tabs button{
+      color:#6b2c08;
+    }
+</style>
 </head>
 <body>
   <div class="artifact-layer" aria-hidden="true">
