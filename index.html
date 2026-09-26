@@ -857,6 +857,29 @@
     }
     #emailSentStep h3{margin:0 0 7px;color:#4a1900;font-size:24px}
     #emailSentStep p{color:#6b2c08;line-height:1.5}
+
+    .locked-state{
+      grid-column:1/-1;
+      border:1px dashed rgba(120,60,20,.22);
+      background:linear-gradient(145deg,#f3f3f0,#e5e5e1);
+      border-radius:22px;
+      padding:24px;
+      text-align:center;
+      color:#5a2100;
+      box-shadow:0 10px 24px rgba(120,60,20,.07);
+    }
+    .locked-state .lock-icon{font-size:32px;margin-bottom:8px}
+    .locked-state strong{display:block;font-size:19px;margin-bottom:7px;color:#4a1900}
+    .locked-state p{margin:0 auto 14px;max-width:520px;color:#6b2c08;line-height:1.55}
+    .locked-state button{
+      border:0;border-radius:999px;padding:11px 16px;cursor:pointer;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);color:#4a1900;font-weight:900;
+    }
+    .access-active{
+      border:1px solid rgba(47,125,50,.18);
+      background:#e8f5e8;color:#2f6c32;border-radius:999px;
+      padding:7px 11px;font-size:12px;font-weight:900;display:inline-flex;align-items:center;gap:6px;
+    }
 </style>
 </head>
 <body>
@@ -903,7 +926,7 @@
         <div class="daily-ref meta"></div>
       </div>
 
-      <section class="lifetime-card" aria-label="Lifetime access offer">
+      <section id="lifetimeOffer" class="lifetime-card" aria-label="Lifetime access offer">
         <div>
           <div class="lifetime-kicker">✦ Limited Lifetime Offer</div>
           <h3>Unlock Gita Verse for life</h3>
@@ -1123,7 +1146,31 @@
 
     const $=id=>document.getElementById(id);
 
-    function showScreen(id){
+    function hasLifetimeAccess(){
+      return !!(
+        authSession?.access_token &&
+        accountProfile?.plan_status==='lifetime' &&
+        accountProfile?.payment_status==='paid'
+      );
+    }
+
+    function showPaywall(message='Lifetime Access is required to open this content.'){
+      showScreen('home',true);
+      const offer=$('lifetimeOffer');
+      if(offer){
+        offer.scrollIntoView({behavior:'smooth',block:'center'});
+        toast(message);
+      }
+    }
+
+    function showScreen(id,bypassGate=false){
+      const protectedScreens=new Set(['topicScreen','chapterScreen','verseScreen','chatScreen']);
+      if(!bypassGate && protectedScreens.has(id) && !hasLifetimeAccess()){
+        showPaywall(authSession?.access_token
+          ? 'Complete the lifetime payment to unlock all Gita content.'
+          : 'Sign in and purchase Lifetime Access to continue.');
+        return;
+      }
       document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
       $(id).classList.add('active');
       $('navHome').classList.toggle('active',id==='home');
@@ -1132,7 +1179,10 @@
     }
 
     async function api(path){
-      const r=await fetch(SUPA+'/rest/v1/'+path,{headers});
+      if(!hasLifetimeAccess()) throw new Error('Lifetime Access required');
+      const r=await fetch(SUPA+'/rest/v1/'+path,{
+        headers:{apikey:KEY,Authorization:'Bearer '+authSession.access_token}
+      });
       if(!r.ok) throw new Error(await r.text());
       return r.json();
     }
@@ -1190,7 +1240,7 @@
       try{
         const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
           method:'POST',
-          headers:{apikey:KEY,'Content-Type':'application/json'},
+          headers:{apikey:KEY,Authorization:'Bearer '+authSession.access_token,'Content-Type':'application/json'},
           body:JSON.stringify({refresh_token:stored.refresh_token})
         });
         if(!r.ok) throw new Error('Session expired');
@@ -1239,8 +1289,32 @@
         $('accountPurchased').textContent=accountProfile?.purchased_at
           ? new Date(accountProfile.purchased_at).toLocaleDateString()
           : '—';
-        $('accountUpgrade').classList.toggle('hidden',plan==='lifetime');
+        $('accountUpgrade').classList.toggle('hidden',plan==='lifetime' && payment==='paid');
       }
+      renderAccessState();
+    }
+
+    function renderAccessState(){
+      const paid=hasLifetimeAccess();
+      const daily=$('daily');
+      const offer=$('lifetimeOffer');
+
+      if(offer) offer.classList.toggle('hidden',paid);
+      $('navChat').textContent=paid?'Ask Krishna':'🔒 Ask Krishna';
+
+      if(!paid){
+        if(daily){
+          daily.querySelector('.daily-quote').textContent='🔒 Daily verse is available with Lifetime Access';
+          daily.querySelector('.daily-ref').textContent='Sign in and complete the one-time ₹1,000 payment to unlock.';
+        }
+        if($('topicGrid')) $('topicGrid').innerHTML='<div class="locked-state"><div class="lock-icon">🔒</div><strong>Life Topics are locked</strong><p>Unlock practical Gita guides on love, anger, fear, attachment, purpose and more.</p><button onclick="startLifetimePurchase()">Unlock Lifetime Access</button></div>';
+        if($('chapters')) $('chapters').innerHTML='<div class="locked-state"><div class="lock-icon">🔒</div><strong>18 chapters · 701 verses</strong><p>Full shlokas, meanings, deep explanations, audio and navigation unlock after payment.</p><button onclick="startLifetimePurchase()">Unlock Lifetime Access</button></div>';
+        chapters=[];
+        return;
+      }
+
+      if(daily) daily.querySelector('.daily-ref').innerHTML='<span class="access-active">✓ Lifetime Access active</span>';
+      loadPaidContent().catch(e=>toast('Could not load content'));
     }
 
     function openAccount(){
@@ -1466,6 +1540,7 @@
     }
 
     function openTopic(key){
+      if(!hasLifetimeAccess()){showPaywall();return}
       const t=LIFE_TOPICS[key];
       if(!t)return;
       $('topicEyebrow').textContent=t.kicker;
@@ -1487,6 +1562,7 @@
     }
 
     async function openVerseReference(chapterId,verseNumber){
+      if(!hasLifetimeAccess()){showPaywall();return}
       stopSpeech();
       const chapter=chapters.find(c=>Number(c.id)===Number(chapterId));
       if(!chapter)return;
@@ -1588,6 +1664,11 @@
     }
 
     async function load(){
+      renderAccessState();
+    }
+
+    async function loadPaidContent(){
+      if(!hasLifetimeAccess()) return;
       chapters=await api('gita_chapters?select=*&order=id.asc');
       renderTopicGrid();
       $('chapters').innerHTML='';
@@ -1611,6 +1692,7 @@
     }
 
     async function openChapter(c){
+      if(!hasLifetimeAccess()){showPaywall();return}
       currentChapter=c;
       showScreen('chapterScreen');
       $('chapterEyebrow').textContent='Chapter '+c.id;
@@ -1631,6 +1713,7 @@
     }
 
     function openVerse(i){
+      if(!hasLifetimeAccess()){showPaywall();return}
       currentVerseIndex=i;
       currentTab='meaning';
       showScreen('verseScreen');
@@ -1900,6 +1983,7 @@
     }
 
     async function sendChat(text){
+      if(!hasLifetimeAccess()){showPaywall();return}
       const q=(text||$('chatInput').value).trim();
       if(!q)return;
       $('chatInput').value='';
@@ -1935,7 +2019,7 @@
     }
 
     $('navHome').addEventListener('click',()=>showScreen('home'));
-    $('navChat').addEventListener('click',()=>showScreen('chatScreen'));
+    $('navChat').addEventListener('click',()=>hasLifetimeAccess()?showScreen('chatScreen'):showPaywall());
     $('navAccount').addEventListener('click',openAccount);
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
@@ -1945,8 +2029,10 @@
     $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
     $('signOutBtn').addEventListener('click',signOut);
     $('accountUpgrade').addEventListener('click',startLifetimePurchase);
-    $('askHero').addEventListener('click',()=>showScreen('chatScreen'));
-    $('startReading').addEventListener('click',()=>document.querySelector('.section-head').scrollIntoView({behavior:'smooth'}));
+    $('askHero').addEventListener('click',()=>hasLifetimeAccess()?showScreen('chatScreen'):showPaywall());
+    $('startReading').addEventListener('click',()=>hasLifetimeAccess()
+      ? document.querySelector('.section-head').scrollIntoView({behavior:'smooth'})
+      : showPaywall());
     $('backHome').addEventListener('click',()=>showScreen('home'));
     $('backTopics').addEventListener('click',()=>showScreen('home'));
     $('buyLifetime').addEventListener('click',startLifetimePurchase);
