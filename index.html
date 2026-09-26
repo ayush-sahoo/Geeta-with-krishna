@@ -1476,6 +1476,20 @@
       }
       .topbar{flex-wrap:wrap}
     }
+
+    .welcome-user{
+      display:inline-flex;
+      align-items:center;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.46);
+      border:1px solid rgba(140,58,0,.14);
+      color:#6b2c08;
+      font-size:12px;
+      font-weight:900;
+      line-height:1;
+    }
+    .welcome-user.hidden{display:none!important}
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1943,26 +1957,42 @@
     }
 
     function userDisplayName(){
-      const u=authSession?.user;
-      if(!u) return '';
+      const u=authSession?.user||{};
       const meta=u.user_metadata||{};
       const full=(meta.full_name||meta.name||meta.user_name||'').trim();
       if(full) return full.split(' ')[0];
-      const email=(u.email||'').trim();
+
+      const email=(
+        u.email||
+        accountProfile?.auth_email||
+        accountProfile?.email||
+        ''
+      ).trim();
+
       if(!email) return '';
-      const local=email.split('@')[0].replace(/[._-]+/g,' ').trim();
-      if(!local) return '';
+
+      const local=email.split('@')[0]
+        .replace(/[._-]+/g,' ')
+        .replace(/\d{3,}$/,'')
+        .trim();
+
+      if(!local) return email.split('@')[0];
+
       return local
         .split(' ')
-        .map(x=>x ? x.charAt(0).toUpperCase()+x.slice(1) : '')
+        .filter(Boolean)
+        .map(x=>x.charAt(0).toUpperCase()+x.slice(1))
         .join(' ');
     }
 
     function updateWelcomeUser(){
       const el=$('welcomeUser');
       if(!el) return;
+
+      const loggedIn=!!authSession?.access_token;
       const name=userDisplayName();
-      if(authSession?.user && name){
+
+      if(loggedIn && name){
         el.textContent='Welcome, '+name+' 🙏';
         el.classList.remove('hidden');
       }else{
