@@ -711,6 +711,57 @@
       .lifetime-buy{width:100%}
       .lifetime-note{text-align:left}
     }
+
+    .auth-modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px}
+    .auth-modal.hidden{display:none}
+    .auth-backdrop{position:absolute;inset:0;background:rgba(55,20,0,.42);backdrop-filter:blur(7px)}
+    .auth-card{
+      position:relative;z-index:1;width:min(460px,100%);
+      background:linear-gradient(145deg,#f7f7f5,#e9e9e6);
+      color:#4a1900;border:1px solid rgba(120,60,20,.14);
+      border-radius:28px;padding:28px;
+      box-shadow:0 28px 80px rgba(78,28,0,.28);
+    }
+    .auth-card h2{margin:4px 0 8px;color:#4a1900;font-size:28px}
+    .auth-card p{margin:0 0 18px;color:#6b2c08;line-height:1.55}
+    .auth-close{
+      position:absolute;right:15px;top:12px;border:0;background:transparent;
+      color:#7a3c16;font-size:29px;cursor:pointer;line-height:1;
+    }
+    .auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0}
+    .auth-tabs button{
+      border:1px solid rgba(120,60,20,.12);background:#ededeb;color:#6b2c08;
+      border-radius:999px;padding:10px;cursor:pointer;font-weight:800;
+    }
+    .auth-tabs button.active{background:linear-gradient(145deg,#ffd166,#ff9f1c);color:#4a1900}
+    #authForm{display:grid;gap:13px}
+    #authForm label{display:grid;gap:6px;color:#6b2c08;font-weight:800;font-size:13px}
+    #authForm input{
+      width:100%;border:1px solid rgba(120,60,20,.16);border-radius:14px;
+      background:#fff;color:#4a1900;padding:12px 13px;outline:none;font-size:15px;
+    }
+    #authForm input:focus{border-color:#ff9f1c;box-shadow:0 0 0 3px rgba(255,159,28,.12)}
+    .auth-submit{
+      width:100%;border:0;border-radius:14px;padding:13px 15px;cursor:pointer;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);color:#4a1900;font-weight:950;font-size:15px;
+    }
+    .auth-error{min-height:20px;color:#b53a20;font-size:13px;margin-top:10px;line-height:1.45}
+    .account-row{
+      display:flex;justify-content:space-between;gap:20px;align-items:center;
+      padding:12px 0;border-bottom:1px solid rgba(120,60,20,.10);
+      color:#7a3c16;
+    }
+    .account-row strong{color:#4a1900;text-align:right;overflow-wrap:anywhere}
+    .plan-pill{
+      display:inline-flex;padding:6px 10px;border-radius:999px;
+      background:#ededeb;border:1px solid rgba(120,60,20,.10);
+    }
+    .plan-pill.lifetime{background:#ffd166;color:#4a1900}
+    .auth-signout{
+      width:100%;margin-top:9px;border:1px solid rgba(120,60,20,.14);
+      background:#ededeb;color:#6b2c08;border-radius:14px;padding:12px;cursor:pointer;font-weight:850;
+    }
+    #accountUpgrade{margin-top:18px}
 </style>
 </head>
 <body>
@@ -730,6 +781,7 @@
       <nav class="nav">
         <button id="navHome" class="active">Home</button>
         <button id="navChat">Ask Krishna</button>
+        <button id="navAccount">Sign in</button>
       </nav>
     </header>
 
@@ -900,6 +952,46 @@
     </section>
   </div>
 
+  <div id="authModal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth-backdrop" id="authBackdrop"></div>
+    <div class="auth-card">
+      <button id="closeAuth" class="auth-close" aria-label="Close">×</button>
+
+      <div id="authLoggedOut">
+        <div class="lifetime-kicker">Account</div>
+        <h2 id="authTitle">Sign in to Gita with Krishna</h2>
+        <p id="authMessage">Use your email to keep your plan and purchases connected to your account.</p>
+
+        <div class="auth-tabs">
+          <button id="authLoginTab" class="active">Sign in</button>
+          <button id="authSignupTab">Create account</button>
+        </div>
+
+        <form id="authForm">
+          <label>Email
+            <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+          </label>
+          <label>Password
+            <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters">
+          </label>
+          <button id="authSubmit" type="submit" class="auth-submit">Sign in</button>
+        </form>
+        <div id="authError" class="auth-error"></div>
+      </div>
+
+      <div id="authLoggedIn" class="hidden">
+        <div class="lifetime-kicker">Your account</div>
+        <h2>Namaste 🙏</h2>
+        <div class="account-row"><span>Email</span><strong id="accountEmail">—</strong></div>
+        <div class="account-row"><span>Plan</span><strong id="accountPlan" class="plan-pill">Free</strong></div>
+        <div class="account-row"><span>Payment</span><strong id="accountPayment">Unpaid</strong></div>
+        <div class="account-row"><span>Purchased</span><strong id="accountPurchased">—</strong></div>
+        <button id="accountUpgrade" class="auth-submit">Get Lifetime Access — ₹1,000</button>
+        <button id="signOutBtn" class="auth-signout">Sign out</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
 
   <script>
@@ -913,6 +1005,9 @@
     let currentVerseIndex=0;
     let currentTab='meaning';
     let speaking=false;
+    let authMode='login';
+    let authSession=null;
+    let accountProfile=null;
     const saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'));
 
     const $=id=>document.getElementById(id);
@@ -939,6 +1034,179 @@
 
     function cleanTranslation(t=''){
       return t.replace(/^\d+\.\d+\.?\s*/,'').trim();
+    }
+
+    function authHeaders(token){
+      return {
+        apikey:KEY,
+        Authorization:'Bearer '+token,
+        'Content-Type':'application/json'
+      };
+    }
+
+    function saveSession(session){
+      authSession=session||null;
+      if(session) localStorage.setItem('gitaAuthSession',JSON.stringify(session));
+      else localStorage.removeItem('gitaAuthSession');
+      updateAccountUI();
+    }
+
+    async function refreshAuthSession(){
+      let stored=null;
+      try{stored=JSON.parse(localStorage.getItem('gitaAuthSession')||'null')}catch(e){}
+      if(!stored?.refresh_token){
+        saveSession(null);
+        return null;
+      }
+      try{
+        const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
+          method:'POST',
+          headers:{apikey:KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({refresh_token:stored.refresh_token})
+        });
+        if(!r.ok) throw new Error('Session expired');
+        const session=await r.json();
+        saveSession(session);
+        await loadAccountProfile();
+        return session;
+      }catch(e){
+        saveSession(null);
+        return null;
+      }
+    }
+
+    async function loadAccountProfile(){
+      if(!authSession?.access_token||!authSession?.user?.id){
+        accountProfile=null;
+        updateAccountUI();
+        return null;
+      }
+      try{
+        const r=await fetch(
+          SUPA+'/rest/v1/user_accounts?select=*&user_id=eq.'+encodeURIComponent(authSession.user.id)+'&limit=1',
+          {headers:authHeaders(authSession.access_token)}
+        );
+        if(!r.ok) throw new Error(await r.text());
+        const rows=await r.json();
+        accountProfile=rows[0]||null;
+      }catch(e){
+        accountProfile=null;
+      }
+      updateAccountUI();
+      return accountProfile;
+    }
+
+    function updateAccountUI(){
+      const loggedIn=!!authSession?.access_token;
+      $('navAccount').textContent=loggedIn?'Account':'Sign in';
+      $('authLoggedOut').classList.toggle('hidden',loggedIn);
+      $('authLoggedIn').classList.toggle('hidden',!loggedIn);
+
+      if(loggedIn){
+        const email=authSession.user?.email||accountProfile?.email||'—';
+        const plan=accountProfile?.plan_status||'free';
+        const payment=accountProfile?.payment_status||'unpaid';
+
+        $('accountEmail').textContent=email;
+        $('accountPlan').textContent=plan==='lifetime'?'Lifetime':'Free';
+        $('accountPlan').classList.toggle('lifetime',plan==='lifetime');
+        $('accountPayment').textContent=payment.charAt(0).toUpperCase()+payment.slice(1);
+        $('accountPurchased').textContent=accountProfile?.purchased_at
+          ? new Date(accountProfile.purchased_at).toLocaleDateString()
+          : '—';
+        $('accountUpgrade').classList.toggle('hidden',plan==='lifetime');
+      }
+    }
+
+    function openAuth(message=''){
+      $('authModal').classList.remove('hidden');
+      if(message) $('authMessage').textContent=message;
+      updateAccountUI();
+      setTimeout(()=>{if(!authSession)$('authEmail').focus()},50);
+    }
+
+    function closeAuth(){
+      $('authModal').classList.add('hidden');
+      $('authError').textContent='';
+    }
+
+    function setAuthMode(mode){
+      authMode=mode;
+      const signup=mode==='signup';
+      $('authLoginTab').classList.toggle('active',!signup);
+      $('authSignupTab').classList.toggle('active',signup);
+      $('authSubmit').textContent=signup?'Create account':'Sign in';
+      $('authTitle').textContent=signup?'Create your account':'Sign in to Gita with Krishna';
+      $('authPassword').autocomplete=signup?'new-password':'current-password';
+      $('authError').textContent='';
+    }
+
+    async function submitAuth(e){
+      e.preventDefault();
+      const email=$('authEmail').value.trim();
+      const password=$('authPassword').value;
+      $('authError').textContent='';
+      $('authSubmit').disabled=true;
+      $('authSubmit').textContent=authMode==='signup'?'Creating…':'Signing in…';
+
+      try{
+        const endpoint=authMode==='signup'
+          ? SUPA+'/auth/v1/signup'
+          : SUPA+'/auth/v1/token?grant_type=password';
+        const r=await fetch(endpoint,{
+          method:'POST',
+          headers:{apikey:KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({email,password})
+        });
+        const data=await r.json();
+        if(!r.ok) throw new Error(data.msg||data.error_description||data.message||'Authentication failed');
+
+        if(authMode==='signup'&&!data.access_token){
+          $('authError').style.color='#2f7d32';
+          $('authError').textContent='Account created. Check your email to confirm it, then sign in.';
+          setAuthMode('login');
+          return;
+        }
+
+        saveSession(data);
+        await loadAccountProfile();
+        closeAuth();
+        toast('Signed in');
+      }catch(err){
+        $('authError').style.color='#b53a20';
+        $('authError').textContent=err.message||'Could not sign in';
+      }finally{
+        $('authSubmit').disabled=false;
+        $('authSubmit').textContent=authMode==='signup'?'Create account':'Sign in';
+      }
+    }
+
+    async function signOut(){
+      try{
+        if(authSession?.access_token){
+          await fetch(SUPA+'/auth/v1/logout',{
+            method:'POST',
+            headers:authHeaders(authSession.access_token)
+          });
+        }
+      }catch(e){}
+      accountProfile=null;
+      saveSession(null);
+      closeAuth();
+      toast('Signed out');
+    }
+
+    function startLifetimePurchase(){
+      if(!authSession?.access_token){
+        openAuth('Sign in first so we can connect your lifetime purchase to the correct email account.');
+        return;
+      }
+      localStorage.setItem('pendingLifetimePurchase',JSON.stringify({
+        user_id:authSession.user?.id,
+        email:authSession.user?.email,
+        started_at:new Date().toISOString()
+      }));
+      window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
     }
 
     const LIFE_TOPICS={
@@ -1558,13 +1826,19 @@
 
     $('navHome').addEventListener('click',()=>showScreen('home'));
     $('navChat').addEventListener('click',()=>showScreen('chatScreen'));
+    $('navAccount').addEventListener('click',()=>openAuth());
+    $('closeAuth').addEventListener('click',closeAuth);
+    $('authBackdrop').addEventListener('click',closeAuth);
+    $('authLoginTab').addEventListener('click',()=>setAuthMode('login'));
+    $('authSignupTab').addEventListener('click',()=>setAuthMode('signup'));
+    $('authForm').addEventListener('submit',submitAuth);
+    $('signOutBtn').addEventListener('click',signOut);
+    $('accountUpgrade').addEventListener('click',startLifetimePurchase);
     $('askHero').addEventListener('click',()=>showScreen('chatScreen'));
     $('startReading').addEventListener('click',()=>document.querySelector('.section-head').scrollIntoView({behavior:'smooth'}));
     $('backHome').addEventListener('click',()=>showScreen('home'));
     $('backTopics').addEventListener('click',()=>showScreen('home'));
-    $('buyLifetime').addEventListener('click',()=>{
-      window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
-    });
+    $('buyLifetime').addEventListener('click',startLifetimePurchase);
     $('backChapter').addEventListener('click',()=>showScreen('chapterScreen'));
     $('audioBtn').addEventListener('click',speak);
     $('saveVerse').addEventListener('click',toggleSave);
@@ -1590,8 +1864,11 @@
     document.querySelectorAll('.suggestions button').forEach(b=>b.addEventListener('click',()=>sendChat(b.textContent)));
     window.addEventListener('beforeunload',stopSpeech);
 
-    load().catch(e=>{
-      $('chapters').innerHTML='<div class="meta">Could not load the Gita. '+e.message+'</div>';
+    updateAccountUI();
+    refreshAuthSession().finally(()=>{
+      load().catch(e=>{
+        $('chapters').innerHTML='<div class="meta">Could not load the Gita. '+e.message+'</div>';
+      });
     });
   </script>
 </body>
