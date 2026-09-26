@@ -1490,6 +1490,35 @@
       line-height:1;
     }
     .welcome-user.hidden{display:none!important}
+
+    .nav{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .nav .welcome-user{
+      margin:0 4px 0 0;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.48);
+      border:1px solid rgba(140,58,0,.14);
+      color:#6b2c08;
+      font-size:12px;
+      font-weight:900;
+      line-height:1;
+      white-space:nowrap;
+    }
+    @media(max-width:760px){
+      .nav .welcome-user{
+        width:100%;
+        justify-content:flex-end;
+        order:-1;
+        background:transparent;
+        border:0;
+        padding:0 2px 4px;
+      }
+      .nav{flex-wrap:wrap;justify-content:flex-end}
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1524,6 +1553,7 @@
         <div><strong>Gita Verse</strong><small>Read · Reflect · Ask</small></div>
       </div>
       <nav class="nav">
+        <span id="welcomeUser" class="welcome-user hidden"></span>
         <button id="navHome" class="active">Home</button>
         <button id="navChat">Ask Krishna</button>
         <button id="navAccount">Sign in</button>
