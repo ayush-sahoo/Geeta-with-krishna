@@ -1322,18 +1322,26 @@
     }
 
     async function loadAccountProfile(){
-      if(!authSession?.access_token||!authSession?.user?.id){
-        accountProfile=null;updateAccountUI();return null;
+      if(!authSession?.access_token){
+        accountProfile=null;
+        updateAccountUI();
+        return null;
       }
       try{
-        const r=await fetch(
-          SUPA+'/rest/v1/user_accounts?select=*&user_id=eq.'+encodeURIComponent(authSession.user.id)+'&limit=1',
-          {headers:authHeaders(authSession.access_token)}
-        );
-        if(!r.ok) throw new Error(await r.text());
-        const rows=await r.json();
-        accountProfile=rows[0]||null;
-      }catch(e){accountProfile=null}
+        const r=await fetch(SUPA+'/functions/v1/get-my-access',{
+          method:'GET',
+          headers:{
+            apikey:KEY,
+            Authorization:'Bearer '+authSession.access_token
+          }
+        });
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(data.error||'Could not load account access');
+        accountProfile=data;
+      }catch(e){
+        accountProfile=null;
+        console.error('loadAccountProfile failed',e);
+      }
       updateAccountUI();
       return accountProfile;
     }
