@@ -268,7 +268,7 @@
           <button id="audioBtn" class="audio-btn" aria-label="Play verse and meaning">▶</button>
           <div class="audio-copy">
             <strong>Hear this verse</strong>
-            <small>Chanting voice → faster explanation · energetic devotional ambience</small>
+            <small>Female chant → male meaning · energetic devotional music</small>
           </div>
           <div id="wave" class="wave"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
@@ -585,6 +585,7 @@
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
         headers:{apikey:KEY,'Content-Type':'application/json'},
+        cache:'no-store',
         body:JSON.stringify({text,kind})
       });
       if(!r.ok){
@@ -624,7 +625,7 @@
         await playBlob(verseAudio);
         if(!speaking)return;
 
-        await new Promise(r=>setTimeout(r,450));
+        await new Promise(r=>setTimeout(r,300));
         if(!speaking)return;
 
         const meaningAudio=await fetchTTS(spokenExplanation(v),'meaning');
