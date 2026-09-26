@@ -1306,6 +1306,134 @@
         padding:20px 18px;
       }
     }
+
+    /* Fix preview clipping/layout bug */
+    .actual-preview-shell{
+      position:relative;
+      width:100%;
+      grid-column:1/-1;
+      overflow:hidden;
+      border-radius:24px;
+      background:rgba(255,248,232,.18);
+      border:1px solid rgba(128,61,19,.10);
+      box-shadow:0 12px 28px rgba(130,55,10,.08);
+      isolation:isolate;
+    }
+
+    .topic-actual-preview{
+      min-height:220px;
+    }
+
+    .chapter-actual-preview{
+      height:560px;
+    }
+
+    .actual-preview-content{
+      position:relative;
+      inset:auto;
+      z-index:1;
+      padding:18px;
+      opacity:.54;
+      filter:blur(.7px) saturate(.92);
+      pointer-events:none;
+      user-select:none;
+      transform:none;
+    }
+
+    .actual-topic-grid{
+      margin:0;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-content:flex-start;
+    }
+
+    .actual-chapter-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      max-height:520px;
+      overflow:hidden;
+    }
+
+    .actual-chapter-grid .chapter{
+      min-height:145px;
+      margin:0;
+    }
+
+    .actual-preview-overlay{
+      position:absolute;
+      z-index:3;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:min(560px,calc(100% - 40px));
+      max-width:calc(100% - 40px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:22px 24px;
+      border-radius:22px;
+      background:rgba(255,249,238,.94);
+      border:1px solid rgba(120,60,20,.12);
+      box-shadow:0 18px 40px rgba(110,45,5,.16);
+      backdrop-filter:blur(10px);
+      box-sizing:border-box;
+    }
+
+    .actual-preview-overlay h3{
+      margin:0;
+      color:#4a1900;
+      font-size:clamp(24px,3.6vw,32px);
+      line-height:1.12;
+      letter-spacing:-.02em;
+    }
+
+    .actual-preview-overlay p{
+      margin:10px 0 16px;
+      max-width:500px;
+      padding:0;
+      color:#6b2c08;
+      font-size:14px;
+      line-height:1.5;
+      background:transparent;
+      border:0;
+      box-shadow:none;
+    }
+
+    .actual-preview-overlay button{
+      border:0;
+      border-radius:999px;
+      padding:12px 20px;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);
+      color:#4a1900;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(255,159,28,.18);
+    }
+
+    .actual-preview-overlay .preview-note{
+      margin-top:9px;
+    }
+
+    @media(max-width:760px){
+      .chapter-actual-preview{
+        height:520px;
+      }
+
+      .actual-chapter-grid{
+        grid-template-columns:1fr;
+        max-height:480px;
+      }
+
+      .actual-preview-overlay{
+        width:calc(100% - 28px);
+        max-width:calc(100% - 28px);
+        padding:20px 16px;
+      }
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
