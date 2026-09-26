@@ -502,7 +502,7 @@
 
       ambientMaster=ctx.createGain();
       ambientMaster.gain.setValueAtTime(0,ctx.currentTime);
-      ambientMaster.gain.linearRampToValueAtTime(.045,ctx.currentTime+.7);
+      ambientMaster.gain.linearRampToValueAtTime(.075,ctx.currentTime+.45);
       ambientMaster.connect(ctx.destination);
 
       const droneFilter=ctx.createBiquadFilter();
@@ -544,11 +544,12 @@
       let beat=0;
       ambientTimer=setInterval(()=>{
         if(!ambientCtx) return;
-        const notes=[392,440,523.25,587.33];
-        bell(notes[beat%notes.length],.018,.55);
-        if(beat%4===2) bell(783.99,.012,.38);
+        const notes=[392,523.25,587.33,659.25,783.99,659.25];
+        bell(notes[beat%notes.length],.032,.34);
+        if(beat%2===0) bell(196,.024,.20);
+        if(beat%4===3) bell(987.77,.018,.22);
         beat++;
-      },720);
+      },330);
     }
 
     function stopAmbient(){
@@ -608,7 +609,9 @@
     }
 
     function spokenExplanation(v){
-      return cleanTranslation(v.translation_english||'');
+      const meaning=cleanTranslation(v.translation_english||'').trim();
+      const first=(meaning.match(/^[^.!?]+[.!?]/)||[meaning])[0];
+      return first.trim();
     }
 
     async function speak(){
