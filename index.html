@@ -268,7 +268,7 @@
           <button id="audioBtn" class="audio-btn" aria-label="Play verse and meaning">▶</button>
           <div class="audio-copy">
             <strong>Hear this verse</strong>
-            <small>Krishna-inspired voice · Sanskrit → explanation</small>
+            <small>Chanting voice → faster explanation · energetic devotional ambience</small>
           </div>
           <div id="wave" class="wave"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
@@ -490,47 +490,69 @@
     let ambientCtx=null;
     let ambientMaster=null;
     let ambientNodes=[];
+    let ambientTimer=null;
 
     function startAmbient(){
       const AC=window.AudioContext||window.webkitAudioContext;
       if(!AC) return;
       stopAmbient();
+
       ambientCtx=new AC();
       const ctx=ambientCtx;
+
       ambientMaster=ctx.createGain();
       ambientMaster.gain.setValueAtTime(0,ctx.currentTime);
-      ambientMaster.gain.linearRampToValueAtTime(.024,ctx.currentTime+1.2);
-
-      const filter=ctx.createBiquadFilter();
-      filter.type='lowpass';
-      filter.frequency.value=620;
-      filter.connect(ambientMaster);
+      ambientMaster.gain.linearRampToValueAtTime(.045,ctx.currentTime+.7);
       ambientMaster.connect(ctx.destination);
+
+      const droneFilter=ctx.createBiquadFilter();
+      droneFilter.type='lowpass';
+      droneFilter.frequency.value=900;
+      droneFilter.connect(ambientMaster);
 
       [146.83,220,293.66].forEach((f,i)=>{
         const osc=ctx.createOscillator();
         const gain=ctx.createGain();
         osc.type=i===1?'triangle':'sine';
         osc.frequency.value=f;
-        gain.gain.value=i===1?.09:.055;
+        gain.gain.value=i===1?.12:.075;
         osc.connect(gain);
-        gain.connect(filter);
+        gain.connect(droneFilter);
         osc.start();
         ambientNodes.push(osc);
       });
 
-      const shimmer=ctx.createOscillator();
-      const shimmerGain=ctx.createGain();
-      shimmer.type='sine';
-      shimmer.frequency.value=440;
-      shimmerGain.gain.value=.012;
-      shimmer.connect(shimmerGain);
-      shimmerGain.connect(filter);
-      shimmer.start();
-      ambientNodes.push(shimmer);
+      function bell(freq,vol,dur){
+        if(!ambientCtx) return;
+        const o=ctx.createOscillator();
+        const g=ctx.createGain();
+        const t=ctx.currentTime;
+        o.type='sine';
+        o.frequency.setValueAtTime(freq,t);
+        g.gain.setValueAtTime(.0001,t);
+        g.gain.exponentialRampToValueAtTime(vol,t+.02);
+        g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+        o.connect(g);
+        g.connect(ambientMaster);
+        o.start(t);
+        o.stop(t+dur+.05);
+      }
+
+      bell(659.25,.045,1.5);
+      bell(987.77,.025,1.0);
+
+      let beat=0;
+      ambientTimer=setInterval(()=>{
+        if(!ambientCtx) return;
+        const notes=[392,440,523.25,587.33];
+        bell(notes[beat%notes.length],.018,.55);
+        if(beat%4===2) bell(783.99,.012,.38);
+        beat++;
+      },720);
     }
 
     function stopAmbient(){
+      if(ambientTimer){clearInterval(ambientTimer);ambientTimer=null;}
       if(!ambientCtx) return;
       const ctx=ambientCtx;
       if(ambientMaster){
@@ -538,7 +560,7 @@
           const now=ctx.currentTime;
           ambientMaster.gain.cancelScheduledValues(now);
           ambientMaster.gain.setValueAtTime(ambientMaster.gain.value,now);
-          ambientMaster.gain.linearRampToValueAtTime(0,now+.7);
+          ambientMaster.gain.linearRampToValueAtTime(0,now+.45);
         }catch(e){}
       }
       const nodes=[...ambientNodes];
@@ -546,7 +568,7 @@
         nodes.forEach(n=>{try{n.stop()}catch(e){}});
         ambientNodes=[];
         try{ctx.close()}catch(e){}
-      },750);
+      },500);
       ambientCtx=null;
       ambientMaster=null;
     }
@@ -585,16 +607,7 @@
     }
 
     function spokenExplanation(v){
-      const meaning=cleanTranslation(v.translation_english||'');
-      const insight={
-        action:'What Krishna is pointing toward here is this: give yourself fully to the action that is yours to do, but do not surrender your inner peace to the outcome.',
-        mind:'Krishna is asking you to observe the mind before obeying it. Fear, anger, and desire become powerful when every impulse is treated like a command.',
-        self:'Krishna is reminding you that circumstances and roles change, but your deeper identity does not have to rise and fall with every external event.',
-        devotion:'Krishna is showing devotion as a way of softening the ego. When action becomes an offering, the pressure to control every reward begins to loosen.',
-        wisdom:'Krishna is pointing toward clear seeing: learning what is temporary, what is lasting, and what deserves to guide your choices.',
-        balance:'Krishna is teaching steadiness. The goal is not to feel nothing, but to stop letting every gain, loss, praise, fear, or disappointment decide your direction.'
-      }[themeOf(v)];
-      return meaning+' '+insight;
+      return cleanTranslation(v.translation_english||'');
     }
 
     async function speak(){
@@ -610,8 +623,10 @@
         if(!speaking)return;
         await playBlob(verseAudio);
         if(!speaking)return;
-        await new Promise(r=>setTimeout(r,850));
+
+        await new Promise(r=>setTimeout(r,450));
         if(!speaking)return;
+
         const meaningAudio=await fetchTTS(spokenExplanation(v),'meaning');
         if(!speaking)return;
         await playBlob(meaningAudio);
