@@ -762,6 +762,88 @@
       background:#ededeb;color:#6b2c08;border-radius:14px;padding:12px;cursor:pointer;font-weight:850;
     }
     #accountUpgrade{margin-top:18px}
+
+    .auth-page{max-width:560px;margin:26px auto 70px}
+    .auth-page-card,.account-page-card{
+      background:linear-gradient(145deg,#f4f4f2,#e8e8e5);
+      border:1px solid rgba(120,60,20,.13);
+      border-radius:30px;
+      padding:32px;
+      color:#4a1900;
+      box-shadow:0 18px 44px rgba(120,60,20,.13);
+    }
+    .auth-page-card{text-align:center}
+    .auth-brand-mark{
+      width:64px;height:64px;border-radius:50%;
+      display:grid;place-items:center;margin:0 auto 14px;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);
+      color:#4a1900;font-size:30px;font-weight:900;
+      box-shadow:0 10px 24px rgba(255,159,28,.22);
+    }
+    .auth-page-card h2,.account-page-card h2{
+      margin:8px 0 8px;color:#4a1900;font-size:clamp(30px,5vw,42px);letter-spacing:-.035em;
+    }
+    .auth-lead{color:#6b2c08;line-height:1.6;margin:0 auto 24px;max-width:440px}
+    .google-btn{
+      width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+      border:1px solid rgba(120,60,20,.14);background:white;color:#3b2a21;
+      border-radius:16px;padding:14px 16px;font-size:15px;font-weight:850;cursor:pointer;
+      box-shadow:0 6px 16px rgba(120,60,20,.07);
+    }
+    .google-g{
+      width:25px;height:25px;border-radius:50%;display:grid;place-items:center;
+      background:white;border:1px solid #ddd;font-weight:900;color:#4285f4;
+    }
+    .auth-or{display:flex;align-items:center;gap:12px;margin:22px 0;color:#8a6a57;font-size:12px}
+    .auth-or::before,.auth-or::after{content:"";height:1px;background:#d6d3cc;flex:1}
+    .phone-label{display:block;text-align:left;color:#6b2c08;font-size:13px;font-weight:850;margin-bottom:7px}
+    .phone-input-wrap{
+      display:flex;align-items:center;background:white;border:1px solid rgba(120,60,20,.15);
+      border-radius:15px;overflow:hidden;margin-bottom:12px;
+    }
+    .country-code{padding:0 12px;color:#5a2100;font-weight:900;border-right:1px solid #e2ddd4}
+    .phone-input-wrap input{
+      flex:1;min-width:0;border:0;outline:0;background:transparent;color:#4a1900;
+      font-size:17px;padding:14px 13px;letter-spacing:.02em;
+    }
+    .auth-main-btn{
+      width:100%;border:0;border-radius:15px;padding:14px 16px;cursor:pointer;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);color:#4a1900;
+      font-weight:950;font-size:15px;box-shadow:0 9px 20px rgba(255,159,28,.18);
+    }
+    .auth-main-btn:disabled{opacity:.55;cursor:not-allowed}
+    .otp-meta{
+      display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;
+      margin-bottom:16px;color:#7a3c16;font-size:13px;
+    }
+    .otp-meta button,.auth-link-btn{
+      border:0;background:transparent;color:#b54700;font-weight:900;cursor:pointer;
+    }
+    .otp-input{
+      width:100%;border:1px solid rgba(120,60,20,.15);background:white;color:#4a1900;
+      border-radius:15px;padding:14px;text-align:center;font-size:25px;font-weight:900;
+      letter-spacing:.35em;outline:none;margin-bottom:12px;
+    }
+    .auth-link-btn{margin-top:12px}
+    .auth-page-error{min-height:20px;margin-top:12px;color:#b53a20;font-size:13px;line-height:1.5}
+    .auth-legal{margin-top:20px;color:#8a6a57;font-size:11px;line-height:1.5}
+    .account-page-card{max-width:620px;margin:18px auto 70px}
+    .account-page-card .account-row{
+      display:flex;justify-content:space-between;align-items:center;gap:18px;
+      padding:14px 0;border-bottom:1px solid rgba(120,60,20,.10);color:#7a3c16;
+    }
+    .account-page-card .account-row strong{color:#4a1900;text-align:right;overflow-wrap:anywhere}
+    .plan-pill{padding:6px 10px;border-radius:999px;background:#ededeb;border:1px solid rgba(120,60,20,.10)}
+    .plan-pill.lifetime{background:#ffd166;color:#4a1900}
+    .auth-signout{
+      width:100%;margin-top:10px;border:1px solid rgba(120,60,20,.14);background:#ededeb;
+      color:#6b2c08;border-radius:15px;padding:13px;cursor:pointer;font-weight:900;
+    }
+    #accountUpgrade{margin-top:18px}
+    @media(max-width:680px){
+      .auth-page-card,.account-page-card{padding:22px;border-radius:24px}
+      .auth-page{margin-top:12px}
+    }
 </style>
 </head>
 <body>
@@ -950,46 +1032,71 @@
         <button id="sendChat">Send</button>
       </div>
     </section>
-  </div>
 
-  <div id="authModal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <div class="auth-backdrop" id="authBackdrop"></div>
-    <div class="auth-card">
-      <button id="closeAuth" class="auth-close" aria-label="Close">×</button>
+    <section id="authScreen" class="screen">
+      <div class="auth-page">
+        <button id="authBack" class="back">← Back</button>
+        <div class="auth-page-card">
+          <div class="auth-brand-mark">ॐ</div>
+          <div class="daily-label">Welcome to Gita with Krishna</div>
+          <h2>Begin your journey</h2>
+          <p class="auth-lead">Create your account to save your access, purchases and plan across devices.</p>
 
-      <div id="authLoggedOut">
-        <div class="lifetime-kicker">Account</div>
-        <h2 id="authTitle">Sign in to Gita with Krishna</h2>
-        <p id="authMessage">Use your email to keep your plan and purchases connected to your account.</p>
+          <button id="googleLogin" class="google-btn">
+            <span class="google-g">G</span>
+            Continue with Google
+          </button>
 
-        <div class="auth-tabs">
-          <button id="authLoginTab" class="active">Sign in</button>
-          <button id="authSignupTab">Create account</button>
+          <div class="auth-or"><span>or continue with mobile</span></div>
+
+          <div id="phoneStep">
+            <label class="phone-label">Mobile number</label>
+            <div class="phone-input-wrap">
+              <span class="country-code">+91</span>
+              <input id="phoneNumber" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="9876543210">
+            </div>
+            <button id="sendOtp" class="auth-main-btn">Send OTP</button>
+          </div>
+
+          <div id="otpStep" class="hidden">
+            <div class="otp-meta">
+              <span>OTP sent to</span>
+              <strong id="otpPhoneDisplay"></strong>
+              <button id="changePhone" type="button">Change</button>
+            </div>
+            <label class="phone-label">Enter 6-digit OTP</label>
+            <input id="otpCode" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+            <button id="verifyOtp" class="auth-main-btn">Verify & Continue</button>
+            <button id="resendOtp" class="auth-link-btn">Resend OTP</button>
+          </div>
+
+          <div id="authPageError" class="auth-page-error"></div>
+
+          <div class="auth-legal">
+            By continuing, you agree to use Gita with Krishna responsibly and keep your account secure.
+          </div>
         </div>
-
-        <form id="authForm">
-          <label>Email
-            <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com">
-          </label>
-          <label>Password
-            <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters">
-          </label>
-          <button id="authSubmit" type="submit" class="auth-submit">Sign in</button>
-        </form>
-        <div id="authError" class="auth-error"></div>
       </div>
+    </section>
 
-      <div id="authLoggedIn" class="hidden">
-        <div class="lifetime-kicker">Your account</div>
+    <section id="accountScreen" class="screen">
+      <div class="reader-top">
+        <button id="accountBack" class="back">← Home</button>
+        <span class="meta">Your account</span>
+      </div>
+      <div class="account-page-card">
+        <div class="daily-label">Account</div>
         <h2>Namaste 🙏</h2>
         <div class="account-row"><span>Email</span><strong id="accountEmail">—</strong></div>
+        <div class="account-row"><span>Mobile</span><strong id="accountPhone">—</strong></div>
+        <div class="account-row"><span>Sign-in method</span><strong id="accountProvider">—</strong></div>
         <div class="account-row"><span>Plan</span><strong id="accountPlan" class="plan-pill">Free</strong></div>
         <div class="account-row"><span>Payment</span><strong id="accountPayment">Unpaid</strong></div>
         <div class="account-row"><span>Purchased</span><strong id="accountPurchased">—</strong></div>
-        <button id="accountUpgrade" class="auth-submit">Get Lifetime Access — ₹1,000</button>
+        <button id="accountUpgrade" class="auth-main-btn">Get Lifetime Access — ₹1,000</button>
         <button id="signOutBtn" class="auth-signout">Sign out</button>
       </div>
-    </div>
+    </section>
   </div>
 
   <div id="toast" class="toast"></div>
@@ -1005,9 +1112,9 @@
     let currentVerseIndex=0;
     let currentTab='meaning';
     let speaking=false;
-    let authMode='login';
     let authSession=null;
     let accountProfile=null;
+    let pendingPhone='';
     const saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'));
 
     const $=id=>document.getElementById(id);
@@ -1037,11 +1144,7 @@
     }
 
     function authHeaders(token){
-      return {
-        apikey:KEY,
-        Authorization:'Bearer '+token,
-        'Content-Type':'application/json'
-      };
+      return {apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
     }
 
     function saveSession(session){
@@ -1051,13 +1154,35 @@
       updateAccountUI();
     }
 
+    async function consumeOAuthHash(){
+      const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+      const access=hash.get('access_token');
+      const refresh=hash.get('refresh_token');
+      if(!access||!refresh)return false;
+
+      const userRes=await fetch(SUPA+'/auth/v1/user',{headers:authHeaders(access)});
+      if(!userRes.ok)return false;
+      const user=await userRes.json();
+
+      saveSession({
+        access_token:access,
+        refresh_token:refresh,
+        token_type:hash.get('token_type')||'bearer',
+        expires_in:Number(hash.get('expires_in')||3600),
+        user
+      });
+
+      history.replaceState({},document.title,location.pathname+location.search);
+      await loadAccountProfile();
+      showScreen('accountScreen');
+      toast('Signed in with Google');
+      return true;
+    }
+
     async function refreshAuthSession(){
       let stored=null;
       try{stored=JSON.parse(localStorage.getItem('gitaAuthSession')||'null')}catch(e){}
-      if(!stored?.refresh_token){
-        saveSession(null);
-        return null;
-      }
+      if(!stored?.refresh_token){saveSession(null);return null}
       try{
         const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
           method:'POST',
@@ -1077,9 +1202,7 @@
 
     async function loadAccountProfile(){
       if(!authSession?.access_token||!authSession?.user?.id){
-        accountProfile=null;
-        updateAccountUI();
-        return null;
+        accountProfile=null;updateAccountUI();return null;
       }
       try{
         const r=await fetch(
@@ -1089,25 +1212,25 @@
         if(!r.ok) throw new Error(await r.text());
         const rows=await r.json();
         accountProfile=rows[0]||null;
-      }catch(e){
-        accountProfile=null;
-      }
+      }catch(e){accountProfile=null}
       updateAccountUI();
       return accountProfile;
     }
 
     function updateAccountUI(){
       const loggedIn=!!authSession?.access_token;
-      $('navAccount').textContent=loggedIn?'Account':'Sign in';
-      $('authLoggedOut').classList.toggle('hidden',loggedIn);
-      $('authLoggedIn').classList.toggle('hidden',!loggedIn);
+      $('navAccount').textContent=loggedIn?'Account':'Sign up';
 
       if(loggedIn){
         const email=authSession.user?.email||accountProfile?.email||'—';
+        const phone=authSession.user?.phone||accountProfile?.phone||'—';
+        const provider=accountProfile?.auth_provider||authSession.user?.app_metadata?.provider||'—';
         const plan=accountProfile?.plan_status||'free';
         const payment=accountProfile?.payment_status||'unpaid';
 
-        $('accountEmail').textContent=email;
+        $('accountEmail').textContent=email||'—';
+        $('accountPhone').textContent=phone||'—';
+        $('accountProvider').textContent=provider==='google'?'Google':provider==='phone'?'Mobile OTP':provider;
         $('accountPlan').textContent=plan==='lifetime'?'Lifetime':'Free';
         $('accountPlan').classList.toggle('lifetime',plan==='lifetime');
         $('accountPayment').textContent=payment.charAt(0).toUpperCase()+payment.slice(1);
@@ -1118,92 +1241,102 @@
       }
     }
 
-    function openAuth(message=''){
-      $('authModal').classList.remove('hidden');
-      if(message) $('authMessage').textContent=message;
-      updateAccountUI();
-      setTimeout(()=>{if(!authSession)$('authEmail').focus()},50);
+    function openAccount(){
+      if(authSession?.access_token) showScreen('accountScreen');
+      else showScreen('authScreen');
     }
 
-    function closeAuth(){
-      $('authModal').classList.add('hidden');
-      $('authError').textContent='';
+    async function startGoogleLogin(){
+      const redirectTo=location.origin+location.pathname;
+      const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
+      location.href=url;
     }
 
-    function setAuthMode(mode){
-      authMode=mode;
-      const signup=mode==='signup';
-      $('authLoginTab').classList.toggle('active',!signup);
-      $('authSignupTab').classList.toggle('active',signup);
-      $('authSubmit').textContent=signup?'Create account':'Sign in';
-      $('authTitle').textContent=signup?'Create your account':'Sign in to Gita with Krishna';
-      $('authPassword').autocomplete=signup?'new-password':'current-password';
-      $('authError').textContent='';
+    function normalizeIndianPhone(raw){
+      const digits=String(raw||'').replace(/\D/g,'').replace(/^91(?=\d{10}$)/,'');
+      if(!/^\d{10}$/.test(digits)) throw new Error('Enter a valid 10-digit mobile number');
+      return '+91'+digits;
     }
 
-    async function submitAuth(e){
-      e.preventDefault();
-      const email=$('authEmail').value.trim();
-      const password=$('authPassword').value;
-      $('authError').textContent='';
-      $('authSubmit').disabled=true;
-      $('authSubmit').textContent=authMode==='signup'?'Creating…':'Signing in…';
-
+    async function sendPhoneOtp(){
+      $('authPageError').textContent='';
+      const btn=$('sendOtp');
       try{
-        const endpoint=authMode==='signup'
-          ? SUPA+'/auth/v1/signup'
-          : SUPA+'/auth/v1/token?grant_type=password';
-        const r=await fetch(endpoint,{
+        pendingPhone=normalizeIndianPhone($('phoneNumber').value);
+        btn.disabled=true;btn.textContent='Sending…';
+        const r=await fetch(SUPA+'/auth/v1/otp',{
           method:'POST',
           headers:{apikey:KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({email,password})
+          body:JSON.stringify({phone:pendingPhone,create_user:true})
+        });
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Could not send OTP');
+
+        $('phoneStep').classList.add('hidden');
+        $('otpStep').classList.remove('hidden');
+        $('otpPhoneDisplay').textContent=pendingPhone;
+        $('otpCode').value='';
+        $('otpCode').focus();
+        toast('OTP sent');
+      }catch(e){
+        $('authPageError').textContent=e.message||'Could not send OTP';
+      }finally{
+        btn.disabled=false;btn.textContent='Send OTP';
+      }
+    }
+
+    async function verifyPhoneOtp(){
+      $('authPageError').textContent='';
+      const token=$('otpCode').value.replace(/\D/g,'');
+      if(token.length!==6){$('authPageError').textContent='Enter the 6-digit OTP';return}
+      const btn=$('verifyOtp');
+      try{
+        btn.disabled=true;btn.textContent='Verifying…';
+        const r=await fetch(SUPA+'/auth/v1/verify',{
+          method:'POST',
+          headers:{apikey:KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({type:'sms',phone:pendingPhone,token})
         });
         const data=await r.json();
-        if(!r.ok) throw new Error(data.msg||data.error_description||data.message||'Authentication failed');
-
-        if(authMode==='signup'&&!data.access_token){
-          $('authError').style.color='#2f7d32';
-          $('authError').textContent='Account created. Check your email to confirm it, then sign in.';
-          setAuthMode('login');
-          return;
-        }
+        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Invalid OTP');
 
         saveSession(data);
         await loadAccountProfile();
-        closeAuth();
-        toast('Signed in');
-      }catch(err){
-        $('authError').style.color='#b53a20';
-        $('authError').textContent=err.message||'Could not sign in';
+        showScreen('accountScreen');
+        toast('Mobile verified');
+      }catch(e){
+        $('authPageError').textContent=e.message||'Could not verify OTP';
       }finally{
-        $('authSubmit').disabled=false;
-        $('authSubmit').textContent=authMode==='signup'?'Create account':'Sign in';
+        btn.disabled=false;btn.textContent='Verify & Continue';
       }
+    }
+
+    function resetPhoneStep(){
+      $('otpStep').classList.add('hidden');
+      $('phoneStep').classList.remove('hidden');
+      $('authPageError').textContent='';
+      pendingPhone='';
     }
 
     async function signOut(){
       try{
         if(authSession?.access_token){
-          await fetch(SUPA+'/auth/v1/logout',{
-            method:'POST',
-            headers:authHeaders(authSession.access_token)
-          });
+          await fetch(SUPA+'/auth/v1/logout',{method:'POST',headers:authHeaders(authSession.access_token)});
         }
       }catch(e){}
-      accountProfile=null;
-      saveSession(null);
-      closeAuth();
-      toast('Signed out');
+      accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
     }
 
     function startLifetimePurchase(){
       if(!authSession?.access_token){
-        openAuth('Sign in first so we can connect your lifetime purchase to the correct email account.');
+        showScreen('authScreen');
+        $('authPageError').textContent='Sign up or log in first so your lifetime purchase can be linked to your account.';
         return;
       }
       localStorage.setItem('pendingLifetimePurchase',JSON.stringify({
         user_id:authSession.user?.id,
-        email:authSession.user?.email,
+        email:authSession.user?.email||null,
+        phone:authSession.user?.phone||null,
         started_at:new Date().toISOString()
       }));
       window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
@@ -1826,12 +1959,14 @@
 
     $('navHome').addEventListener('click',()=>showScreen('home'));
     $('navChat').addEventListener('click',()=>showScreen('chatScreen'));
-    $('navAccount').addEventListener('click',()=>openAuth());
-    $('closeAuth').addEventListener('click',closeAuth);
-    $('authBackdrop').addEventListener('click',closeAuth);
-    $('authLoginTab').addEventListener('click',()=>setAuthMode('login'));
-    $('authSignupTab').addEventListener('click',()=>setAuthMode('signup'));
-    $('authForm').addEventListener('submit',submitAuth);
+    $('navAccount').addEventListener('click',openAccount);
+    $('authBack').addEventListener('click',()=>showScreen('home'));
+    $('accountBack').addEventListener('click',()=>showScreen('home'));
+    $('googleLogin').addEventListener('click',startGoogleLogin);
+    $('sendOtp').addEventListener('click',sendPhoneOtp);
+    $('verifyOtp').addEventListener('click',verifyPhoneOtp);
+    $('resendOtp').addEventListener('click',sendPhoneOtp);
+    $('changePhone').addEventListener('click',resetPhoneStep);
     $('signOutBtn').addEventListener('click',signOut);
     $('accountUpgrade').addEventListener('click',startLifetimePurchase);
     $('askHero').addEventListener('click',()=>showScreen('chatScreen'));
@@ -1865,11 +2000,13 @@
     window.addEventListener('beforeunload',stopSpeech);
 
     updateAccountUI();
-    refreshAuthSession().finally(()=>{
+    (async()=>{
+      const oauthHandled=await consumeOAuthHash().catch(()=>false);
+      if(!oauthHandled) await refreshAuthSession();
       load().catch(e=>{
         $('chapters').innerHTML='<div class="meta">Could not load the Gita. '+e.message+'</div>';
       });
-    });
+    })();
   </script>
 </body>
 </html>
