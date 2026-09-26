@@ -490,28 +490,39 @@
     let ambientAudio=null;
     let ambientFade=null;
 
-    function startAmbient(){
+    async function startAmbient(){
       stopAmbient();
       try{
-        ambientAudio=new Audio(SUPA+'/functions/v1/raga-music');
+        const b64=await fetch('/raga-loop.b64',{cache:'force-cache'}).then(r=>r.text());
+        const bin=atob(b64.trim());
+        const bytes=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+        const blob=new Blob([bytes],{type:'audio/mpeg'});
+        const url=URL.createObjectURL(blob);
+
+        ambientAudio=new Audio(url);
         ambientAudio.loop=true;
         ambientAudio.preload='auto';
         ambientAudio.volume=0;
-        ambientAudio.play().catch(()=>{});
-        let target=.16;
+
+        await ambientAudio.play();
+
+        let target=.30;
         ambientFade=setInterval(()=>{
           if(!ambientAudio){
             clearInterval(ambientFade);
             ambientFade=null;
             return;
           }
-          ambientAudio.volume=Math.min(target,ambientAudio.volume+.02);
+          ambientAudio.volume=Math.min(target,ambientAudio.volume+.03);
           if(ambientAudio.volume>=target){
             clearInterval(ambientFade);
             ambientFade=null;
           }
-        },70);
-      }catch(e){}
+        },55);
+      }catch(e){
+        console.warn('Background music failed',e);
+      }
     }
 
     function stopAmbient(){
