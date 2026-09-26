@@ -1055,6 +1055,13 @@
           <h2>Begin your journey</h2>
           <p class="auth-lead">Enter your email and we’ll send you a secure sign-in link. No password needed.</p>
 
+          <button id="googleLogin" class="google-btn">
+            <span class="google-g">G</span>
+            Continue with Google
+          </button>
+
+          <div class="auth-or"><span>or continue with email</span></div>
+
           <div id="emailStep">
             <label class="phone-label">Email address</label>
             <input id="emailAddress" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
@@ -1239,6 +1246,12 @@
     function openAccount(){
       if(authSession?.access_token) showScreen('accountScreen');
       else showScreen('authScreen');
+    }
+
+    async function startGoogleLogin(){
+      const redirectTo=location.origin+location.pathname;
+      const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
+      location.href=url;
     }
 
     async function sendEmailMagicLink(){
@@ -1926,6 +1939,7 @@
     $('navAccount').addEventListener('click',openAccount);
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
+    $('googleLogin').addEventListener('click',startGoogleLogin);
     $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
     $('changeEmail').addEventListener('click',resetEmailStep);
     $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
