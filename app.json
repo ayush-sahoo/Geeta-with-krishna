@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Gita with Krishna",
-    "slug": "gita-with-krishna",
+    "name": "Gita Verse",
+    "slug": "gita-verse",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
