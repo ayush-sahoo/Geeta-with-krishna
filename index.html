@@ -1519,58 +1519,6 @@
       }
       .nav{flex-wrap:wrap;justify-content:flex-end}
     }
-
-    .topic-story{
-      margin:18px 0 18px;
-      padding:24px 26px;
-      border-radius:24px;
-      background:linear-gradient(145deg,rgba(255,248,232,.94),rgba(255,230,172,.94));
-      border:1px solid rgba(148,61,0,.14);
-      box-shadow:0 10px 24px rgba(140,58,0,.08);
-    }
-    .topic-story:empty{display:none}
-    .story-label{
-      color:#b34700;
-      font-size:11px;
-      font-weight:950;
-      letter-spacing:.09em;
-      text-transform:uppercase;
-      margin-bottom:8px;
-    }
-    .topic-story h3{
-      margin:0 0 10px;
-      color:#4a1900;
-      font-size:24px;
-      line-height:1.15;
-      letter-spacing:-.02em;
-    }
-    .topic-story p{
-      margin:0;
-      color:#6b2c08;
-      font-size:15px;
-      line-height:1.72;
-    }
-    .verse-evidence-head{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      margin:24px 0 10px;
-    }
-    .verse-evidence-head span{
-      display:block;
-      color:#4a1900;
-      font-size:18px;
-      font-weight:950;
-    }
-    .verse-evidence-head small{
-      display:block;
-      margin-top:3px;
-      color:#8a5a2b;
-      font-size:12px;
-    }
-    .topic-verse.evidence{
-      opacity:.94;
-    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1684,7 +1632,6 @@
         <h2 id="topicTitle"></h2>
         <p id="topicIntro"></p>
       </div>
-      <div id="topicStory" class="topic-story"></div>
       <div class="topic-guide">
         <div class="guide-card do">
           <h3>What to do</h3>
@@ -2504,49 +2451,6 @@
       }
     };
 
-    const TOPIC_STORIES={
-      love:{
-        title:'From attachment to steadier love',
-        body:'The Gita’s thread is that love becomes unstable when it is mixed with possession, fear of loss, or the demand that another person must complete us. BG 6.32 asks us to recognise another person’s joy and pain as our own; BG 12.13 describes mature devotion as friendliness, compassion and non-hatred; BG 9.29 removes the idea that divine love is based on status; and BG 18.65 brings love back to remembrance and devotion. Taken together, the movement is from “I need you to make me secure” toward “I care deeply, but I do not possess you.” That is why the practical advice below focuses on care, compassion and boundaries rather than clinging.'
-      },
-      lust:{
-        title:'How desire turns into loss of control',
-        body:'The Gita gives a sequence rather than a single warning. BG 2.62 says repeated dwelling creates attachment; BG 2.63 shows frustrated attachment becoming anger, confusion and poor judgment; BG 3.37 identifies uncontrolled desire and anger as powerful inner forces; and BG 3.41 tells us to regulate the senses early. So the lesson is not “never desire.” It is: notice the loop before it becomes compulsion. The Do/Don’t steps below are built around interrupting that loop early, reducing triggers and avoiding decisions at the peak of craving.'
-      },
-      anger:{
-        title:'Anger is usually the second emotion',
-        body:'The Gita connects anger to disappointed attachment. BG 2.62–63 traces the chain from fixation to attachment, desire, anger and clouded judgment. BG 5.23 then shifts from diagnosis to training: learn to withstand the surge before acting. BG 16.21 places anger beside desire and greed as forces that can destroy inner clarity. So the story is simple: anger often begins before the outburst, in an expectation we became attached to. The practical response is to pause, identify the frustrated expectation, and act only after clarity returns.'
-      },
-      fear:{
-        title:'Move from imagined futures to present duty',
-        body:'Fear in the Gita is not treated as proof that something bad will happen. BG 2.56 describes steadiness that is not shattered by changing circumstances; BG 4.10 links freedom from fear with deeper understanding and refuge; other teachings repeatedly return to disciplined action without obsession over outcomes. Put together, the message is: uncertainty may remain, but you do not have to let imagined futures control your next action. That is why the steps below separate what is in your control from what is not and bring attention back to preparation, duty and the present moment.'
-      },
-      attachment:{
-        title:'Care fully without being owned by the outcome',
-        body:'Across the Gita, attachment is not the same as involvement. The problem begins when identity and peace depend on a person, object or result staying exactly as we want. The Gita repeatedly teaches full action with less possessiveness toward outcomes. That means you can love, work, build and commit deeply while still allowing reality to change. The Do/Don’t guidance below therefore focuses on responsibility without gripping, appreciation without ownership, and action without making one outcome the condition for your inner stability.'
-      },
-      ego:{
-        title:'Shift from “I am the centre” to “I am a participant”',
-        body:'The Gita repeatedly questions the ego’s claim that “I alone am the doer, controller and owner.” Its broader teaching is that action happens through many causes, conditions and qualities of nature, while wisdom grows when we act without inflating the self around success or failure. This does not mean becoming passive or lacking confidence. It means reducing the need to dominate, be praised, or prove superiority. The practical steps below are therefore about responsibility with humility, learning from correction, and letting contribution matter more than recognition.'
-      },
-      grief:{
-        title:'Grief is real, but it is not the whole truth',
-        body:'The Gita begins with Arjuna overwhelmed by loss, fear and sorrow. Krishna does not mock that pain; he widens Arjuna’s perspective beyond the immediate emotional collapse. Teachings on the enduring Self, change and duty are meant to prevent grief from becoming total identification with loss. The practical implication is not “stop feeling.” It is: let grief move through you without allowing it to erase all meaning, responsibility or connection. The Do/Don’t section below follows that balance—feel honestly, seek support, and avoid making permanent conclusions from an acute wave of pain.'
-      },
-      mind:{
-        title:'The mind becomes what it repeatedly rehearses',
-        body:'The Gita treats the mind as trainable rather than fixed. Repeated attention strengthens certain thoughts, cravings and fears; disciplined redirection gradually weakens them. This is why practice and detachment are paired so often in the Gita’s psychology: one without the other is incomplete. The story is not “force the mind to be silent,” but “notice where it keeps going, interrupt unhelpful loops, and return it again and again.” The steps below convert that principle into practical habits for overthinking and mental restlessness.'
-      },
-      duty:{
-        title:'Do the right work without becoming enslaved by the result',
-        body:'Karma Yoga is a sequence: first identify your responsibility, then act with care, then loosen your psychological dependence on the result. The famous teaching of BG 2.47 is not a command to ignore outcomes; it is a warning against making outcomes the only source of motivation or self-worth. Other passages reinforce acting according to one’s own duty rather than copying another path. That is why the guidance below emphasises controllable effort, values, preparation and consistency—and warns against paralysis, comparison and result-obsession.'
-      },
-      devotion:{
-        title:'Devotion becomes visible in how you live',
-        body:'Bhakti in the Gita moves from inward remembrance to outward character. BG 9.22 speaks of steady devotion, BG 9.26 shows that sincerity matters more than grandeur, BG 12.13 connects devotion with compassion and non-hatred, and BG 18.65 joins remembrance, love and surrender. So devotion is not merely emotional intensity or ritual. It should gradually change how you act. The practical guidance below therefore turns devotion into offering, humility, compassion and steadiness rather than escape from responsibility.'
-      }
-    };
-
     function renderTopicGrid(){
       const grid=$('topicGrid');
       if(!grid)return;
@@ -2567,20 +2471,14 @@
       $('topicEyebrow').textContent=t.kicker;
       $('topicTitle').textContent=t.label;
       $('topicIntro').textContent=t.intro;
-
-      const story=TOPIC_STORIES[key]||null;
-      $('topicStory').innerHTML=story
-        ? '<div class="story-label">How the Gita connects these verses</div><h3>'+story.title+'</h3><p>'+story.body+'</p>'
-        : '';
-
       $('topicDos').innerHTML=(t.dos||[]).map(x=>'<li>'+x+'</li>').join('');
       $('topicDonts').innerHTML=(t.donts||[]).map(x=>'<li>'+x+'</li>').join('');
       $('topicPractice').innerHTML='<strong>Practice for today</strong>'+(t.practice||'');
-      $('topicVerses').innerHTML='<div class="verse-evidence-head"><div><span>Verses behind this guidance</span><small>Tap any verse to read it in context</small></div></div>';
+      $('topicVerses').innerHTML='';
 
       t.verses.forEach(item=>{
         const card=document.createElement('div');
-        card.className='topic-verse evidence';
+        card.className='topic-verse';
         card.innerHTML='<div class="topic-verse-top"><div class="topic-ref">Bhagavad Gita '+item.c+'.'+item.v+'</div><button class="topic-read">Read verse →</button></div><p>'+item.n+'</p>';
         card.querySelector('button').addEventListener('click',()=>openVerseReference(item.c,item.v));
         $('topicVerses').appendChild(card);
