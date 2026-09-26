@@ -1,0 +1,158 @@
+{
+  "success": true,
+  "status": 200,
+  "statusText": "OK",
+  "text": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <meta name=\"theme-color\" content=\"#0d1324\">\n  <title>Gita with Krishna</title>\n  <style>\n    :root{\n      --bg:#0d1324;\n      --bg2:#141d34;\n      --card:#19233d;\n      --card2:#202c49;\n      --gold:#e7bd67;\n      --gold-soft:#f6dda2;\n      --text:#fffaf0;\n      --muted:#c8cfdb;\n      --border:rgba(255,255,255,.14);\n      --accent:#30436b;\n    }\n    *{box-sizing:border-box}\n    html{scroll-behavior:smooth}\n    body{\n      margin:0;\n      min-height:100vh;\n      background:\n        radial-gradient(circle at 50% -10%, #24345b 0%, #141d34 34%, #0d1324 72%);\n      color:var(--text);\n      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;\n    }\n    button,input{font:inherit}\n    button{color:inherit}\n    .app{max-width:960px;margin:0 auto;padding:0 16px 90px}\n    .topbar{\n      position:sticky;top:0;z-index:20;\n      display:flex;justify-content:space-between;align-items:center;\n      padding:14px 0;\n      background:rgba(13,19,36,.92);\n      backdrop-filter:blur(14px);\n      border-bottom:1px solid var(--border);\n    }\n    .brand{display:flex;align-items:center;gap:10px}\n    .mark{\n      width:42px;height:42px;border-radius:50%;\n      display:grid;place-items:center;\n      background:linear-gradient(145deg,#f3d78f,#b98b36);\n      color:#151b2a;font-weight:900;font-size:20px;\n    }\n    .brand strong{display:block;font-size:15px}\n    .brand small{color:var(--muted)}\n    .nav{display:flex;gap:8px}\n    .nav button,.ghost{\n      border:1px solid var(--border);\n      background:rgba(255,255,255,.06);\n      border-radius:999px;\n      padding:10px 14px;\n      cursor:pointer;\n    }\n    .nav button.active{background:var(--gold);color:#151b2a;border-color:transparent;font-weight:800}\n    .screen{display:none}\n    .screen.active{display:block}\n    .hero{padding:52px 0 24px}\n    .eyebrow{color:var(--gold);font-weight:800;letter-spacing:.08em}\n    h1{\n      font-size:clamp(42px,7vw,72px);\n      line-height:1;\n      letter-spacing:-.04em;\n      margin:12px 0 16px;\n      max-width:760px;\n    }\n    .hero p{\n      color:var(--muted);\n      font-size:18px;line-height:1.65;\n      max-width:690px;margin:0;\n    }\n    .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}\n    .primary,.secondary{\n      border-radius:999px;padding:13px 18px;font-weight:800;cursor:pointer;\n    }\n    .primary{border:0;background:var(--gold);color:#151b2a}\n    .secondary{border:1px solid var(--border);background:rgba(255,255,255,.06)}\n    .daily{\n      border:1px solid var(--border);\n      background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.035));\n      border-radius:26px;padding:22px;margin:22px 0 34px;\n    }\n    .daily-label{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}\n    .daily-quote{font-size:21px;line-height:1.6;margin:10px 0}\n    .meta{color:var(--muted);font-size:13px}\n    .section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:24px 0 12px}\n    .section-head h2{margin:0;font-size:26px}\n    .chapters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\n    .chapter{\n      text-align:left;\n      border:1px solid var(--border);\n      background:rgba(255,255,255,.055);\n      border-radius:22px;padding:18px;cursor:pointer;\n      transition:transform .16s ease, background .16s ease;\n    }\n    .chapter:hover{transform:translateY(-2px);background:rgba(255,255,255,.085)}\n    .chapter-num{\n      width:36px;height:36px;border-radius:50%;\n      display:grid;place-items:center;\n      background:#2a385d;color:var(--gold);font-weight:900;\n    }\n    .chapter h3{margin:14px 0 5px;font-size:18px}\n    .chapter .sans{color:#e0e5ec}\n    .reader-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:18px 0}\n    .back{border:0;background:none;color:var(--gold);font-weight:900;padding:8px 0;cursor:pointer}\n    .verse-list{display:grid;gap:10px}\n    .verse-row{\n      text-align:left;border:1px solid var(--border);\n      background:rgba(255,255,255,.055);\n      border-radius:20px;padding:16px;cursor:pointer;\n    }\n    .verse-row .ref{color:var(--gold);font-weight:900}\n    .verse-row .preview{margin-top:8px;white-space:pre-line;line-height:1.65;color:#eef2f7}\n    .verse-hero{\n      border:1px solid var(--border);\n      background:linear-gradient(150deg,#1d2946,#141d34);\n      border-radius:30px;padding:26px;\n    }\n    .verse-ref{text-align:center;color:var(--gold);font-weight:900}\n    .verse-text{\n      font-size:clamp(25px,4.8vw,38px);\n      line-height:1.75;text-align:center;\n      white-space:pre-line;margin:22px auto;\n    }\n    .translit{color:var(--muted);font-style:italic;text-align:center;line-height:1.7}\n    .audio{\n      border-top:1px solid var(--border);\n      margin-top:24px;padding-top:18px;\n      display:flex;gap:14px;align-items:center;flex-wrap:wrap;\n    }\n    .audio-btn{\n      width:54px;height:54px;border-radius:50%;border:0;\n      background:var(--gold);color:#151b2a;\n      font-size:20px;cursor:pointer;\n    }\n    .audio-copy strong{display:block}\n    .audio-copy small{display:block;color:var(--muted);margin-top:3px}\n    .wave{height:28px;display:flex;gap:3px;align-items:center}\n    .wave i{width:3px;height:9px;border-radius:8px;background:var(--gold-soft);opacity:.4}\n    .wave.playing i{animation:pulse .8s infinite alternate}\n    .wave i:nth-child(2){animation-delay:.1s}\n    .wave i:nth-child(3){animation-delay:.2s}\n    .wave i:nth-child(4){animation-delay:.3s}\n    .wave i:nth-child(5){animation-delay:.4s}\n    @keyframes pulse{to{height:26px;opacity:1}}\n    .tabs{display:flex;gap:8px;overflow:auto;padding:18px 0 8px}\n    .tabs button{\n      white-space:nowrap;border:1px solid var(--border);\n      background:rgba(255,255,255,.05);\n      color:var(--muted);border-radius:999px;padding:10px 13px;cursor:pointer;\n    }\n    .tabs button.active{background:var(--accent);color:white;border-color:#5870a4}\n    .panel{\n      border:1px solid var(--border);\n      background:rgba(255,255,255,.055);\n      border-radius:22px;padding:22px;\n    }\n    .panel h3{margin:0 0 10px;color:var(--gold);font-size:13px;text-transform:uppercase;letter-spacing:.09em}\n    .panel p{white-space:pre-line;margin:0;font-size:17px;line-height:1.75;color:#f4f6f9}\n    .reflect{margin-top:16px;padding:15px 16px;border-left:3px solid var(--gold);background:rgba(255,255,255,.04);border-radius:0 14px 14px 0;color:#d7dde6;line-height:1.6}\n    .verse-actions{display:flex;justify-content:space-between;gap:10px;margin-top:16px}\n    .verse-actions button{border:1px solid var(--border);background:rgba(255,255,255,.06);padding:11px 14px;border-radius:14px;cursor:pointer}\n    .verse-actions button:disabled{opacity:.35;cursor:not-allowed}\n    .chat-head{\n      border:1px solid var(--border);\n      background:linear-gradient(145deg,#202e4f,#151f39);\n      border-radius:24px;padding:22px;margin-top:20px;\n    }\n    .chat-head h2{font-size:30px;margin:5px 0 8px}\n    .chat-head p{margin:0;color:var(--muted);line-height:1.6}\n    .suggestions{display:flex;gap:8px;overflow:auto;margin:14px 0}\n    .suggestions button{white-space:nowrap;border:1px solid var(--border);background:rgba(255,255,255,.06);padding:9px 12px;border-radius:999px;cursor:pointer}\n    .chat{display:flex;flex-direction:column;gap:10px;padding:12px 0}\n    .bubble{max-width:86%;padding:14px 15px;border-radius:20px;line-height:1.6;white-space:pre-line}\n    .assistant{align-self:flex-start;background:rgba(255,255,255,.065);border:1px solid var(--border)}\n    .user{align-self:flex-end;background:#30436b}\n    .cite{margin-top:7px;color:var(--gold);font-size:12px}\n    .composer{\n      position:sticky;bottom:12px;\n      display:flex;gap:8px;\n      background:rgba(18,25,47,.94);\n      border:1px solid var(--border);\n      border-radius:20px;padding:10px;\n      backdrop-filter:blur(14px);\n    }\n    .composer input{\n      flex:1;min-width:0;\n      border:1px solid var(--border);\n      background:#0f1629;\n      color:white;border-radius:14px;padding:12px;\n      outline:none;\n    }\n    .composer button{border:0;background:var(--gold);color:#151b2a;font-weight:900;border-radius:14px;padding:10px 16px;cursor:pointer}\n    .toast{\n      position:fixed;left:50%;bottom:22px;transform:translateX(-50%);\n      background:#202b47;color:white;border:1px solid var(--border);\n      padding:10px 14px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;\n    }\n    .toast.show{opacity:1}\n    @media(max-width:680px){\n      .chapters{grid-template-columns:1fr}\n      .app{padding-inline:12px}\n      .hero{padding-top:34px}\n      .verse-hero{padding:19px}\n      .brand small{display:none}\n    }\n  </style>\n</head>\n<body>\n  <div class=\"app\">\n    <header class=\"topbar\">\n      <div class=\"brand\">\n        <div class=\"mark\">ॐ</div>\n        <div><strong>Gita with Krishna</strong><small>Read · Reflect · Ask</small></div>\n      </div>\n      <nav class=\"nav\">\n        <button id=\"navHome\" class=\"active\">Home</button>\n        <button id=\"navChat\">Ask Krishna</button>\n      </nav>\n    </header>\n\n    <section id=\"home\" class=\"screen active\">\n      <div class=\"hero\">\n        <div class=\"eyebrow\">श्रीमद्भगवद्गीता</div>\n        <h1>Ancient wisdom.<br>For your life today.</h1>\n        <p>Explore all 18 chapters, understand each verse at multiple depths, hear the shloka first and its meaning second, and ask questions grounded in the Gita.</p>\n        <div class=\"cta\">\n          <button id=\"startReading\" class=\"primary\">Start reading</button>\n          <button id=\"askHero\" class=\"secondary\">Ask Krishna</button>\n        </div>\n      </div>\n\n      <div id=\"daily\" class=\"daily\">\n        <div class=\"daily-label\">Verse for today</div>\n        <div class=\"daily-quote\">Loading your verse…</div>\n        <div class=\"daily-ref meta\"></div>\n      </div>\n\n      <div class=\"section-head\"><h2>18 Chapters</h2><span class=\"meta\">701 verses</span></div>\n      <div id=\"chapters\" class=\"chapters\"></div>\n    </section>\n\n    <section id=\"chapterScreen\" class=\"screen\">\n      <div class=\"reader-top\">\n        <button id=\"backHome\" class=\"back\">← Chapters</button>\n        <span id=\"chapterCount\" class=\"meta\"></span>\n      </div>\n      <div class=\"eyebrow\" id=\"chapterEyebrow\"></div>\n      <h2 id=\"chapterTitle\" style=\"font-size:34px;margin:7px 0 20px\"></h2>\n      <div id=\"verseList\" class=\"verse-list\"></div>\n    </section>\n\n    <section id=\"verseScreen\" class=\"screen\">\n      <div class=\"reader-top\">\n        <button id=\"backChapter\" class=\"back\">← Chapter</button>\n        <button id=\"saveVerse\" class=\"ghost\">☆ Save</button>\n      </div>\n\n      <article class=\"verse-hero\">\n        <div id=\"verseRef\" class=\"verse-ref\"></div>\n        <div id=\"verseSanskrit\" class=\"verse-text\"></div>\n        <div id=\"verseTranslit\" class=\"translit\"></div>\n        <div class=\"audio\">\n          <button id=\"audioBtn\" class=\"audio-btn\" aria-label=\"Play verse and meaning\">▶</button>\n          <div class=\"audio-copy\">\n            <strong>Hear this verse</strong>\n            <small>Krishna-inspired voice · Sanskrit → explanation</small>\n          </div>\n          <div id=\"wave\" class=\"wave\"><i></i><i></i><i></i><i></i><i></i></div>\n        </div>\n      </article>\n\n      <div id=\"meaningTabs\" class=\"tabs\">\n        <button data-tab=\"meaning\" class=\"active\">Meaning</button>\n        <button data-tab=\"deep\">Deep meaning</button>\n        <button data-tab=\"today\">Apply today</button>\n      </div>\n\n      <div class=\"panel\">\n        <h3 id=\"panelTitle\">Meaning</h3>\n        <p id=\"panelBody\"></p>\n        <div id=\"reflection\" class=\"reflect\"></div>\n      </div>\n\n      <div class=\"verse-actions\">\n        <button id=\"prevVerse\">← Previous</button>\n        <button id=\"nextVerse\">Next →</button>\n      </div>\n    </section>\n\n    <section id=\"chatScreen\" class=\"screen\">\n      <div class=\"chat-head\">\n        <div class=\"eyebrow\">Ask through the lens of the Gita</div>\n        <h2>What is on your mind?</h2>\n        <p>Responses are an AI devotional guide inspired by the Bhagavad Gita and cite relevant verses.</p>\n      </div>\n\n      <div class=\"suggestions\">\n        <button>I'm anxious about my career</button>\n        <button>How do I control anger?</button>\n        <button>How do I let go?</button>\n        <button>What is my duty?</button>\n      </div>\n\n      <div id=\"chat\" class=\"chat\">\n        <div class=\"bubble assistant\">Namaste. Tell me what you are facing, and I’ll reflect on it through relevant verses from the Gita.</div>\n      </div>\n\n      <div class=\"composer\">\n        <input id=\"chatInput\" placeholder=\"Ask about fear, work, relationships, purpose…\">\n        <button id=\"sendChat\">Send</button>\n      </div>\n    </section>\n  </div>\n\n  <div id=\"toast\" class=\"toast\"></div>\n\n  <script>\n    const SUPA='https://bkwvuckznpaawmqrjjgk.supabase.co';\n    const KEY='sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW';\n    const headers={apikey:KEY,Authorization:'Bearer '+KEY};\n\n    let chapters=[];\n    let currentChapter=null;\n    let currentVerses=[];\n    let currentVerseIndex=0;\n    let currentTab='meaning';\n    let speaking=false;\n    const saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'));\n\n    const $=id=>document.getElementById(id);\n\n    function showScreen(id){\n      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));\n      $(id).classList.add('active');\n      $('navHome').classList.toggle('active',id==='home');\n      $('navChat').classList.toggle('active',id==='chatScreen');\n      window.scrollTo({top:0,behavior:'smooth'});\n    }\n\n    async function api(path){\n      const r=await fetch(SUPA+'/rest/v1/'+path,{headers});\n      if(!r.ok) throw new Error(await r.text());\n      return r.json();\n    }\n\n    function toast(msg){\n      $('toast').textContent=msg;\n      $('toast').classList.add('show');\n      setTimeout(()=>$('toast').classList.remove('show'),1400);\n    }\n\n    function cleanTranslation(t=''){\n      return t.replace(/^\\d+\\.\\d+\\.?\\s*/,'').trim();\n    }\n\n    function themeOf(v){\n      const t=(v.translation_english||'').toLowerCase();\n      if(/action|work|duty|fruit|result/.test(t))return 'action';\n      if(/mind|sense|desire|anger/.test(t))return 'mind';\n      if(/soul|self|death|born|eternal/.test(t))return 'self';\n      if(/devotion|worship|love|faith/.test(t))return 'devotion';\n      if(/knowledge|wisdom|ignorance/.test(t))return 'wisdom';\n      return 'balance';\n    }\n\n    function deepMeaning(v){\n      const base=cleanTranslation(v.translation_english||'');\n      const text={\n        action:'This verse points beyond mere activity. It asks you to separate the quality of your action from your hunger for a particular outcome. Krishna’s teaching here is about inner freedom: act fully, but do not hand your peace over to results you cannot completely control.',\n        mind:'The deeper teaching is that the mind becomes either a guide or a trap depending on what it repeatedly attaches itself to. The verse invites observation before reaction — notice desire, fear, anger, or impulse before they become action.',\n        self:'At a deeper level, this verse distinguishes the changing surface of life from the deeper Self. Roles, circumstances, success, loss, and even the body change; the teaching asks you to discover a steadier identity beneath them.',\n        devotion:'This verse treats devotion not as passive belief but as a way of re-centering the ego. Offering action and intention to something higher loosens the need to control every outcome.',\n        wisdom:'The verse is about seeing clearly. Wisdom in the Gita is not simply information; it is the ability to recognize what is lasting, what is temporary, and what kind of action follows from that distinction.',\n        balance:'The deeper movement of this verse is toward steadiness. The Gita repeatedly teaches that clarity appears when we stop being pulled entirely by praise and blame, gain and loss, hope and fear.'\n      }[themeOf(v)];\n      return text+'\\n\\nIn this verse, the immediate teaching is: '+base;\n    }\n\n    function applyToday(v){\n      return {\n        action:'Choose one important task today. Give it your best attention for 30 minutes without checking whether it is “working” yet. Measure yourself by the quality of your effort, not the immediate result.',\n        mind:'Before your next emotional reaction, create a 10-second gap. Name what you are feeling, breathe once slowly, and then choose your response instead of letting the impulse choose for you.',\n        self:'Notice one identity you are clinging to today — job title, approval, success, failure, appearance. Ask: “If this changed, what in me would still remain?”',\n        devotion:'Take one ordinary action — a meal, a task, a conversation — and do it as an offering rather than as a transaction. Focus on sincerity instead of reward.',\n        wisdom:'When you face a decision today, write two columns: what is temporary and what is principled. Let the principled side influence the next action.',\n        balance:'When something goes unusually well or badly today, delay your conclusion about what it “means.” Return to the next right action before judging the whole situation.'\n      }[themeOf(v)];\n    }\n\n    function reflectionFor(v){\n      return {\n        action:'Reflection: What action is mine to do, even if the outcome is uncertain?',\n        mind:'Reflection: What emotion is currently asking to make a decision for me?',\n        self:'Reflection: What part of me remains steady when circumstances change?',\n        devotion:'Reflection: What would change if I treated this action as an offering?',\n        wisdom:'Reflection: What am I seeing clearly, and what am I assuming?',\n        balance:'Reflection: Can I stay steady long enough to choose rather than react?'\n      }[themeOf(v)];\n    }\n\n    async function load(){\n      chapters=await api('gita_chapters?select=*&order=id.asc');\n      $('chapters').innerHTML='';\n\n      chapters.forEach(c=>{\n        const b=document.createElement('button');\n        b.className='chapter';\n        b.innerHTML='<span class=\"chapter-num\">'+c.id+'</span><h3>'+c.name_english+'</h3><div class=\"sans\">'+c.name_sanskrit+'</div><div class=\"meta\" style=\"margin-top:10px\">'+c.verse_count+' verses</div>';\n        b.addEventListener('click',()=>openChapter(c));\n        $('chapters').appendChild(b);\n      });\n\n      const seed=new Date().getDate()+new Date().getMonth()*31;\n      const chapter=chapters[seed%chapters.length];\n      const list=await api('gita_verses?select=chapter_id,verse_number,translation_english&chapter_id=eq.'+chapter.id+'&order=verse_number.asc');\n      const verse=list[seed%list.length];\n      if(verse){\n        $('daily').querySelector('.daily-quote').textContent='“'+cleanTranslation(verse.translation_english)+'”';\n        $('daily').querySelector('.daily-ref').textContent='Bhagavad Gita '+verse.chapter_id+'.'+verse.verse_number;\n      }\n    }\n\n    async function openChapter(c){\n      currentChapter=c;\n      showScreen('chapterScreen');\n      $('chapterEyebrow').textContent='Chapter '+c.id;\n      $('chapterTitle').textContent=c.name_english;\n      $('chapterCount').textContent=c.verse_count+' verses';\n      $('verseList').innerHTML='<div class=\"meta\">Loading verses…</div>';\n\n      currentVerses=await api('gita_verses?select=*&chapter_id=eq.'+c.id+'&order=verse_number.asc');\n      $('verseList').innerHTML='';\n\n      currentVerses.forEach((v,i)=>{\n        const b=document.createElement('button');\n        b.className='verse-row';\n        b.innerHTML='<div class=\"ref\">Verse '+c.id+'.'+v.verse_number+'</div><div class=\"preview\">'+v.sanskrit+'</div>';\n        b.addEventListener('click',()=>openVerse(i));\n        $('verseList').appendChild(b);\n      });\n    }\n\n    function openVerse(i){\n      currentVerseIndex=i;\n      currentTab='meaning';\n      showScreen('verseScreen');\n      renderVerse();\n      renderTab('meaning');\n    }\n\n    function renderVerse(){\n      stopSpeech();\n      const v=currentVerses[currentVerseIndex];\n      $('verseRef').textContent='Bhagavad Gita '+v.chapter_id+'.'+v.verse_number;\n      $('verseSanskrit').textContent=v.sanskrit;\n      $('verseTranslit').textContent=v.transliteration||'';\n      $('saveVerse').textContent=saved.has(v.id)?'★ Saved':'☆ Save';\n      $('prevVerse').disabled=currentVerseIndex===0;\n      $('nextVerse').disabled=currentVerseIndex===currentVerses.length-1;\n    }\n\n    function renderTab(tab){\n      currentTab=tab;\n      document.querySelectorAll('#meaningTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));\n      const v=currentVerses[currentVerseIndex];\n\n      if(tab==='meaning'){\n        $('panelTitle').textContent='Meaning';\n        $('panelBody').textContent=cleanTranslation(v.translation_english||'Meaning unavailable.');\n        $('reflection').textContent='Read slowly. Notice which phrase creates the strongest reaction in you.';\n      }\n      if(tab==='deep'){\n        $('panelTitle').textContent='Deep Meaning';\n        $('panelBody').textContent=deepMeaning(v);\n        $('reflection').textContent=reflectionFor(v);\n      }\n      if(tab==='today'){\n        $('panelTitle').textContent='Apply Today';\n        $('panelBody').textContent=applyToday(v);\n        $('reflection').textContent='Keep the practice small enough that you can actually do it today.';\n      }\n    }\n\n    let currentAudio=null;
+    let ambientCtx=null;
+    let ambientMaster=null;
+    let ambientNodes=[];
+
+    function startAmbient(){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      stopAmbient();
+      ambientCtx=new AC();
+      const ctx=ambientCtx;
+      ambientMaster=ctx.createGain();
+      ambientMaster.gain.setValueAtTime(0,ctx.currentTime);
+      ambientMaster.gain.linearRampToValueAtTime(.024,ctx.currentTime+1.2);
+
+      const filter=ctx.createBiquadFilter();
+      filter.type='lowpass';
+      filter.frequency.value=620;
+      filter.connect(ambientMaster);
+      ambientMaster.connect(ctx.destination);
+
+      [146.83,220,293.66].forEach((f,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.type=i===1?'triangle':'sine';
+        osc.frequency.value=f;
+        gain.gain.value=i===1?.09:.055;
+        osc.connect(gain);
+        gain.connect(filter);
+        osc.start();
+        ambientNodes.push(osc);
+      });
+
+      const shimmer=ctx.createOscillator();
+      const shimmerGain=ctx.createGain();
+      shimmer.type='sine';
+      shimmer.frequency.value=440;
+      shimmerGain.gain.value=.012;
+      shimmer.connect(shimmerGain);
+      shimmerGain.connect(filter);
+      shimmer.start();
+      ambientNodes.push(shimmer);
+    }
+
+    function stopAmbient(){
+      if(!ambientCtx) return;
+      const ctx=ambientCtx;
+      if(ambientMaster){
+        try{
+          const now=ctx.currentTime;
+          ambientMaster.gain.cancelScheduledValues(now);
+          ambientMaster.gain.setValueAtTime(ambientMaster.gain.value,now);
+          ambientMaster.gain.linearRampToValueAtTime(0,now+.7);
+        }catch(e){}
+      }
+      const nodes=[...ambientNodes];
+      setTimeout(()=>{
+        nodes.forEach(n=>{try{n.stop()}catch(e){}});
+        ambientNodes=[];
+        try{ctx.close()}catch(e){}
+      },750);
+      ambientCtx=null;
+      ambientMaster=null;
+    }
+
+    function stopSpeech(){
+      if(currentAudio){try{currentAudio.pause()}catch(e){} currentAudio=null;}
+      stopAmbient();
+      speaking=false;
+      $('audioBtn').textContent='▶';
+      $('wave').classList.remove('playing');
+    }
+
+    async function fetchTTS(text,kind){
+      const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
+        method:'POST',
+        headers:{apikey:KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({text,kind})
+      });
+      if(!r.ok){
+        let msg='Voice generation failed';
+        try{const j=await r.json();msg=j.error||msg}catch(e){}
+        throw new Error(msg);
+      }
+      return r.blob();
+    }
+
+    function playBlob(blob){
+      return new Promise((resolve,reject)=>{
+        const url=URL.createObjectURL(blob);
+        const a=new Audio(url);
+        currentAudio=a;
+        a.onended=()=>{URL.revokeObjectURL(url);currentAudio=null;resolve()};
+        a.onerror=()=>{URL.revokeObjectURL(url);currentAudio=null;reject(new Error('Audio playback failed'))};
+        a.play().catch(reject);
+      });
+    }
+
+    function spokenExplanation(v){
+      const meaning=cleanTranslation(v.translation_english||'');
+      const insight={
+        action:'What Krishna is pointing toward here is this: give yourself fully to the action that is yours to do, but do not surrender your inner peace to the outcome.',
+        mind:'Krishna is asking you to observe the mind before obeying it. Fear, anger, and desire become powerful when every impulse is treated like a command.',
+        self:'Krishna is reminding you that circumstances and roles change, but your deeper identity does not have to rise and fall with every external event.',
+        devotion:'Krishna is showing devotion as a way of softening the ego. When action becomes an offering, the pressure to control every reward begins to loosen.',
+        wisdom:'Krishna is pointing toward clear seeing: learning what is temporary, what is lasting, and what deserves to guide your choices.',
+        balance:'Krishna is teaching steadiness. The goal is not to feel nothing, but to stop letting every gain, loss, praise, fear, or disappointment decide your direction.'
+      }[themeOf(v)];
+      return meaning+' '+insight;
+    }
+
+    async function speak(){
+      if(speaking){stopSpeech();return}
+      const v=currentVerses[currentVerseIndex];
+      speaking=true;
+      $('audioBtn').textContent='■';
+      $('wave').classList.add('playing');
+      startAmbient();
+
+      try{
+        const verseAudio=await fetchTTS(v.sanskrit,'verse');
+        if(!speaking)return;
+        await playBlob(verseAudio);
+        if(!speaking)return;
+        await new Promise(r=>setTimeout(r,850));
+        if(!speaking)return;
+        const meaningAudio=await fetchTTS(spokenExplanation(v),'meaning');
+        if(!speaking)return;
+        await playBlob(meaningAudio);
+      }catch(e){
+        toast(e.message||'Narration stopped');
+      }finally{
+        if(speaking) stopSpeech();
+      }
+    }
+
+    function toggleSave(){\n      const v=currentVerses[currentVerseIndex];\n      if(saved.has(v.id)) saved.delete(v.id); else saved.add(v.id);\n      localStorage.setItem('savedVerses',JSON.stringify([...saved]));\n      $('saveVerse').textContent=saved.has(v.id)?'★ Saved':'☆ Save';\n      toast(saved.has(v.id)?'Verse saved':'Removed from saved');\n    }\n\n    async function sendChat(text){\n      const q=(text||$('chatInput').value).trim();\n      if(!q)return;\n      $('chatInput').value='';\n\n      const u=document.createElement('div');\n      u.className='bubble user';\n      u.textContent=q;\n      $('chat').appendChild(u);\n\n      const a=document.createElement('div');\n      a.className='bubble assistant';\n      a.textContent='Reflecting on the Gita…';\n      $('chat').appendChild(a);\n      a.scrollIntoView({behavior:'smooth'});\n\n      try{\n        const r=await fetch(SUPA+'/functions/v1/ask-krishna',{\n          method:'POST',\n          headers:{apikey:KEY,'Content-Type':'application/json'},\n          body:JSON.stringify({question:q})\n        });\n        const d=await r.json();\n        a.textContent=d.answer||d.error||'No response';\n        if(d.citations?.length){\n          const c=document.createElement('div');\n          c.className='cite';\n          c.textContent=d.citations.join(' · ');\n          a.appendChild(c);\n        }\n      }catch(e){\n        a.textContent='Could not reach the guide. Please try again.';\n      }\n    }\n\n    $('navHome').addEventListener('click',()=>showScreen('home'));\n    $('navChat').addEventListener('click',()=>showScreen('chatScreen'));\n    $('askHero').addEventListener('click',()=>showScreen('chatScreen'));\n    $('startReading').addEventListener('click',()=>document.querySelector('.section-head').scrollIntoView({behavior:'smooth'}));\n    $('backHome').addEventListener('click',()=>showScreen('home'));\n    $('backChapter').addEventListener('click',()=>showScreen('chapterScreen'));\n    $('audioBtn').addEventListener('click',speak);\n    $('saveVerse').addEventListener('click',toggleSave);\n    $('prevVerse').addEventListener('click',()=>{\n      if(currentVerseIndex>0){\n        currentVerseIndex--;\n        renderVerse();\n        renderTab(currentTab);\n        window.scrollTo({top:0,behavior:'smooth'});\n      }\n    });\n    $('nextVerse').addEventListener('click',()=>{\n      if(currentVerseIndex<currentVerses.length-1){\n        currentVerseIndex++;\n        renderVerse();\n        renderTab(currentTab);\n        window.scrollTo({top:0,behavior:'smooth'});\n      }\n    });\n    document.querySelectorAll('#meaningTabs button').forEach(b=>b.addEventListener('click',()=>renderTab(b.dataset.tab)));\n    $('sendChat').addEventListener('click',()=>sendChat());\n    $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});\n    document.querySelectorAll('.suggestions button').forEach(b=>b.addEventListener('click',()=>sendChat(b.textContent)));\n    window.addEventListener('beforeunload',stopSpeech);\n\n    load().catch(e=>{\n      $('chapters').innerHTML='<div class=\"meta\">Could not load the Gita. '+e.message+'</div>';\n    });\n  </script>\n</body>\n</html>",
+  "headers": {
+    "access-control-allow-origin": "*",
+    "age": "78394",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-disposition": "inline",
+    "content-encoding": "br",
+    "content-type": "text/html; charset=utf-8",
+    "date": "Sat, 26 Sep 2026 10:38:23 GMT",
+    "etag": "W/\"6b64d98965b9e7208ec001b871e6af02\"",
+    "last-modified": "Fri, 25 Sep 2026 12:51:48 GMT",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "transfer-encoding": "chunked",
+    "x-vercel-cache": "HIT",
+    "x-vercel-id": "fra1:iad1::rhtsj-1790419103419-9fc0d09eef74"
+  }
+}
