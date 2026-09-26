@@ -196,12 +196,21 @@
     .topic-chip:hover{transform:translateY(-2px);border-color:rgba(231,189,103,.5);background:rgba(231,189,103,.09)}
     .topic-chip span{color:var(--gold)}
     .topic-hero{
-      border:1px solid var(--border);
-      background:radial-gradient(circle at 75% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#562007,#230b03);
-      border-radius:28px;padding:24px;margin:6px 0 18px;
+      border:1px solid rgba(158,64,0,.16);
+      background:
+        radial-gradient(circle at 84% 10%,rgba(255,255,255,.70),transparent 30%),
+        radial-gradient(circle at 14% 88%,rgba(255,183,3,.16),transparent 28%),
+        linear-gradient(145deg,#fff4cf,#ffc25a);
+      border-radius:28px;
+      padding:24px;
+      margin:6px 0 18px;
+      color:#4a1900;
+      box-shadow:0 16px 34px rgba(170,70,0,.14);
+      position:relative;
+      overflow:hidden;
     }
-    .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em}
-    .topic-hero p{margin:0;color:#6b2c08;line-height:1.75;font-size:17px}
+    .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em;color:#4a1900}
+    .topic-hero p{margin:0;color:#6b2c08;line-height:1.75;font-size:17px;font-weight:520}
     .topic-guide{
       display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px;
     }
@@ -496,6 +505,26 @@
     }
     .topic-chip,.hero-badge,.secondary,.topic-read,.tabs button{
       color:#6b2c08;
+    }
+
+    .topic-hero::after{
+      content:"ॐ";
+      position:absolute;
+      right:24px;
+      top:12px;
+      font-size:74px;
+      color:rgba(244,93,1,.10);
+      pointer-events:none;
+    }
+    .topic-hero .eyebrow{
+      color:#b54700;
+      position:relative;
+      z-index:1;
+    }
+    .topic-hero h2,.topic-hero p{
+      position:relative;
+      z-index:1;
+      max-width:760px;
     }
 </style>
 </head>
