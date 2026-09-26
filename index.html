@@ -7,20 +7,21 @@
   <title>Gita with Krishna</title>
   <style>
     :root{
-      --bg:#070d1b;
-      --bg2:#10172a;
-      --card:#151d33;
-      --card2:#1b2540;
-      --gold:#e8bd67;
-      --gold-soft:#f7dda0;
-      --saffron:#d98a2b;
-      --amber:#f0a94a;
-      --lotus:#c988a5;
-      --text:#fff7e8;
-      --muted:#c9d0dc;
-      --border:rgba(232,189,103,.22);
-      --accent:#3a3157;
-      --shadow:0 20px 60px rgba(0,0,0,.34);
+      --bg:#1a0903;
+      --bg2:#2a0d04;
+      --card:#321307;
+      --card2:#481b08;
+      --gold:#ffd166;
+      --gold-soft:#ffe8a8;
+      --saffron:#ff8a1f;
+      --bhagwa:#e85d04;
+      --deep-saffron:#b93b00;
+      --marigold:#f6a81a;
+      --text:#fff7e7;
+      --muted:#e9cdb5;
+      --border:rgba(255,184,77,.28);
+      --accent:#7b2600;
+      --shadow:0 22px 70px rgba(53,12,0,.42);
     }
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -32,10 +33,10 @@
       color:var(--text);
       font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       background:
-        radial-gradient(circle at 50% -8%, rgba(232,189,103,.18) 0%, rgba(217,138,43,.07) 18%, transparent 38%),
-        radial-gradient(circle at 12% 18%, rgba(140,91,167,.10), transparent 25%),
-        radial-gradient(circle at 88% 24%, rgba(92,122,187,.10), transparent 28%),
-        linear-gradient(180deg,#0b1224 0%,#080e1c 38%,#0b1020 72%,#070b16 100%);
+        radial-gradient(circle at 50% -8%, rgba(255,209,102,.24) 0%, rgba(255,138,31,.14) 17%, transparent 34%),
+        radial-gradient(circle at 10% 24%, rgba(232,93,4,.16), transparent 26%),
+        radial-gradient(circle at 92% 28%, rgba(246,168,26,.12), transparent 28%),
+        linear-gradient(180deg,#3a1205 0%,#220a03 34%,#150702 70%,#100501 100%);
     }
     body::before{
       content:"";
@@ -43,28 +44,31 @@
       inset:0;
       pointer-events:none;
       z-index:0;
-      opacity:.17;
+      opacity:.34;
       background:
-        radial-gradient(circle at center, rgba(232,189,103,.23) 0 1px, transparent 1.5px),
-        radial-gradient(circle at center, transparent 0 32%, rgba(232,189,103,.07) 32.4%, transparent 33%),
-        radial-gradient(circle at center, transparent 0 50%, rgba(217,138,43,.05) 50.5%, transparent 51%),
-        conic-gradient(from 0deg at 50% 50%, transparent 0 8deg, rgba(232,189,103,.035) 8deg 10deg, transparent 10deg 18deg);
-      background-size:520px 520px;
-      background-position:center 70px;
+        radial-gradient(circle at center, transparent 0 18%, rgba(255,209,102,.08) 18.4%, transparent 19%),
+        radial-gradient(circle at center, transparent 0 31%, rgba(255,138,31,.07) 31.4%, transparent 32%),
+        radial-gradient(circle at center, transparent 0 45%, rgba(232,93,4,.05) 45.5%, transparent 46%),
+        conic-gradient(from 0deg at 50% 50%, transparent 0 7deg, rgba(255,209,102,.045) 7deg 9deg, transparent 9deg 18deg);
+      background-size:620px 620px;
+      background-position:center 60px;
+      animation:mandalaSpin 70s linear infinite;
     }
     body::after{
-      content:"ॐ";
+      content:"☀";
       position:fixed;
       left:50%;
-      top:7vh;
+      top:4vh;
       transform:translateX(-50%);
       pointer-events:none;
       z-index:0;
-      font-size:clamp(110px,20vw,240px);
-      line-height:1;
-      color:rgba(232,189,103,.035);
-      text-shadow:0 0 60px rgba(232,189,103,.05);
+      font-size:clamp(160px,26vw,320px);
+      color:rgba(255,177,56,.045);
+      text-shadow:0 0 90px rgba(255,138,31,.10);
+      animation:divinePulse 5s ease-in-out infinite;
     }
+    @keyframes mandalaSpin{to{background-position:center 60px;filter:hue-rotate(0deg);transform:rotate(.001deg)}}
+    @keyframes divinePulse{0%,100%{opacity:.55;filter:blur(0)}50%{opacity:.9;filter:blur(.4px)}}
 
     button,input{font:inherit}
     button{color:inherit}
@@ -98,37 +102,37 @@
     .screen{display:none}
     .screen.active{display:block}
     .hero{
-      margin-top:20px;
-      padding:48px 28px 32px;
+      margin-top:18px;
+      padding:58px 32px 38px;
       position:relative;
       overflow:hidden;
-      border-radius:34px;
-      border:1px solid rgba(232,189,103,.20);
+      border-radius:36px;
+      border:1px solid rgba(255,188,76,.26);
       background:
-        radial-gradient(circle at 72% 18%,rgba(232,189,103,.12),transparent 27%),
-        radial-gradient(circle at 18% 84%,rgba(169,104,72,.08),transparent 25%),
-        linear-gradient(155deg,rgba(28,35,62,.96),rgba(11,17,34,.98));
-      box-shadow:0 26px 70px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.03);
+        radial-gradient(circle at 75% 20%,rgba(255,209,102,.16),transparent 26%),
+        radial-gradient(circle at 18% 84%,rgba(232,93,4,.18),transparent 25%),
+        linear-gradient(150deg,rgba(84,30,4,.96),rgba(37,10,2,.98));
+      box-shadow:0 30px 90px rgba(56,13,0,.40),inset 0 1px 0 rgba(255,255,255,.04);
     }
     .hero::before{
-      content:"✦";
+      content:"ॐ";
       position:absolute;
       right:28px;
-      top:24px;
-      color:rgba(232,189,103,.35);
-      font-size:32px;
-      text-shadow:0 0 22px rgba(232,189,103,.22);
+      top:18px;
+      font-size:96px;
+      line-height:1;
+      color:rgba(255,209,102,.10);
+      text-shadow:0 0 30px rgba(255,138,31,.12);
     }
     .hero::after{
       content:"";
       position:absolute;
-      width:260px;height:260px;
-      border-radius:50%;
-      right:-85px;bottom:-110px;
-      border:1px solid rgba(232,189,103,.10);
-      box-shadow:0 0 0 24px rgba(232,189,103,.025),0 0 0 48px rgba(232,189,103,.018);
+      right:-90px;bottom:-105px;
+      width:300px;height:300px;border-radius:50%;
+      border:1px solid rgba(255,209,102,.16);
+      box-shadow:0 0 0 28px rgba(255,138,31,.035),0 0 0 56px rgba(255,209,102,.022),0 0 0 84px rgba(232,93,4,.015);
     }
-    .eyebrow{color:var(--gold);font-weight:800;letter-spacing:.08em}
+    .eyebrow{color:#ffb347;font-weight:900;letter-spacing:.10em;text-transform:uppercase;text-shadow:0 0 18px rgba(255,138,31,.20)}
     h1{
       font-size:clamp(42px,7vw,72px);
       line-height:1;
@@ -145,7 +149,7 @@
     .primary,.secondary{
       border-radius:999px;padding:13px 18px;font-weight:800;cursor:pointer;
     }
-    .primary{border:0;background:linear-gradient(145deg,#f3d98f,#d58b2a);color:#241708;box-shadow:0 10px 28px rgba(213,139,42,.22)}
+    .primary{border:0;background:linear-gradient(145deg,#ffd96f,#ff9f1c);color:#241708;box-shadow:0 12px 34px rgba(255,138,31,.28)}
     .secondary{border:1px solid rgba(232,189,103,.24);background:linear-gradient(145deg,rgba(232,189,103,.08),rgba(255,255,255,.035));color:var(--gold-soft)}
     .daily{
       border:1px solid rgba(232,189,103,.18);
@@ -172,7 +176,7 @@
     .topic-grid{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 34px}
     .topic-chip{
       border:1px solid var(--border);
-      background:linear-gradient(145deg,rgba(232,189,103,.08),rgba(255,255,255,.025));
+      background:linear-gradient(145deg,rgba(255,138,31,.16),rgba(232,93,4,.07));
       color:var(--text);border-radius:999px;padding:11px 15px;cursor:pointer;
       font-weight:800;display:flex;align-items:center;gap:7px;transition:.16s;
     }
@@ -180,7 +184,7 @@
     .topic-chip span{color:var(--gold)}
     .topic-hero{
       border:1px solid var(--border);
-      background:radial-gradient(circle at 75% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#26203d,#12182b);
+      background:radial-gradient(circle at 75% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#562007,#230b03);
       border-radius:28px;padding:24px;margin:6px 0 18px;
     }
     .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em}
@@ -203,6 +207,29 @@
       color:#f3e8c9;line-height:1.65;
     }
     .daily-practice strong{color:var(--gold);display:block;margin-bottom:4px}
+    .artifact-layer{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .artifact{position:absolute;color:rgba(255,209,102,.13);filter:drop-shadow(0 0 12px rgba(255,138,31,.10));animation:artifactFloat 12s ease-in-out infinite}
+    .artifact.a1{left:3%;top:16%;font-size:42px;animation-delay:0s}
+    .artifact.a2{right:4%;top:22%;font-size:48px;animation-delay:2s}
+    .artifact.a3{left:7%;top:62%;font-size:36px;animation-delay:4s}
+    .artifact.a4{right:8%;top:70%;font-size:44px;animation-delay:1s}
+    .artifact.a5{left:47%;top:84%;font-size:30px;animation-delay:3s}
+    @keyframes artifactFloat{0%,100%{transform:translateY(0) rotate(0deg);opacity:.45}50%{transform:translateY(-18px) rotate(6deg);opacity:.85}}
+    .temple-arch{
+      position:absolute;inset:12px 12px auto 12px;height:110px;pointer-events:none;opacity:.25;z-index:0;
+      background:
+        radial-gradient(ellipse at 50% 100%, transparent 0 44%, rgba(255,209,102,.22) 45% 47%, transparent 48%),
+        linear-gradient(90deg,transparent 0 7%,rgba(255,138,31,.10) 7% 9%,transparent 9% 91%,rgba(255,138,31,.10) 91% 93%,transparent 93%);
+      border-radius:26px 26px 0 0;
+    }
+    .hero-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;
+      border:1px solid rgba(255,209,102,.22);background:rgba(255,138,31,.08);
+      color:#ffe7b0;font-size:12px;font-weight:800;letter-spacing:.04em;
+    }
+    .sacred-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0;color:rgba(255,209,102,.62);font-size:14px}
+    .sacred-divider::before,.sacred-divider::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(255,209,102,.28),transparent)}
     @media(max-width:680px){.topic-guide{grid-template-columns:1fr}}
     .topic-verses{display:grid;gap:11px}
     .topic-verse{
@@ -220,12 +247,17 @@
     .chapters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .chapter{
       text-align:left;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.055);
-      border-radius:22px;padding:18px;cursor:pointer;
-      transition:transform .16s ease, background .16s ease;
+      position:relative;
+      overflow:hidden;
+      border:1px solid rgba(255,188,76,.20);
+      background:
+        radial-gradient(circle at 85% 0%,rgba(255,209,102,.08),transparent 30%),
+        linear-gradient(145deg,rgba(71,24,5,.94),rgba(34,10,2,.94));
+      border-radius:24px;padding:18px;cursor:pointer;
+      transition:transform .16s ease, background .16s ease,border-color .16s ease;
+      box-shadow:0 12px 36px rgba(39,8,0,.18);
     }
-    .chapter:hover{transform:translateY(-3px);background:linear-gradient(145deg,rgba(46,52,79,.96),rgba(24,29,49,.96));border-color:rgba(232,189,103,.34);box-shadow:0 12px 28px rgba(0,0,0,.18)}
+    .chapter:hover{transform:translateY(-4px) scale(1.01);background:linear-gradient(145deg,rgba(102,34,4,.98),rgba(43,12,2,.98));border-color:rgba(255,209,102,.42);box-shadow:0 16px 40px rgba(55,12,0,.28)}
     .chapter-num{
       width:36px;height:36px;border-radius:50%;
       display:grid;place-items:center;
@@ -284,7 +316,7 @@
     .tabs button.active{background:var(--accent);color:white;border-color:#5870a4}
     .panel{
       border:1px solid rgba(232,189,103,.18);
-      background:linear-gradient(145deg,rgba(26,33,56,.93),rgba(13,19,34,.94));
+      background:linear-gradient(145deg,rgba(70,23,5,.92),rgba(31,9,2,.95));
       border-radius:22px;padding:22px;
     }
     .panel h3{margin:0 0 10px;color:var(--gold);font-size:13px;text-transform:uppercase;letter-spacing:.09em}
@@ -295,7 +327,7 @@
     .verse-actions button:disabled{opacity:.35;cursor:not-allowed}
     .chat-head{
       border:1px solid var(--border);
-      background:radial-gradient(circle at 80% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#2a213e,#12182b);
+      background:radial-gradient(circle at 80% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#5c2207,#250c03);
       border-radius:24px;padding:22px;margin-top:20px;
     }
     .chat-head h2{font-size:30px;margin:5px 0 8px}
@@ -342,7 +374,7 @@
       border-radius:30px;
       background:
         radial-gradient(circle at 50% 26%,rgba(73,126,210,.22),transparent 36%),
-        linear-gradient(155deg,#201d35,#101524 60%,#0b101d);
+        linear-gradient(155deg,#4d1c07,#231006 60%,#160803);
       box-shadow:0 22px 70px rgba(0,0,0,.26);
       transition:opacity .25s ease,transform .25s ease;
     }
@@ -419,6 +451,13 @@
   </style>
 </head>
 <body>
+  <div class="artifact-layer" aria-hidden="true">
+    <div class="artifact a1">☸</div>
+    <div class="artifact a2">🪷</div>
+    <div class="artifact a3">ॐ</div>
+    <div class="artifact a4">🕉</div>
+    <div class="artifact a5">✦</div>
+  </div>
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -433,12 +472,18 @@
 
     <section id="home" class="screen active">
       <div class="hero">
+        <div class="temple-arch"></div>
         <div class="eyebrow">श्रीमद्भगवद्गीता</div>
         <h1>Ancient wisdom.<br>For your life today.</h1>
         <p>Explore all 18 chapters, understand each verse at multiple depths, hear the shloka first and its meaning second, and ask questions grounded in the Gita.</p>
         <div class="cta">
           <button id="startReading" class="primary">Start reading</button>
           <button id="askHero" class="secondary">Ask Krishna</button>
+        </div>
+        <div class="hero-badges">
+          <span class="hero-badge">☸ 18 अध्याय</span>
+          <span class="hero-badge">🪷 701 श्लोक</span>
+          <span class="hero-badge">✦ जीवन मार्गदर्शन</span>
         </div>
       </div>
 
@@ -448,6 +493,7 @@
         <div class="daily-ref meta"></div>
       </div>
 
+      <div class="sacred-divider">☸</div>
       <div class="section-head">
         <div><div class="daily-label">Explore by life topic</div><h2>What are you dealing with?</h2></div>
         <span class="meta">Gita guidance across multiple shlokas</span>
