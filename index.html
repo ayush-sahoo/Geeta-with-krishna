@@ -7,44 +7,82 @@
   <title>Gita with Krishna</title>
   <style>
     :root{
-      --bg:#0d1324;
-      --bg2:#141d34;
-      --card:#19233d;
-      --card2:#202c49;
-      --gold:#e7bd67;
-      --gold-soft:#f6dda2;
-      --text:#fffaf0;
-      --muted:#c8cfdb;
-      --border:rgba(255,255,255,.14);
-      --accent:#30436b;
+      --bg:#070d1b;
+      --bg2:#10172a;
+      --card:#151d33;
+      --card2:#1b2540;
+      --gold:#e8bd67;
+      --gold-soft:#f7dda0;
+      --saffron:#d98a2b;
+      --amber:#f0a94a;
+      --lotus:#c988a5;
+      --text:#fff7e8;
+      --muted:#c9d0dc;
+      --border:rgba(232,189,103,.22);
+      --accent:#3a3157;
+      --shadow:0 20px 60px rgba(0,0,0,.34);
     }
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
     body{
       margin:0;
       min-height:100vh;
-      background:
-        radial-gradient(circle at 50% -10%, #24345b 0%, #141d34 34%, #0d1324 72%);
+      position:relative;
+      overflow-x:hidden;
       color:var(--text);
       font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 50% -8%, rgba(232,189,103,.18) 0%, rgba(217,138,43,.07) 18%, transparent 38%),
+        radial-gradient(circle at 12% 18%, rgba(140,91,167,.10), transparent 25%),
+        radial-gradient(circle at 88% 24%, rgba(92,122,187,.10), transparent 28%),
+        linear-gradient(180deg,#0b1224 0%,#080e1c 38%,#0b1020 72%,#070b16 100%);
     }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      opacity:.17;
+      background:
+        radial-gradient(circle at center, rgba(232,189,103,.23) 0 1px, transparent 1.5px),
+        radial-gradient(circle at center, transparent 0 32%, rgba(232,189,103,.07) 32.4%, transparent 33%),
+        radial-gradient(circle at center, transparent 0 50%, rgba(217,138,43,.05) 50.5%, transparent 51%),
+        conic-gradient(from 0deg at 50% 50%, transparent 0 8deg, rgba(232,189,103,.035) 8deg 10deg, transparent 10deg 18deg);
+      background-size:520px 520px;
+      background-position:center 70px;
+    }
+    body::after{
+      content:"ॐ";
+      position:fixed;
+      left:50%;
+      top:7vh;
+      transform:translateX(-50%);
+      pointer-events:none;
+      z-index:0;
+      font-size:clamp(110px,20vw,240px);
+      line-height:1;
+      color:rgba(232,189,103,.035);
+      text-shadow:0 0 60px rgba(232,189,103,.05);
+    }
+
     button,input{font:inherit}
     button{color:inherit}
-    .app{max-width:960px;margin:0 auto;padding:0 16px 90px}
+    .app{max-width:960px;margin:0 auto;padding:0 16px 90px;position:relative;z-index:1}
     .topbar{
       position:sticky;top:0;z-index:20;
       display:flex;justify-content:space-between;align-items:center;
       padding:14px 0;
-      background:rgba(13,19,36,.92);
+      background:rgba(8,13,27,.88);
       backdrop-filter:blur(14px);
-      border-bottom:1px solid var(--border);
+      border-bottom:1px solid rgba(232,189,103,.17);
     }
     .brand{display:flex;align-items:center;gap:10px}
     .mark{
       width:42px;height:42px;border-radius:50%;
       display:grid;place-items:center;
-      background:linear-gradient(145deg,#f3d78f,#b98b36);
-      color:#151b2a;font-weight:900;font-size:20px;
+      background:radial-gradient(circle at 35% 30%,#ffe9b4 0%,#e8bd67 48%,#b96f22 100%);
+      color:#241608;font-weight:900;font-size:20px;box-shadow:0 0 24px rgba(232,189,103,.24);
     }
     .brand strong{display:block;font-size:15px}
     .brand small{color:var(--muted)}
@@ -59,7 +97,37 @@
     .nav button.active{background:var(--gold);color:#151b2a;border-color:transparent;font-weight:800}
     .screen{display:none}
     .screen.active{display:block}
-    .hero{padding:52px 0 24px}
+    .hero{
+      margin-top:20px;
+      padding:48px 28px 32px;
+      position:relative;
+      overflow:hidden;
+      border-radius:34px;
+      border:1px solid rgba(232,189,103,.20);
+      background:
+        radial-gradient(circle at 72% 18%,rgba(232,189,103,.12),transparent 27%),
+        radial-gradient(circle at 18% 84%,rgba(169,104,72,.08),transparent 25%),
+        linear-gradient(155deg,rgba(28,35,62,.96),rgba(11,17,34,.98));
+      box-shadow:0 26px 70px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .hero::before{
+      content:"✦";
+      position:absolute;
+      right:28px;
+      top:24px;
+      color:rgba(232,189,103,.35);
+      font-size:32px;
+      text-shadow:0 0 22px rgba(232,189,103,.22);
+    }
+    .hero::after{
+      content:"";
+      position:absolute;
+      width:260px;height:260px;
+      border-radius:50%;
+      right:-85px;bottom:-110px;
+      border:1px solid rgba(232,189,103,.10);
+      box-shadow:0 0 0 24px rgba(232,189,103,.025),0 0 0 48px rgba(232,189,103,.018);
+    }
     .eyebrow{color:var(--gold);font-weight:800;letter-spacing:.08em}
     h1{
       font-size:clamp(42px,7vw,72px);
@@ -77,22 +145,34 @@
     .primary,.secondary{
       border-radius:999px;padding:13px 18px;font-weight:800;cursor:pointer;
     }
-    .primary{border:0;background:var(--gold);color:#151b2a}
-    .secondary{border:1px solid var(--border);background:rgba(255,255,255,.06)}
+    .primary{border:0;background:linear-gradient(145deg,#f3d98f,#d58b2a);color:#241708;box-shadow:0 10px 28px rgba(213,139,42,.22)}
+    .secondary{border:1px solid rgba(232,189,103,.24);background:linear-gradient(145deg,rgba(232,189,103,.08),rgba(255,255,255,.035));color:var(--gold-soft)}
     .daily{
-      border:1px solid var(--border);
-      background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
+      border:1px solid rgba(232,189,103,.18);
+      background:
+        radial-gradient(circle at top right,rgba(232,189,103,.10),transparent 28%),
+        linear-gradient(145deg,rgba(26,34,59,.94),rgba(13,19,36,.94));
       border-radius:26px;padding:22px;margin:22px 0 34px;
+      box-shadow:0 16px 44px rgba(0,0,0,.20);
     }
     .daily-label{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
     .daily-quote{font-size:21px;line-height:1.6;margin:10px 0}
     .meta{color:var(--muted);font-size:13px}
     .section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:24px 0 12px}
+    .section-head::after{
+      content:"✦  ·  ✦";
+      display:block;
+      color:rgba(232,189,103,.46);
+      letter-spacing:.28em;
+      font-size:11px;
+      margin-top:7px;
+    }
+
     .section-head h2{margin:0;font-size:26px}
     .topic-grid{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 34px}
     .topic-chip{
       border:1px solid var(--border);
-      background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
+      background:linear-gradient(145deg,rgba(232,189,103,.08),rgba(255,255,255,.025));
       color:var(--text);border-radius:999px;padding:11px 15px;cursor:pointer;
       font-weight:800;display:flex;align-items:center;gap:7px;transition:.16s;
     }
@@ -100,7 +180,7 @@
     .topic-chip span{color:var(--gold)}
     .topic-hero{
       border:1px solid var(--border);
-      background:linear-gradient(145deg,#202e4f,#151f39);
+      background:radial-gradient(circle at 75% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#26203d,#12182b);
       border-radius:28px;padding:24px;margin:6px 0 18px;
     }
     .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em}
@@ -127,7 +207,7 @@
     .topic-verses{display:grid;gap:11px}
     .topic-verse{
       border:1px solid var(--border);
-      background:rgba(255,255,255,.055);
+      background:linear-gradient(145deg,rgba(30,39,67,.92),rgba(17,23,43,.92));
       border-radius:20px;padding:17px;
     }
     .topic-verse-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -145,11 +225,11 @@
       border-radius:22px;padding:18px;cursor:pointer;
       transition:transform .16s ease, background .16s ease;
     }
-    .chapter:hover{transform:translateY(-2px);background:rgba(255,255,255,.085)}
+    .chapter:hover{transform:translateY(-3px);background:linear-gradient(145deg,rgba(46,52,79,.96),rgba(24,29,49,.96));border-color:rgba(232,189,103,.34);box-shadow:0 12px 28px rgba(0,0,0,.18)}
     .chapter-num{
       width:36px;height:36px;border-radius:50%;
       display:grid;place-items:center;
-      background:#2a385d;color:var(--gold);font-weight:900;
+      background:radial-gradient(circle,#3c3152,#232744);color:var(--gold);font-weight:900;border:1px solid rgba(232,189,103,.24);box-shadow:0 0 18px rgba(232,189,103,.08);
     }
     .chapter h3{margin:14px 0 5px;font-size:18px}
     .chapter .sans{color:#e0e5ec}
@@ -165,7 +245,7 @@
     .verse-row .preview{margin-top:8px;white-space:pre-line;line-height:1.65;color:#eef2f7}
     .verse-hero{
       border:1px solid var(--border);
-      background:linear-gradient(150deg,#1d2946,#141d34);
+      background:radial-gradient(circle at 50% 0%,rgba(232,189,103,.12),transparent 32%),linear-gradient(150deg,#1d2440,#0f1628);
       border-radius:30px;padding:26px;
     }
     .verse-ref{text-align:center;color:var(--gold);font-weight:900}
@@ -203,8 +283,8 @@
     }
     .tabs button.active{background:var(--accent);color:white;border-color:#5870a4}
     .panel{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.055);
+      border:1px solid rgba(232,189,103,.18);
+      background:linear-gradient(145deg,rgba(26,33,56,.93),rgba(13,19,34,.94));
       border-radius:22px;padding:22px;
     }
     .panel h3{margin:0 0 10px;color:var(--gold);font-size:13px;text-transform:uppercase;letter-spacing:.09em}
@@ -215,7 +295,7 @@
     .verse-actions button:disabled{opacity:.35;cursor:not-allowed}
     .chat-head{
       border:1px solid var(--border);
-      background:linear-gradient(145deg,#202e4f,#151f39);
+      background:radial-gradient(circle at 80% 0%,rgba(232,189,103,.11),transparent 28%),linear-gradient(145deg,#2a213e,#12182b);
       border-radius:24px;padding:22px;margin-top:20px;
     }
     .chat-head h2{font-size:30px;margin:5px 0 8px}
@@ -262,7 +342,7 @@
       border-radius:30px;
       background:
         radial-gradient(circle at 50% 26%,rgba(73,126,210,.22),transparent 36%),
-        linear-gradient(155deg,#172442,#10182d 60%,#111725);
+        linear-gradient(155deg,#201d35,#101524 60%,#0b101d);
       box-shadow:0 22px 70px rgba(0,0,0,.26);
       transition:opacity .25s ease,transform .25s ease;
     }
@@ -332,7 +412,7 @@
     @media(max-width:680px){
       .chapters{grid-template-columns:1fr}
       .app{padding-inline:12px}
-      .hero{padding-top:34px}
+      .hero{padding:28px 20px 26px;margin-top:12px}
       .verse-hero{padding:19px}
       .brand small{display:none}
     }
