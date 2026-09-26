@@ -1451,6 +1451,12 @@
     .actual-preview-overlay button{
       border-radius:999px;
     }
+
+    .actual-preview-overlay{
+      border-radius:36px !important;
+      overflow:hidden;
+      clip-path:inset(0 round 36px);
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1953,7 +1959,7 @@
           '<div class="actual-preview-shell topic-actual-preview">'+
             '<div class="actual-preview-content topic-grid actual-topic-grid">'+topicMarkup+'</div>'+
             '<div class="actual-preview-overlay">'+
-              '<div class="preview-pill">Preview</div>'+
+
               '<h3>Explore guidance for life</h3>'+
               '<p>The actual topics are visible below. Unlock them to open the full guides and referenced shlokas.</p>'+
               '<button onclick="startLifetimePurchase()">Get Lifetime Access</button>'+
