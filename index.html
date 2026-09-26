@@ -226,15 +226,26 @@
       background:radial-gradient(circle,rgba(244,213,138,.38) 0%,rgba(231,189,103,.15) 36%,rgba(87,121,190,.07) 58%,transparent 74%);
       filter:blur(3px);
     }
-    .krishna-figure{
+    .speaker-image-wrap{
       position:relative;
       z-index:3;
-      width:230px;
-      height:266px;
-      transform-origin:50% 88%;
-      filter:drop-shadow(0 12px 24px rgba(0,0,0,.28));
+      width:min(290px,76vw);
+      height:255px;
+      border-radius:22px;
+      overflow:hidden;
+      border:1px solid rgba(244,213,138,.24);
+      box-shadow:0 14px 34px rgba(0,0,0,.30);
+      background:#0c1428;
     }
-    .krishna-figure svg{width:100%;height:100%;display:block}
+    .speaker-image{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:center 28%;
+      display:block;
+      transform:scale(1.01);
+      transition:transform .35s ease,filter .35s ease;
+    }
     .krishna-copy{position:relative;z-index:4;text-align:center;margin-top:-12px}
     .krishna-copy strong{display:block;color:var(--gold-soft);font-size:20px;letter-spacing:.02em}
     .krishna-copy span{display:block;color:#d5dbe6;font-size:13px;margin-top:5px}
@@ -247,7 +258,7 @@
     .orbit-two{width:330px;height:330px;top:-12px;border-color:rgba(101,151,225,.12)}
     .avatar-bars{height:28px;display:flex;align-items:center;gap:4px;margin-top:13px;position:relative;z-index:4}
     .avatar-bars i{display:block;width:3px;height:6px;border-radius:999px;background:var(--gold);opacity:.45}
-    .krishna-avatar.playing .krishna-figure{animation:krishnaBreath 2.1s ease-in-out infinite}
+    .krishna-avatar.playing .speaker-image{animation:speakerBreath 2.4s ease-in-out infinite}
     .krishna-avatar.playing .krishna-aura{animation:krishnaAura 1.8s ease-in-out infinite}
     .krishna-avatar.playing .orbit-one{animation:krishnaOrbit 11s linear infinite}
     .krishna-avatar.playing .orbit-two{animation:krishnaOrbit 17s linear infinite reverse}
@@ -259,7 +270,7 @@
     .krishna-avatar.playing .avatar-bars i:nth-child(6){animation-delay:.40s}
     .krishna-avatar.playing .avatar-bars i:nth-child(7){animation-delay:.48s}
     .krishna-avatar.explaining .krishna-aura{background:radial-gradient(circle,rgba(120,177,240,.38) 0%,rgba(75,126,211,.17) 38%,transparent 72%)}
-    @keyframes krishnaBreath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.018)}}
+    @keyframes speakerBreath{0%,100%{transform:scale(1.01)}50%{transform:scale(1.045)}}
     @keyframes krishnaAura{0%,100%{transform:scale(.96);opacity:.72}50%{transform:scale(1.07);opacity:1}}
     @keyframes krishnaOrbit{to{transform:rotate(360deg)}}
     @keyframes avatarBeat{to{height:24px;opacity:1}}
@@ -338,47 +349,11 @@
 
       <div id="krishnaAvatar" class="krishna-avatar hidden" aria-live="polite">
         <div class="krishna-aura"></div>
-        <div class="krishna-orbit orbit-one"></div>
-        <div class="krishna-orbit orbit-two"></div>
-        <div class="krishna-figure" aria-hidden="true">
-          <svg viewBox="0 0 260 300" role="img" aria-label="Stylized Shri Krishna devotional avatar">
-            <defs>
-              <radialGradient id="skinGlow" cx="50%" cy="35%" r="70%">
-                <stop offset="0%" stop-color="#8ecbff"/>
-                <stop offset="100%" stop-color="#3768b0"/>
-              </radialGradient>
-              <linearGradient id="goldDress" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#f8df94"/>
-                <stop offset="100%" stop-color="#c89236"/>
-              </linearGradient>
-            </defs>
-            <ellipse cx="130" cy="278" rx="66" ry="10" fill="rgba(0,0,0,.22)"/>
-            <path d="M90 88 Q130 45 170 88 L160 48 Q130 22 100 48 Z" fill="#e8b950"/>
-            <circle cx="98" cy="44" r="8" fill="#49a7d8"/>
-            <path d="M101 44 C92 25 104 9 123 6 C115 24 118 37 101 44Z" fill="#2f9f77"/>
-            <path d="M103 41 C112 29 126 27 137 33 C124 40 117 48 103 41Z" fill="#4dc5a0"/>
-            <circle cx="130" cy="102" r="43" fill="url(#skinGlow)"/>
-            <path d="M91 97 Q102 50 130 54 Q160 54 170 97 Q159 74 130 72 Q105 73 91 97Z" fill="#17233d"/>
-            <path d="M107 105 Q115 100 123 105" stroke="#18243b" stroke-width="3" fill="none" stroke-linecap="round"/>
-            <path d="M137 105 Q145 100 153 105" stroke="#18243b" stroke-width="3" fill="none" stroke-linecap="round"/>
-            <circle cx="116" cy="107" r="2.5" fill="#10182a"/>
-            <circle cx="146" cy="107" r="2.5" fill="#10182a"/>
-            <path d="M127 119 Q130 121 133 119" stroke="#2d4773" stroke-width="2" fill="none"/>
-            <path d="M117 129 Q130 137 143 129" stroke="#783f57" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <path d="M130 62 L130 85" stroke="#f7d678" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="130" cy="60" r="3.5" fill="#eaa957"/>
-            <path d="M104 151 Q130 138 156 151 L180 223 Q130 258 80 223Z" fill="url(#goldDress)"/>
-            <path d="M90 172 Q130 150 170 172" stroke="#8d4f9e" stroke-width="12" fill="none" stroke-linecap="round"/>
-            <path d="M78 183 Q53 197 48 225" stroke="#5d91cf" stroke-width="17" fill="none" stroke-linecap="round"/>
-            <path d="M182 183 Q207 197 212 225" stroke="#5d91cf" stroke-width="17" fill="none" stroke-linecap="round"/>
-            <path d="M48 225 Q83 207 116 198" stroke="#d5a746" stroke-width="8" fill="none" stroke-linecap="round"/>
-            <path d="M116 198 Q154 189 211 225" stroke="#d5a746" stroke-width="8" fill="none" stroke-linecap="round"/>
-            <circle cx="64" cy="216" r="7" fill="#7fb7ee"/>
-            <circle cx="196" cy="216" r="7" fill="#7fb7ee"/>
-          </svg>
+        <div class="speaker-image-wrap">
+          <img id="speakerImage" class="speaker-image" alt="Speaker reference artwork">
         </div>
         <div class="krishna-copy">
-          <strong>श्री कृष्ण</strong>
+          <strong id="speakerName">Speaker</strong>
           <span id="avatarStatus">श्लोक सुनिए...</span>
         </div>
         <div class="avatar-bars" aria-hidden="true">
@@ -693,10 +668,60 @@
       },50);
     }
 
+    const SPEAKER_ART={
+      dhritarashtra:{
+        name:'धृतराष्ट्र',
+        image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/King%20Dhritarashtra.jpg'
+      },
+      sanjaya:{
+        name:'सञ्जय',
+        image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Dhritarastra%20sanjaya.jpg'
+      },
+      arjuna:{
+        name:'अर्जुन',
+        image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Arjuna%20standing%20in%20a%20hilly%20landscape.jpg'
+      },
+      krishna:{
+        name:'श्री कृष्ण',
+        image:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Krishna%20Arjuna%20Gita.jpg'
+      }
+    };
+
+    function speakerFromText(v){
+      const s=((v?.sanskrit||'')+' '+(v?.transliteration||'')).toLowerCase();
+      if(/धृतराष्ट्र\s+उवाच|dhṛ?tarāṣṭra\s+uvāca/.test(s)) return 'dhritarashtra';
+      if(/सञ्जय\s+उवाच|संजय\s+उवाच|sañjaya\s+uvāca|sanjaya\s+uvāca/.test(s)) return 'sanjaya';
+      if(/अर्जुन\s+उवाच|arjuna\s+uvāca/.test(s)) return 'arjuna';
+      if(/श्रीभगवानुवाच|भगवानुवाच|śrībhagavān\s+uvāca|bhagavān\s+uvāca/.test(s)) return 'krishna';
+      return null;
+    }
+
+    function activeSpeakerForIndex(index){
+      // Known opening speech by Duryodhana in Chapter 1.
+      const v=currentVerses[index];
+      if(Number(v?.chapter_id)===1 && Number(v?.verse_number)>=3 && Number(v?.verse_number)<=11){
+        return 'sanjaya';
+      }
+      for(let i=index;i>=0;i--){
+        const found=speakerFromText(currentVerses[i]);
+        if(found) return found;
+      }
+      return 'krishna';
+    }
+
     function showKrishnaAvatar(mode){
       const card=$('krishnaAvatar');
       const status=$('avatarStatus');
-      if(!card||!status)return;
+      const img=$('speakerImage');
+      const name=$('speakerName');
+      if(!card||!status||!img||!name)return;
+
+      const key=activeSpeakerForIndex(currentVerseIndex);
+      const art=SPEAKER_ART[key]||SPEAKER_ART.krishna;
+      img.src=art.image;
+      img.alt=art.name+' reference artwork';
+      name.textContent=art.name;
+
       card.classList.remove('hidden','explaining');
       card.classList.add('playing');
       if(mode==='meaning'){
