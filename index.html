@@ -369,16 +369,57 @@
     }
 
     function deepMeaning(v){
-      const base=cleanTranslation(v.translation_english||'');
-      const text={
-        action:'This verse points beyond mere activity. It asks you to separate the quality of your action from your hunger for a particular outcome. Krishna’s teaching here is about inner freedom: act fully, but do not hand your peace over to results you cannot completely control.',
-        mind:'The deeper teaching is that the mind becomes either a guide or a trap depending on what it repeatedly attaches itself to. The verse invites observation before reaction — notice desire, fear, anger, or impulse before they become action.',
-        self:'At a deeper level, this verse distinguishes the changing surface of life from the deeper Self. Roles, circumstances, success, loss, and even the body change; the teaching asks you to discover a steadier identity beneath them.',
-        devotion:'This verse treats devotion not as passive belief but as a way of re-centering the ego. Offering action and intention to something higher loosens the need to control every outcome.',
-        wisdom:'The verse is about seeing clearly. Wisdom in the Gita is not simply information; it is the ability to recognize what is lasting, what is temporary, and what kind of action follows from that distinction.',
-        balance:'The deeper movement of this verse is toward steadiness. The Gita repeatedly teaches that clarity appears when we stop being pulled entirely by praise and blame, gain and loss, hope and fear.'
-      }[themeOf(v)];
-      return text+'\n\nIn this verse, the immediate teaching is: '+base;
+      const base=cleanTranslation(v.translation_english||'').trim();
+      const t=base.toLowerCase();
+      const chapter=Number(v.chapter_id||0);
+
+      const chapterLens={
+        1:'This chapter places us inside Arjuna’s moral and emotional crisis. Its deeper question is not merely what happens on the battlefield, but what happens when duty, attachment, fear, and identity collide.',
+        2:'This chapter establishes the Gita’s central foundations: the enduring Self, disciplined action, equanimity, and wisdom that is not shaken by changing circumstances.',
+        3:'This chapter develops Karma Yoga — acting fully in the world without becoming psychologically owned by the fruits of action.',
+        4:'This chapter connects right action with knowledge, showing how understanding transforms the inner quality of what we do.',
+        5:'This chapter explores renunciation as an inner freedom from possessiveness and ego, rather than simply abandoning action.',
+        6:'This chapter focuses on meditation, self-mastery, and the disciplined relationship between the mind and the deeper Self.',
+        7:'This chapter moves from self-discipline toward knowledge of the divine source underlying the visible world.',
+        8:'This chapter examines remembrance, mortality, and the orientation of consciousness at the deepest moments of life.',
+        9:'This chapter presents devotion and divine presence as intimate, accessible, and available within ordinary life.',
+        10:'This chapter reveals the divine through excellence, beauty, power, order, and extraordinary expressions found throughout creation.',
+        11:'This chapter confronts Arjuna with the cosmic form, expanding his perspective beyond the limits of an individual human viewpoint.',
+        12:'This chapter explores Bhakti Yoga and the qualities of a person whose devotion has matured into steadiness, compassion, and freedom from ego.',
+        13:'This chapter distinguishes the field of experience — body and mind — from the knower who is aware of that field.',
+        14:'This chapter explains the three gunas — sattva, rajas, and tamas — as forces shaping thought, behaviour, attachment, and perception.',
+        15:'This chapter uses the image of the cosmic tree to examine attachment, impermanence, and the search for the ultimate source.',
+        16:'This chapter contrasts qualities that lead toward inner freedom with those that deepen confusion, ego, and bondage.',
+        17:'This chapter shows how faith takes different forms according to a person’s nature and influences worship, discipline, food, and conduct.',
+        18:'This final chapter integrates the paths of action, knowledge, devotion, renunciation, and surrender into a unified teaching.'
+      }[chapter]||'This verse belongs to the Gita’s wider inquiry into right action, clear understanding, and inner freedom.';
+
+      let specific='';
+      if(/dhritarashtra|sanjaya|army|battle|warrior|pandava|duryodhana|drona|kurukshetra/.test(t)){
+        specific='The verse is first of all doing narrative work: it locates people, motives, loyalties, and tensions. Its deeper value comes from noticing the psychological state behind the action — who is attached, who is afraid, who is calculating, and who is trying to see clearly.';
+      }else if(/fruit|fruits|result|results|action|work|duty|perform/.test(t)){
+        specific='The key distinction here is between action and ownership of the outcome. Krishna does not argue for passivity; he asks for complete participation without making one’s peace, identity, or integrity dependent on success or failure.';
+      }else if(/soul|self|born|death|dies|eternal|body|slain/.test(t)){
+        specific='This verse separates the changing body and personality from the deeper Self. The practical implication is not indifference to life, but a shift in identity: what is most essential in a person is not exhausted by physical change, status, gain, or loss.';
+      }else if(/mind|sense|senses|desire|anger|lust|attachment/.test(t)){
+        specific='The verse describes an inner chain of causation. Attention becomes attachment, attachment can become craving, and unchecked craving can distort judgment. The teaching is therefore about intervening early — at the level of attention and identification — rather than only fighting the final emotion.';
+      }else if(/yoga|meditat|concentrat|steady|still|discipline/.test(t)){
+        specific='Here yoga means trained steadiness rather than escape. The verse points to a mind that can remain present without being dragged around by every impulse, memory, fear, or reward. That steadiness is what makes clear action possible.';
+      }else if(/devot|worship|love|faith|offer|surrender/.test(t)){
+        specific='The deeper movement here is from ego-centred action toward offering. Devotion in the Gita is not merely emotion; it changes the centre from which one acts, reducing the need to control, possess, and constantly prove oneself.';
+      }else if(/knowledge|wisdom|know|ignorance|understand/.test(t)){
+        specific='The verse treats knowledge as a transformation in perception, not just information. To know truly is to see relationships, causes, and identity differently enough that one’s actions also change.';
+      }else if(/equal|pleasure|pain|gain|loss|victory|defeat/.test(t)){
+        specific='The teaching here is equanimity: not flattening emotion, but refusing to let opposite experiences dictate one’s inner direction. Pleasure and pain still occur; the freedom lies in not becoming completely governed by either.';
+      }else if(/nature|guna|sattva|rajas|tamas/.test(t)){
+        specific='This verse asks us to notice how behaviour is shaped by underlying tendencies. Instead of reducing everything to “my personality,” the Gita invites observation of the forces moving through the mind — clarity, restlessness, and inertia — so they can be understood rather than blindly obeyed.';
+      }else if(/supreme|divine|lord|god|brahman|creator|creation/.test(t)){
+        specific='The verse widens the frame from the individual ego to a larger order. Its deeper point is that the sacred is not presented as separate from existence, but as the source, support, or intelligence through which existence becomes intelligible.';
+      }else{
+        specific='Read literally first: the verse is making a precise claim about a human situation. Its deeper meaning emerges by asking what assumption about identity, control, fear, or responsibility the verse is challenging in that situation.';
+      }
+
+      return specific+'\n\n'+chapterLens+'\n\nVerse meaning: '+base;
     }
 
     function applyToday(v){
