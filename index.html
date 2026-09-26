@@ -605,6 +605,112 @@
       color:#6b2c08 !important;
       border-left-color:#ff9f1c !important;
     }
+
+    .lifetime-card{
+      margin:22px 0 32px;
+      padding:24px;
+      border-radius:26px;
+      background:linear-gradient(145deg,#f4f4f2,#e7e7e4);
+      border:1px solid rgba(120,60,20,.13);
+      box-shadow:0 14px 30px rgba(120,60,20,.10);
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:22px;
+      align-items:center;
+      color:#4a1900;
+    }
+    .lifetime-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      color:#b54700;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+    .lifetime-card h3{
+      margin:0 0 8px;
+      font-size:clamp(26px,4vw,38px);
+      letter-spacing:-.03em;
+      color:#4a1900;
+    }
+    .lifetime-card p{
+      margin:0;
+      color:#6b2c08;
+      line-height:1.65;
+      max-width:620px;
+    }
+    .lifetime-price{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      margin:16px 0 4px;
+      flex-wrap:wrap;
+    }
+    .lifetime-price strong{
+      font-size:38px;
+      color:#4a1900;
+      line-height:1;
+    }
+    .lifetime-price s{
+      color:#9b765f;
+      font-size:18px;
+    }
+    .discount-pill{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:7px 10px;
+      background:#ffb703;
+      color:#5a2100;
+      font-weight:900;
+      font-size:12px;
+    }
+    .lifetime-benefits{
+      display:flex;
+      gap:9px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .lifetime-benefits span{
+      background:#ededeb;
+      border:1px solid rgba(120,60,20,.10);
+      color:#6b2c08;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:800;
+    }
+    .lifetime-buy{
+      min-width:210px;
+      border:0;
+      border-radius:18px;
+      padding:16px 20px;
+      cursor:pointer;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);
+      color:#4a1900;
+      font-size:15px;
+      font-weight:950;
+      box-shadow:0 10px 22px rgba(255,138,31,.22);
+      transition:.16s ease;
+    }
+    .lifetime-buy:hover{
+      transform:translateY(-2px);
+      box-shadow:0 14px 28px rgba(255,138,31,.28);
+    }
+    .lifetime-note{
+      margin-top:8px;
+      color:#8a4518;
+      font-size:12px;
+      text-align:center;
+    }
+    @media(max-width:680px){
+      .lifetime-card{grid-template-columns:1fr;padding:20px}
+      .lifetime-buy{width:100%}
+      .lifetime-note{text-align:left}
+    }
 </style>
 </head>
 <body>
@@ -649,6 +755,28 @@
         <div class="daily-quote">Loading your verse…</div>
         <div class="daily-ref meta"></div>
       </div>
+
+      <section class="lifetime-card" aria-label="Lifetime access offer">
+        <div>
+          <div class="lifetime-kicker">✦ Limited Lifetime Offer</div>
+          <h3>Unlock Gita with Krishna for life</h3>
+          <p>One payment. No subscription. Keep lifetime access to the complete Gita experience.</p>
+          <div class="lifetime-price">
+            <strong>₹1,000</strong>
+            <s>₹10,000</s>
+            <span class="discount-pill">90% OFF</span>
+          </div>
+          <div class="lifetime-benefits">
+            <span>✓ One-time payment</span>
+            <span>✓ Lifetime access</span>
+            <span>✓ No recurring charges</span>
+          </div>
+        </div>
+        <div>
+          <button id="buyLifetime" class="lifetime-buy">Get Lifetime Access →</button>
+          <div class="lifetime-note">Secure payment via Razorpay</div>
+        </div>
+      </section>
 
       <div class="sacred-divider">☸</div>
       <div class="section-head">
@@ -1434,6 +1562,9 @@
     $('startReading').addEventListener('click',()=>document.querySelector('.section-head').scrollIntoView({behavior:'smooth'}));
     $('backHome').addEventListener('click',()=>showScreen('home'));
     $('backTopics').addEventListener('click',()=>showScreen('home'));
+    $('buyLifetime').addEventListener('click',()=>{
+      window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
+    });
     $('backChapter').addEventListener('click',()=>showScreen('chapterScreen'));
     $('audioBtn').addEventListener('click',speak);
     $('saveVerse').addEventListener('click',toggleSave);
