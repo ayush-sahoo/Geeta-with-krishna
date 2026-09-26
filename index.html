@@ -1396,20 +1396,59 @@
       accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
     }
 
-    function startLifetimePurchase(){
+    async function startLifetimePurchase(){
       if(!authSession?.access_token){
         showScreen('authScreen');
         $('authPageError').textContent='Sign up or log in first so your lifetime purchase can be linked to your account.';
         return;
       }
-      localStorage.setItem('pendingLifetimePurchase',JSON.stringify({
-        user_id:authSession.user?.id,
-        email:authSession.user?.email||null,
-        started_at:new Date().toISOString()
-      }));
-      window.open('https://rzp.io/rzp/jCKT5V3X','_blank','noopener,noreferrer');
-    }
 
+      if(hasLifetimeAccess()){
+        toast('Lifetime Access is already active');
+        return;
+      }
+
+      const buttons=[$('buyLifetime'),$('accountUpgrade')].filter(Boolean);
+      buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.textContent;b.textContent='Preparing secure payment…'});
+
+      try{
+        const r=await fetch(SUPA+'/functions/v1/create-payment-link',{
+          method:'POST',
+          headers:{
+            apikey:KEY,
+            Authorization:'Bearer '+authSession.access_token,
+            'Content-Type':'application/json'
+          },
+          body:JSON.stringify({})
+        });
+
+        const d=await r.json();
+        if(!r.ok) throw new Error(d.error||d.details?.error?.description||'Could not create payment link');
+
+        if(d.already_paid){
+          await loadAccountProfile();
+          toast('Lifetime Access is already active');
+          showScreen('accountScreen');
+          return;
+        }
+
+        if(!d.short_url) throw new Error('Payment link was not returned');
+
+        if(typeof fbq==='function'){
+          fbq('track','InitiateCheckout',{
+            value:1000,
+            currency:'INR',
+            content_name:'Gita Verse Lifetime Access'
+          });
+        }
+
+        window.location.href=d.short_url;
+      }catch(e){
+        toast(e.message||'Could not start payment');
+      }finally{
+        buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Lifetime Access →'});
+      }
+    }
     const LIFE_TOPICS={
       love:{
         label:'Love',icon:'♥',kicker:'Love without possession',
