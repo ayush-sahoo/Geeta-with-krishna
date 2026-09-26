@@ -883,6 +883,19 @@
 
     .password-login-block{margin-top:4px}
     .password-login-block .email-input{margin-bottom:10px}
+
+    .auth-mode-tabs{
+      display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 18px;
+      background:#e8e8e5;border-radius:999px;padding:4px;
+    }
+    .auth-mode-tabs button{
+      border:0;background:transparent;color:#6b2c08;border-radius:999px;
+      padding:10px 14px;font-weight:900;cursor:pointer;
+    }
+    .auth-mode-tabs button.active{
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);
+      color:#4a1900;box-shadow:0 6px 14px rgba(255,159,28,.18);
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1095,32 +1108,46 @@
         <div class="auth-page-card">
           <div class="auth-brand-mark">ॐ</div>
           <div class="daily-label">Welcome to Gita Verse</div>
-          <h2>Begin your journey</h2>
-          <p class="auth-lead">Enter your email and we’ll send you a secure sign-in link. No password needed.</p>
+          <h2 id="authModeTitle">Login</h2>
+          <p id="authModeLead" class="auth-lead">Welcome back. Sign in to access your account and plan.</p>
+
+          <div class="auth-mode-tabs">
+            <button id="loginTab" class="active">Login</button>
+            <button id="signupTab">Sign up</button>
+          </div>
 
           <button id="googleLogin" class="google-btn">
             <span class="google-g">G</span>
-            Continue with Google
+            <span id="googleButtonText">Continue with Google</span>
           </button>
 
-          <div class="auth-or"><span>or continue with email</span></div>
+          <div class="auth-or"><span id="authDividerText">or login with email</span></div>
 
           <div id="passwordLoginStep" class="password-login-block">
             <label class="phone-label">Email</label>
             <input id="passwordEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
             <label class="phone-label">Password</label>
             <input id="passwordPassword" class="email-input" type="password" autocomplete="current-password" placeholder="Enter password">
-            <button id="passwordLoginBtn" class="auth-main-btn">Sign in with Email & Password</button>
-            <div class="email-help">Use this for password-based accounts. You can still use Google or a magic link below.</div>
+            <button id="passwordLoginBtn" class="auth-main-btn">Login with Email & Password</button>
+            <div class="email-help">For existing password-based accounts.</div>
           </div>
 
-          <div class="auth-or"><span>or use a magic link</span></div>
+          <div id="magicLinkDivider" class="auth-or"><span id="magicDividerText">or use a magic link</span></div>
+
+          <div id="passwordSignupStep" class="password-login-block hidden">
+            <label class="phone-label">Email</label>
+            <input id="signupEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
+            <label class="phone-label">Create password</label>
+            <input id="signupPassword" class="email-input" type="password" autocomplete="new-password" placeholder="Create password">
+            <button id="passwordSignupBtn" class="auth-main-btn">Create Account</button>
+            <div class="email-help">Create a new Gita Verse account with email and password.</div>
+          </div>
 
           <div id="emailStep">
             <label class="phone-label">Email address</label>
             <input id="emailAddress" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
             <button id="sendEmailLink" class="auth-main-btn">Continue with Email</button>
-            <div class="email-help">We’ll send you a secure sign-in link. No password needed.</div>
+            <div id="emailMagicHelp" class="email-help">We’ll send you a secure sign-in link. No password needed.</div>
           </div>
 
           <div id="emailSentStep" class="hidden">
@@ -1173,6 +1200,7 @@
     let speaking=false;
     let authSession=null;
     let accountProfile=null;
+    let authPageMode='login';
     const saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'));
 
     const $=id=>document.getElementById(id);
@@ -1337,7 +1365,7 @@
 
     function updateAccountUI(){
       const loggedIn=!!authSession?.access_token;
-      $('navAccount').textContent=loggedIn?'Account':'Sign up';
+      $('navAccount').textContent=loggedIn?'Account':'Login / Sign up';
 
       if(loggedIn){
         const email=authSession.user?.email||accountProfile?.email||'—';
@@ -1390,6 +1418,69 @@
       const redirectTo=location.origin+location.pathname;
       const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
       location.href=url;
+    }
+
+    function setAuthPageMode(mode){
+      authPageMode=mode;
+      const signup=mode==='signup';
+
+      $('loginTab').classList.toggle('active',!signup);
+      $('signupTab').classList.toggle('active',signup);
+      $('authModeTitle').textContent=signup?'Create your account':'Login';
+      $('authModeLead').textContent=signup
+        ? 'Create your Gita Verse account to save purchases and unlock Lifetime Access.'
+        : 'Welcome back. Sign in to access your account and plan.';
+      $('authDividerText').textContent=signup?'or sign up with email':'or login with email';
+
+      $('passwordLoginStep').classList.toggle('hidden',signup);
+      $('passwordSignupStep').classList.toggle('hidden',!signup);
+
+      $('magicDividerText').textContent=signup?'or sign up with a magic link':'or use a magic link';
+      $('sendEmailLink').textContent=signup?'Sign up with Email Link':'Continue with Email';
+      $('authPageError').textContent='';
+    }
+
+    async function signUpWithPassword(){
+      $('authPageError').textContent='';
+      const email=$('signupEmail').value.trim();
+      const password=$('signupPassword').value;
+
+      if(!/^\S+@\S+\.\S+$/.test(email)){
+        $('authPageError').textContent='Enter a valid email address';
+        return;
+      }
+      if(password.length<6){
+        $('authPageError').textContent='Password must be at least 6 characters';
+        return;
+      }
+
+      const btn=$('passwordSignupBtn');
+      try{
+        btn.disabled=true;btn.textContent='Creating account…';
+        const r=await fetch(SUPA+'/auth/v1/signup',{
+          method:'POST',
+          headers:{apikey:KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({email,password})
+        });
+        const data=await r.json();
+        if(!r.ok) throw new Error(data.msg||data.error_description||data.message||'Could not create account');
+
+        if(data.access_token){
+          saveSession(data);
+          await loadAccountProfile();
+          showScreen('accountScreen');
+          toast('Account created');
+        }else{
+          $('authPageError').style.color='#2f7d32';
+          $('authPageError').textContent='Account created. Check your email to confirm, then log in.';
+          setAuthPageMode('login');
+        }
+      }catch(e){
+        $('authPageError').style.color='#b53a20';
+        $('authPageError').textContent=e.message||'Could not create account';
+      }finally{
+        btn.disabled=false;btn.textContent='Create Account';
+      }
     }
 
     async function signInWithPassword(){
@@ -1445,7 +1536,7 @@
           headers:{apikey:KEY,'Content-Type':'application/json'},
           body:JSON.stringify({
             email,
-            create_user:true,
+            create_user:authPageMode==='signup',
             options:{email_redirect_to:redirectTo}
           })
         });
@@ -2167,6 +2258,10 @@
     $('authBack').addEventListener('click',()=>showScreen('home'));
     $('accountBack').addEventListener('click',()=>showScreen('home'));
     $('googleLogin').addEventListener('click',startGoogleLogin);
+    $('loginTab').addEventListener('click',()=>setAuthPageMode('login'));
+    $('signupTab').addEventListener('click',()=>setAuthPageMode('signup'));
+    $('passwordSignupBtn').addEventListener('click',signUpWithPassword);
+    $('signupPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signUpWithPassword()});
     $('passwordLoginBtn').addEventListener('click',signInWithPassword);
     $('passwordPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signInWithPassword()});
     $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
@@ -2206,6 +2301,7 @@
     document.querySelectorAll('.suggestions button').forEach(b=>b.addEventListener('click',()=>sendChat(b.textContent)));
     window.addEventListener('beforeunload',stopSpeech);
 
+    setAuthPageMode('login');
     updateAccountUI();
     (async()=>{
       const oauthHandled=await consumeOAuthHash().catch(()=>false);
