@@ -487,6 +487,7 @@
     }
 
     let currentAudio=null;
+    let autoplayNarration=true;
     let ambientAudio=null;
     let ambientFade=null;
 
@@ -601,13 +602,28 @@
         await new Promise(r=>setTimeout(r,300));
         if(!speaking)return;
 
-        const meaningAudio=await fetchTTS(spokenExplanation(v),'meaning');
+        const meaning=spokenExplanation(v);
+        const meaningAudio=await fetchTTS(meaning,'meaning',v);
         if(!speaking)return;
         await playBlob(meaningAudio);
+        if(!speaking)return;
+
+        stopAmbient();
+        speaking=false;
+        $('audioBtn').textContent='▶';
+        $('wave').classList.remove('playing');
+
+        if(autoplayNarration && currentVerseIndex < currentVerses.length-1){
+          currentVerseIndex++;
+          renderVerse();
+          renderTab(currentTab);
+          window.scrollTo({top:0,behavior:'smooth'});
+          await new Promise(r=>setTimeout(r,450));
+          speak();
+        }
       }catch(e){
         toast(e.message||'Narration stopped');
-      }finally{
-        if(speaking) stopSpeech();
+        stopSpeech();
       }
     }
 
