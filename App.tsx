@@ -42,7 +42,7 @@ function Home({ onOpenChapter, onOpenChat }: { onOpenChapter: (chapter: Chapter)
     <View style={styles.flex}>
       <View style={styles.hero}>
         <Text style={styles.kicker}>श्रीमद्भगवद्गीता</Text>
-        <Text style={styles.title}>Gita with Krishna</Text>
+        <Text style={styles.title}>Gita Verse</Text>
         <Text style={styles.subtitle}>Read the Gita. Reflect on it. Ask questions grounded in its verses.</Text>
         <Pressable style={styles.primaryButton} onPress={onOpenChat}><Text style={styles.primaryButtonText}>Ask Krishna</Text></Pressable>
       </View>
