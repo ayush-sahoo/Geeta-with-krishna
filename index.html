@@ -1123,14 +1123,14 @@
 
           <div class="auth-or"><span id="authDividerText">or login with email</span></div>
 
-          <div id="passwordLoginStep" class="password-login-block">
+          <form id="passwordLoginStep" class="password-login-block">
             <label class="phone-label">Email</label>
-            <input id="passwordEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
+            <input id="passwordEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com" required>
             <label class="phone-label">Password</label>
-            <input id="passwordPassword" class="email-input" type="password" autocomplete="current-password" placeholder="Enter password">
-            <button id="passwordLoginBtn" class="auth-main-btn">Login</button>
+            <input id="passwordPassword" class="email-input" type="password" autocomplete="current-password" placeholder="Enter password" required>
+            <button id="passwordLoginBtn" type="submit" class="auth-main-btn">Login</button>
             <div class="email-help">For existing password-based accounts.</div>
-          </div>
+          </form>
 
           <div id="authPageError" class="auth-page-error"></div>
 
@@ -1456,7 +1456,8 @@
       }
     }
 
-    async function signInWithPassword(){
+    async function signInWithPassword(event){
+      if(event?.preventDefault) event.preventDefault();
       $('authPageError').textContent='';
       const email=$('passwordEmail').value.trim();
       const password=$('passwordPassword').value;
@@ -1478,8 +1479,10 @@
           headers:{apikey:KEY,'Content-Type':'application/json'},
           body:JSON.stringify({email,password})
         });
-        const data=await r.json();
-        if(!r.ok) throw new Error(data.msg||data.error_description||data.message||'Could not sign in');
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(
+          data.msg||data.error_description||data.message||('Login failed ('+r.status+')')
+        );
 
         saveSession(data);
         await loadAccountProfile();
@@ -2193,8 +2196,7 @@
     $('signupTab').addEventListener('click',()=>setAuthPageMode('signup'));
     $('passwordSignupBtn').addEventListener('click',signUpWithPassword);
     $('signupPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signUpWithPassword()});
-    $('passwordLoginBtn').addEventListener('click',signInWithPassword);
-    $('passwordPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signInWithPassword()});
+    $('passwordLoginStep').addEventListener('submit',signInWithPassword);
     $('signOutBtn').addEventListener('click',signOut);
     $('accountUpgrade').addEventListener('click',startLifetimePurchase);
     $('askHero').addEventListener('click',()=>hasLifetimeAccess()?showScreen('chatScreen'):showPaywall());
