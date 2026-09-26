@@ -1250,6 +1250,39 @@
       return true;
     }
 
+    async function handlePaymentReturn(){
+      const params=new URLSearchParams(location.search);
+      if(params.get('payment')!=='success' || !authSession?.access_token) return false;
+
+      toast('Confirming your payment…');
+
+      for(let i=0;i<8;i++){
+        await loadAccountProfile();
+        if(hasLifetimeAccess()){
+          const paymentId=accountProfile?.payment_id||'paid';
+          const tracked=localStorage.getItem('metaPurchaseTracked');
+          if(tracked!==paymentId && typeof fbq==='function'){
+            fbq('track','Purchase',{
+              value:1000,
+              currency:'INR',
+              content_name:'Gita Verse Lifetime Access'
+            });
+            localStorage.setItem('metaPurchaseTracked',paymentId);
+          }
+
+          history.replaceState({},document.title,location.pathname);
+          renderAccessState();
+          showScreen('accountScreen',true);
+          toast('Lifetime Access unlocked ✓');
+          return true;
+        }
+        await new Promise(r=>setTimeout(r,1200));
+      }
+
+      toast('Payment received. Access may take a moment to update.');
+      return false;
+    }
+
     async function refreshAuthSession(){
       let stored=null;
       try{stored=JSON.parse(localStorage.getItem('gitaAuthSession')||'null')}catch(e){}
@@ -2125,6 +2158,7 @@
     (async()=>{
       const oauthHandled=await consumeOAuthHash().catch(()=>false);
       if(!oauthHandled) await refreshAuthSession();
+      await handlePaymentReturn().catch(()=>false);
       load().catch(e=>{
         $('chapters').innerHTML='<div class="meta">Could not load the Gita. '+e.message+'</div>';
       });
