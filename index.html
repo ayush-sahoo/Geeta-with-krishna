@@ -268,7 +268,7 @@
           <button id="audioBtn" class="audio-btn" aria-label="Play verse and meaning">▶</button>
           <div class="audio-copy">
             <strong>Hear this verse</strong>
-            <small>Female chant → male meaning · Indian classical raga background</small>
+            <small>Female chant → male meaning · original Indian Classical Raga</small>
           </div>
           <div id="wave" class="wave"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
@@ -493,33 +493,25 @@
     async function startAmbient(){
       stopAmbient();
       try{
-        const b64=await fetch('/raga-loop.b64',{cache:'force-cache'}).then(r=>r.text());
-        const bin=atob(b64.trim());
-        const bytes=new Uint8Array(bin.length);
-        for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-        const blob=new Blob([bytes],{type:'audio/mpeg'});
-        const url=URL.createObjectURL(blob);
-
-        ambientAudio=new Audio(url);
+        ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');
         ambientAudio.loop=true;
         ambientAudio.preload='auto';
         ambientAudio.volume=0;
-
         await ambientAudio.play();
 
-        let target=.30;
+        const target=.22;
         ambientFade=setInterval(()=>{
           if(!ambientAudio){
             clearInterval(ambientFade);
             ambientFade=null;
             return;
           }
-          ambientAudio.volume=Math.min(target,ambientAudio.volume+.03);
+          ambientAudio.volume=Math.min(target,ambientAudio.volume+.025);
           if(ambientAudio.volume>=target){
             clearInterval(ambientFade);
             ambientFade=null;
           }
-        },55);
+        },60);
       }catch(e){
         console.warn('Background music failed',e);
       }
