@@ -1457,6 +1457,25 @@
       overflow:hidden;
       clip-path:inset(0 round 36px);
     }
+
+    .welcome-user{
+      margin-left:auto;
+      margin-right:10px;
+      font-size:13px;
+      font-weight:900;
+      color:#6b2c08;
+      white-space:nowrap;
+    }
+    @media(max-width:760px){
+      .welcome-user{
+        width:100%;
+        order:3;
+        margin:6px 0 0;
+        text-align:right;
+        font-size:12px;
+      }
+      .topbar{flex-wrap:wrap}
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -1923,7 +1942,37 @@
       return accountProfile;
     }
 
+    function userDisplayName(){
+      const u=authSession?.user;
+      if(!u) return '';
+      const meta=u.user_metadata||{};
+      const full=(meta.full_name||meta.name||meta.user_name||'').trim();
+      if(full) return full.split(' ')[0];
+      const email=(u.email||'').trim();
+      if(!email) return '';
+      const local=email.split('@')[0].replace(/[._-]+/g,' ').trim();
+      if(!local) return '';
+      return local
+        .split(' ')
+        .map(x=>x ? x.charAt(0).toUpperCase()+x.slice(1) : '')
+        .join(' ');
+    }
+
+    function updateWelcomeUser(){
+      const el=$('welcomeUser');
+      if(!el) return;
+      const name=userDisplayName();
+      if(authSession?.user && name){
+        el.textContent='Welcome, '+name+' 🙏';
+        el.classList.remove('hidden');
+      }else{
+        el.textContent='';
+        el.classList.add('hidden');
+      }
+    }
+
     function updateAccountUI(){
+      updateWelcomeUser();
       const loggedIn=!!authSession?.access_token;
       $('navAccount').textContent=loggedIn?'Account':'Login / Sign up';
 
@@ -2884,6 +2933,7 @@
     window.addEventListener('beforeunload',stopSpeech);
 
     setAuthPageMode('login');
+    updateWelcomeUser();
     updateAccountUI();
     (async()=>{
       const oauthHandled=await consumeOAuthHash().catch(()=>false);
