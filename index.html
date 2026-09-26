@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0d1324">
+  <link rel="preconnect" href="https://bkwvuckznpaawmqrjjgk.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="//bkwvuckznpaawmqrjjgk.supabase.co">
   <title>Gita Verse</title>
   <style>
     :root{
@@ -1949,6 +1951,48 @@
 
     const $=id=>document.getElementById(id);
 
+    const CACHE_PREFIX='gitaVerse:v2:';
+    const CACHE_TTL={
+      chapters:24*60*60*1000,
+      verses:24*60*60*1000,
+      daily:6*60*60*1000
+    };
+    const memoryCache=new Map();
+    let paidContentLoadPromise=null;
+
+    function cacheRead(key,maxAge){
+      const now=Date.now();
+      const mem=memoryCache.get(key);
+      if(mem && now-mem.savedAt<maxAge) return mem.data;
+      try{
+        const raw=localStorage.getItem(CACHE_PREFIX+key);
+        if(!raw) return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed?.savedAt || now-parsed.savedAt>=maxAge) return null;
+        memoryCache.set(key,parsed);
+        return parsed.data;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function cacheWrite(key,data){
+      const entry={savedAt:Date.now(),data};
+      memoryCache.set(key,entry);
+      try{localStorage.setItem(CACHE_PREFIX+key,JSON.stringify(entry))}catch(e){}
+      return data;
+    }
+
+    function sameJson(a,b){
+      try{return JSON.stringify(a)===JSON.stringify(b)}catch(e){return false}
+    }
+
+    function todayCacheKey(){
+      const d=new Date();
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+
+
     function hasLifetimeAccess(){
       return !!(
         authSession?.access_token &&
@@ -2730,28 +2774,98 @@
       renderAccessState();
     }
 
-    async function loadPaidContent(){
-      if(!hasLifetimeAccess()) return;
-      chapters=await api('gita_chapters?select=*&order=id.asc');
+    function renderChapterCards(list){
+      if(!hasLifetimeAccess() || !Array.isArray(list)) return;
+      chapters=list;
       renderTopicGrid();
       $('chapters').innerHTML='';
-
-      chapters.forEach(c=>{
+      list.forEach(c=>{
         const b=document.createElement('button');
         b.className='chapter';
         b.innerHTML='<span class="chapter-num">'+c.id+'</span><h3>'+c.name_english+'</h3><div class="sans">'+c.name_sanskrit+'</div><div class="meta" style="margin-top:10px">'+c.verse_count+' verses</div>';
         b.addEventListener('click',()=>openChapter(c));
         $('chapters').appendChild(b);
       });
+    }
 
-      const seed=new Date().getDate()+new Date().getMonth()*31;
-      const chapter=chapters[seed%chapters.length];
-      const list=await api('gita_verses?select=chapter_id,verse_number,translation_english&chapter_id=eq.'+chapter.id+'&order=verse_number.asc');
-      const verse=list[seed%list.length];
-      if(verse){
-        $('daily').querySelector('.daily-quote').textContent='“'+cleanTranslation(verse.translation_english)+'”';
-        $('daily').querySelector('.daily-ref').textContent='Bhagavad Gita '+verse.chapter_id+'.'+verse.verse_number;
+    function renderDailyVerse(verse){
+      if(!verse || !hasLifetimeAccess()) return;
+      $('daily').querySelector('.daily-quote').textContent='“'+cleanTranslation(verse.translation_english)+'”';
+      $('daily').querySelector('.daily-ref').textContent='Bhagavad Gita '+verse.chapter_id+'.'+verse.verse_number;
+    }
+
+    async function refreshDailyVerse(chapterList){
+      if(!chapterList?.length || !hasLifetimeAccess()) return;
+      const key='daily:'+todayCacheKey();
+      const cached=cacheRead(key,CACHE_TTL.daily);
+      if(cached) renderDailyVerse(cached);
+
+      try{
+        const seed=new Date().getDate()+new Date().getMonth()*31;
+        const chapter=chapterList[seed%chapterList.length];
+        const verseCacheKey='chapter-verses:'+chapter.id;
+        let fullCached=cacheRead(verseCacheKey,CACHE_TTL.verses);
+        let list;
+
+        if(fullCached?.length){
+          list=fullCached.map(v=>({
+            chapter_id:v.chapter_id,
+            verse_number:v.verse_number,
+            translation_english:v.translation_english
+          }));
+        }else{
+          list=await api('gita_verses?select=chapter_id,verse_number,translation_english&chapter_id=eq.'+chapter.id+'&order=verse_number.asc');
+        }
+
+        const verse=list?.[seed%list.length];
+        if(verse){
+          cacheWrite(key,verse);
+          renderDailyVerse(verse);
+        }
+      }catch(e){
+        if(!cached) console.warn('Daily verse refresh failed',e);
       }
+    }
+
+    async function loadPaidContent(){
+      if(!hasLifetimeAccess()) return;
+      if(paidContentLoadPromise) return paidContentLoadPromise;
+
+      paidContentLoadPromise=(async()=>{
+        const cachedChapters=cacheRead('chapters',CACHE_TTL.chapters);
+        if(cachedChapters?.length){
+          renderChapterCards(cachedChapters);
+          refreshDailyVerse(cachedChapters);
+        }
+
+        try{
+          const fresh=await api('gita_chapters?select=*&order=id.asc');
+          if(fresh?.length){
+            cacheWrite('chapters',fresh);
+            if(!sameJson(fresh,cachedChapters)) renderChapterCards(fresh);
+            else chapters=fresh;
+            refreshDailyVerse(fresh);
+          }
+        }catch(e){
+          if(!cachedChapters?.length) throw e;
+          console.warn('Using cached chapters',e);
+        }
+      })().finally(()=>{paidContentLoadPromise=null});
+
+      return paidContentLoadPromise;
+    }
+
+    function renderVerseRows(c,list){
+      if(currentChapter?.id!==c.id || !Array.isArray(list)) return;
+      currentVerses=list;
+      $('verseList').innerHTML='';
+      list.forEach((v,i)=>{
+        const b=document.createElement('button');
+        b.className='verse-row';
+        b.innerHTML='<div class="ref">Verse '+c.id+'.'+v.verse_number+'</div><div class="preview">'+v.sanskrit+'</div>';
+        b.addEventListener('click',()=>openVerse(i));
+        $('verseList').appendChild(b);
+      });
     }
 
     async function openChapter(c){
@@ -2761,18 +2875,28 @@
       $('chapterEyebrow').textContent='Chapter '+c.id;
       $('chapterTitle').textContent=c.name_english;
       $('chapterCount').textContent=c.verse_count+' verses';
-      $('verseList').innerHTML='<div class="meta">Loading verses…</div>';
 
-      currentVerses=await api('gita_verses?select=*&chapter_id=eq.'+c.id+'&order=verse_number.asc');
-      $('verseList').innerHTML='';
+      const key='chapter-verses:'+c.id;
+      const cached=cacheRead(key,CACHE_TTL.verses);
 
-      currentVerses.forEach((v,i)=>{
-        const b=document.createElement('button');
-        b.className='verse-row';
-        b.innerHTML='<div class="ref">Verse '+c.id+'.'+v.verse_number+'</div><div class="preview">'+v.sanskrit+'</div>';
-        b.addEventListener('click',()=>openVerse(i));
-        $('verseList').appendChild(b);
-      });
+      if(cached?.length){
+        renderVerseRows(c,cached);
+      }else{
+        $('verseList').innerHTML='<div class="meta">Loading verses…</div>';
+      }
+
+      try{
+        const fresh=await api('gita_verses?select=*&chapter_id=eq.'+c.id+'&order=verse_number.asc');
+        if(fresh?.length){
+          cacheWrite(key,fresh);
+          if(currentChapter?.id===c.id && !sameJson(fresh,cached)) renderVerseRows(c,fresh);
+          else if(currentChapter?.id===c.id) currentVerses=fresh;
+        }
+      }catch(e){
+        if(!cached?.length){
+          $('verseList').innerHTML='<div class="meta">Could not load verses. Please try again.</div>';
+        }
+      }
     }
 
     function openVerse(i){
