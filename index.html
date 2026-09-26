@@ -1708,7 +1708,7 @@
         <div class="daily-ref meta"></div>
       </div>
 
-      <section id="lifetimeOffer" class="lifetime-card" aria-label="Lifetime access offer">
+      <section id="lifetimeOffer" class="lifetime-card hidden" aria-label="Lifetime access offer">
         <div>
           <div class="lifetime-kicker">✦ Limited Lifetime Offer</div>
           <h3>Unlock Gita Verse for life</h3>
@@ -2178,6 +2178,7 @@
         const paidActive=plan==='lifetime' && payment==='paid';
         $('accountUpgrade').style.display=paidActive?'none':'block';
         $('accountAccessActive').style.display=paidActive?'flex':'none';
+        if($('lifetimeOffer')) $('lifetimeOffer').classList.toggle('hidden',paidActive);
       }
       renderAccessState();
     }
@@ -2232,7 +2233,15 @@
       const daily=$('daily');
       const offer=$('lifetimeOffer');
 
-      if(offer) offer.classList.toggle('hidden',paid);
+      if(offer){
+        if(!authSession?.access_token){
+          offer.classList.remove('hidden');
+        }else if(accountProfile){
+          offer.classList.toggle('hidden',paid);
+        }else{
+          offer.classList.add('hidden');
+        }
+      }
       $('navChat').textContent=paid?'Ask Krishna':'🔒 Ask Krishna';
 
       if(!paid){
