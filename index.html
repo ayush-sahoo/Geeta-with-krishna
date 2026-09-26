@@ -105,6 +105,25 @@
     }
     .topic-hero h2{font-size:clamp(32px,6vw,50px);margin:7px 0 12px;letter-spacing:-.03em}
     .topic-hero p{margin:0;color:#e0e5ed;line-height:1.75;font-size:17px}
+    .topic-guide{
+      display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px;
+    }
+    .guide-card{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      border-radius:20px;padding:18px;
+    }
+    .guide-card h3{margin:0 0 10px;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+    .guide-card.do h3{color:#9fe0b4}
+    .guide-card.dont h3{color:#f1b1a8}
+    .guide-card ul{margin:0;padding-left:18px;display:grid;gap:8px;color:#e8edf4;line-height:1.55}
+    .daily-practice{
+      margin:0 0 18px;border:1px solid rgba(231,189,103,.32);
+      background:rgba(231,189,103,.08);border-radius:18px;padding:16px;
+      color:#f3e8c9;line-height:1.65;
+    }
+    .daily-practice strong{color:var(--gold);display:block;margin-bottom:4px}
+    @media(max-width:680px){.topic-guide{grid-template-columns:1fr}}
     .topic-verses{display:grid;gap:11px}
     .topic-verse{
       border:1px solid var(--border);
@@ -369,6 +388,17 @@
         <h2 id="topicTitle"></h2>
         <p id="topicIntro"></p>
       </div>
+      <div class="topic-guide">
+        <div class="guide-card do">
+          <h3>What to do</h3>
+          <ul id="topicDos"></ul>
+        </div>
+        <div class="guide-card dont">
+          <h3>What to avoid</h3>
+          <ul id="topicDonts"></ul>
+        </div>
+      </div>
+      <div id="topicPractice" class="daily-practice"></div>
       <div id="topicVerses" class="topic-verses"></div>
     </section>
 
@@ -504,6 +534,9 @@
       love:{
         label:'Love',icon:'♥',kicker:'Love without possession',
         intro:'The Gita rarely treats love as romance alone. It points toward a steadier love: compassion without hatred, seeing oneself in others, and devotion that does not demand possession or control.',
+        dos:['Care without trying to possess or control the other person.','Practice compassion even when you disagree.','Notice whether your love makes you more generous, patient and truthful.'],
+        donts:['Do not confuse attachment with love.','Do not make another person responsible for your inner stability.','Do not use love as a reason to abandon discernment or self-respect.'],
+        practice:'Today, do one caring action without expecting appreciation, attention, or a return favour.',
         verses:[
           {c:12,v:13,n:'Love begins with non-hatred and compassion toward every being.'},
           {c:6,v:32,n:'A mature heart learns to recognize another person’s joy and pain as deeply as its own.'},
@@ -514,6 +547,9 @@
       lust:{
         label:'Lust & Desire',icon:'◆',kicker:'When desire starts controlling you',
         intro:'The Gita does not say every desire is evil. It warns about desire that becomes compulsive — when wanting turns into attachment, frustration, anger and loss of judgment.',
+        dos:['Notice desire early, before it becomes obsession.','Reduce repeated exposure to triggers that strengthen craving.','Redirect restless energy into disciplined action, exercise, study or service.'],
+        donts:['Do not keep feeding a fantasy and then expect the urge to disappear.','Do not shame yourself for having desire; observe it without automatically obeying it.','Do not make decisions at the peak of craving.'],
+        practice:'When a strong urge appears, wait 10 minutes before acting. Move your body, change context, and observe whether the urge rises and falls.',
         verses:[
           {c:3,v:37,n:'Krishna identifies uncontrolled desire and anger as powerful inner enemies born of restless passion.'},
           {c:2,v:62,n:'Repeatedly dwelling on an object can grow into attachment, and attachment into craving.'},
@@ -524,6 +560,9 @@
       anger:{
         label:'Anger',icon:'⚡',kicker:'Interrupt anger before it owns the mind',
         intro:'The Gita traces anger back to frustrated attachment and desire. Its solution is not suppression alone, but awareness, self-mastery and reducing the inner demand that life must go exactly as we want.',
+        dos:['Create a pause before speaking or sending a message.','Identify what expectation or attachment was frustrated.','Return to the issue only after your body and mind have settled.'],
+        donts:['Do not make permanent decisions during a temporary surge of anger.','Do not rehearse the insult repeatedly in your mind.','Do not mistake aggression for strength.'],
+        practice:'Use a 90-second rule today: no reply, call, or confrontation until you have breathed slowly and named what exactly triggered you.',
         verses:[
           {c:2,v:62,n:'Attachment creates the conditions from which anger can arise.'},
           {c:2,v:63,n:'Anger clouds memory and judgment, making wise action harder.'},
@@ -534,6 +573,9 @@
       fear:{
         label:'Fear & Anxiety',icon:'◌',kicker:'Steadiness when the future is uncertain',
         intro:'The Gita does not promise a life without uncertainty. It teaches steadiness inside uncertainty — through perspective, disciplined action, trust and freedom from being ruled by imagined outcomes.',
+        dos:['Separate what is in your control from what is not.','Take the next concrete action instead of solving the entire future mentally.','Return attention to duty, preparation and present effort.'],
+        donts:['Do not treat every imagined outcome as a prediction.','Do not delay all action until you feel completely certain.','Do not let fear become your only source of advice.'],
+        practice:'Write two columns: “within my control” and “outside my control.” Act on one item from the first column today.',
         verses:[
           {c:2,v:56,n:'Steady wisdom is marked by a mind not shattered by sorrow or intoxicated by pleasure.'},
           {c:4,v:10,n:'Many have moved beyond fear by taking refuge in deeper understanding and devotion.'},
@@ -544,6 +586,9 @@
       attachment:{
         label:'Attachment',icon:'∞',kicker:'Care deeply without clinging',
         intro:'Non-attachment in the Gita does not mean not caring. It means acting with full sincerity while refusing to make your peace dependent on one result, person, possession or identity.',
+        dos:['Give full effort while accepting that outcomes have many causes.','Keep your identity larger than one role, relationship or result.','Practice gratitude without assuming permanence.'],
+        donts:['Do not make success the condition for self-worth.','Do not cling harder just because something is changing.','Do not call indifference “detachment.”'],
+        practice:'Choose one result you are gripping tightly. Write down the best effort you can make, then deliberately release the rest for today.',
         verses:[
           {c:2,v:47,n:'You are responsible for action, but you cannot own every outcome.'},
           {c:2,v:48,n:'Yoga is steadiness in success and failure rather than emotional dependence on either.'},
@@ -554,6 +599,9 @@
       ego:{
         label:'Ego',icon:'◎',kicker:'You are not the sole doer',
         intro:'The Gita challenges the ego’s belief that “I alone am the doer.” It asks us to recognize nature, circumstance, other people and deeper forces participating in every action.',
+        dos:['Credit the people and conditions that helped you.','Stay teachable even when you are skilled.','Separate your role from your entire identity.'],
+        donts:['Do not assume every success proves superiority.','Do not turn every disagreement into a threat to identity.','Do not confuse humility with weakness or self-erasure.'],
+        practice:'At the end of today, list three things you accomplished and one person, circumstance, or unseen support that made each possible.',
         verses:[
           {c:3,v:27,n:'Actions arise through the qualities of nature, while ego claims complete authorship.'},
           {c:13,v:29,n:'Clear seeing includes recognizing nature as the field in which action unfolds.'},
@@ -564,6 +612,9 @@
       grief:{
         label:'Grief & Loss',icon:'☾',kicker:'How to hold loss without collapsing',
         intro:'The Gita begins in grief. Krishna does not mock Arjuna’s pain; he widens Arjuna’s perspective on life, death, identity and responsibility so grief does not become paralysis.',
+        dos:['Allow grief to be felt without demanding that it disappear quickly.','Stay connected to people and simple responsibilities.','Hold the memory of what was lost without letting loss become your only identity.'],
+        donts:['Do not force yourself to “be spiritual” instead of feeling pain.','Do not isolate indefinitely.','Do not assume today’s intensity will remain unchanged forever.'],
+        practice:'Give grief a container: 15 quiet minutes to remember, write, pray, or sit. After that, return gently to one ordinary task.',
         verses:[
           {c:2,v:11,n:'Krishna begins by challenging the assumptions underneath Arjuna’s grief.'},
           {c:2,v:20,n:'The Self is described as unborn and undying, deeper than bodily change.'},
@@ -574,6 +625,9 @@
       mind:{
         label:'Mind & Overthinking',icon:'≈',kicker:'Train the mind instead of fighting it',
         intro:'The Gita treats the mind as trainable. Overthinking is not solved by one perfect thought, but by repeatedly returning attention, strengthening discipline and becoming less identified with every mental movement.',
+        dos:['Return attention to one chosen task or breath when the mind wanders.','Reduce unnecessary inputs when the mind is overstimulated.','Build routines that make concentration easier.'],
+        donts:['Do not debate every thought as if it deserves an answer.','Do not confuse thinking longer with thinking better.','Do not expect concentration to improve without repetition.'],
+        practice:'Do one 12-minute single-task block today with notifications off. Each time the mind wanders, return without judging yourself.',
         verses:[
           {c:6,v:5,n:'The trained mind can lift you; the untrained mind can work against you.'},
           {c:6,v:26,n:'Whenever the mind wanders, the practice is simply to bring it back again.'},
@@ -584,6 +638,9 @@
       duty:{
         label:'Duty & Career',icon:'→',kicker:'What is mine to do?',
         intro:'The Gita’s language of dharma is broader than career, but it is highly relevant to work: identify the responsibility that is genuinely yours, perform it well, and do not let comparison or obsession with rewards corrupt the action.',
+        dos:['Define the responsibility that is actually yours today.','Measure yourself by quality of effort, preparation and integrity.','Choose work aligned with your nature and strengths where possible.'],
+        donts:['Do not spend more energy comparing paths than walking your own.','Do not abandon responsibility only because the result is uncertain.','Do not confuse ambition with purpose.'],
+        practice:'Write the single most important responsibility you have today. Give it your best uninterrupted 30 minutes before checking outcomes.',
         verses:[
           {c:2,v:31,n:'Arjuna is asked to look clearly at the duty arising from his actual role and situation.'},
           {c:3,v:8,n:'Necessary action is better than withdrawal from responsibility.'},
@@ -594,6 +651,9 @@
       devotion:{
         label:'Devotion & Faith',icon:'✦',kicker:'A relationship, not just a belief',
         intro:'Bhakti in the Gita is not blind belief. It is a reorientation of attention, action and identity toward the Divine, expressed through remembrance, offering, trust, humility and compassion.',
+        dos:['Turn ordinary actions into offerings through intention.','Remember the Divine during both success and difficulty.','Let devotion make you kinder, steadier and less ego-driven.'],
+        donts:['Do not use devotion to avoid practical responsibility.','Do not measure spirituality only by emotion or ritual intensity.','Do not use faith to judge people who practice differently.'],
+        practice:'Before one ordinary task today, pause and inwardly offer the action. Do it carefully, then release the need for recognition.',
         verses:[
           {c:9,v:22,n:'Krishna describes care for those who remain steadily devoted and centred in Him.'},
           {c:9,v:26,n:'Even a simple offering is meaningful when given with sincere devotion.'},
@@ -622,6 +682,9 @@
       $('topicEyebrow').textContent=t.kicker;
       $('topicTitle').textContent=t.label;
       $('topicIntro').textContent=t.intro;
+      $('topicDos').innerHTML=(t.dos||[]).map(x=>'<li>'+x+'</li>').join('');
+      $('topicDonts').innerHTML=(t.donts||[]).map(x=>'<li>'+x+'</li>').join('');
+      $('topicPractice').innerHTML='<strong>Practice for today</strong>'+(t.practice||'');
       $('topicVerses').innerHTML='';
 
       t.verses.forEach(item=>{
