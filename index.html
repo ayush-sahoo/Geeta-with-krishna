@@ -948,10 +948,11 @@
     .preview-content{
       position:absolute;
       inset:0;
+      z-index:1;
       padding:22px;
-      filter:blur(5.5px);
-      opacity:.62;
-      transform:scale(1.035);
+      filter:blur(2.8px);
+      opacity:.92;
+      transform:scale(1.02);
       pointer-events:none;
       user-select:none;
     }
@@ -959,7 +960,8 @@
       content:"";
       position:absolute;
       inset:0;
-      background:linear-gradient(180deg,rgba(255,250,241,.05),rgba(255,247,232,.34));
+      background:linear-gradient(180deg,rgba(255,250,241,.02),rgba(255,247,232,.10));
+      pointer-events:none;
     }
     .preview-topic-grid{
       display:grid;
@@ -975,7 +977,7 @@
       display:flex;
       align-items:center;
       gap:9px;
-      background:linear-gradient(145deg,#fff7e6,#ffd98e);
+      background:linear-gradient(145deg,#fff3c4,#ffbd4a);
       border:1px solid rgba(146,65,10,.14);
       color:#5a2100;
       font-weight:900;
@@ -990,7 +992,7 @@
       border-radius:20px;
       padding:18px;
       min-height:104px;
-      background:linear-gradient(145deg,#fff5d7,#ffc867);
+      background:linear-gradient(145deg,#fff0b8,#ffae32);
       border:1px solid rgba(146,65,10,.14);
       box-shadow:0 8px 20px rgba(165,67,0,.08);
       color:#4a1900;
@@ -1017,8 +1019,8 @@
       text-align:center;
       padding:30px 24px;
       background:
-        radial-gradient(circle at 50% 35%,rgba(255,255,255,.80),rgba(255,248,236,.68) 44%,rgba(255,242,220,.86) 100%);
-      backdrop-filter:blur(7px);
+        linear-gradient(180deg,rgba(255,248,236,.30) 0%,rgba(255,244,228,.44) 48%,rgba(255,239,213,.58) 100%);
+      backdrop-filter:blur(3px);
     }
     .preview-pill{
       display:inline-flex;
@@ -1045,6 +1047,10 @@
     .preview-overlay p{
       max-width:560px;
       margin:10px auto 18px;
+      background:rgba(255,255,255,.48);
+      border:1px solid rgba(120,60,20,.08);
+      border-radius:14px;
+      padding:8px 12px;
       color:#6b2c08;
       font-size:15px;
       line-height:1.55;
