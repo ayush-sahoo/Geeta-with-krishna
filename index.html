@@ -1128,33 +1128,8 @@
             <input id="passwordEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
             <label class="phone-label">Password</label>
             <input id="passwordPassword" class="email-input" type="password" autocomplete="current-password" placeholder="Enter password">
-            <button id="passwordLoginBtn" class="auth-main-btn">Login with Email & Password</button>
+            <button id="passwordLoginBtn" class="auth-main-btn">Login</button>
             <div class="email-help">For existing password-based accounts.</div>
-          </div>
-
-          <div id="magicLinkDivider" class="auth-or"><span id="magicDividerText">or use a magic link</span></div>
-
-          <div id="passwordSignupStep" class="password-login-block hidden">
-            <label class="phone-label">Email</label>
-            <input id="signupEmail" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
-            <label class="phone-label">Create password</label>
-            <input id="signupPassword" class="email-input" type="password" autocomplete="new-password" placeholder="Create password">
-            <button id="passwordSignupBtn" class="auth-main-btn">Create Account</button>
-            <div class="email-help">Create a new Gita Verse account with email and password.</div>
-          </div>
-
-          <div id="emailStep">
-            <label class="phone-label">Email address</label>
-            <input id="emailAddress" class="email-input" type="email" autocomplete="email" placeholder="you@example.com">
-            <button id="sendEmailLink" class="auth-main-btn">Continue with Email</button>
-            <div id="emailMagicHelp" class="email-help">We’ll send you a secure sign-in link. No password needed.</div>
-          </div>
-
-          <div id="emailSentStep" class="hidden">
-            <div class="email-sent-icon">✓</div>
-            <h3>Check your inbox</h3>
-            <p id="emailSentCopy">We sent a secure sign-in link to your email.</p>
-            <button id="changeEmail" class="auth-link-btn">Use a different email</button>
           </div>
 
           <div id="authPageError" class="auth-page-error"></div>
@@ -1426,17 +1401,15 @@
 
       $('loginTab').classList.toggle('active',!signup);
       $('signupTab').classList.toggle('active',signup);
-      $('authModeTitle').textContent=signup?'Create your account':'Login';
+      $('authModeTitle').textContent=signup?'Sign up':'Login';
+      $('googleButtonText').textContent=signup?'Sign up with Google':'Continue with Google';
       $('authModeLead').textContent=signup
-        ? 'Create your Gita Verse account to save purchases and unlock Lifetime Access.'
-        : 'Welcome back. Sign in to access your account and plan.';
-      $('authDividerText').textContent=signup?'or sign up with email':'or login with email';
+        ? 'Create a new Gita Verse account.'
+        : 'Welcome back. Sign in to your existing account.';
+      $('authDividerText').textContent=signup?'or create an account with email':'or login with email';
 
       $('passwordLoginStep').classList.toggle('hidden',signup);
       $('passwordSignupStep').classList.toggle('hidden',!signup);
-
-      $('magicDividerText').textContent=signup?'or sign up with a magic link':'or use a magic link';
-      $('sendEmailLink').textContent=signup?'Sign up with Email Link':'Continue with Email';
       $('authPageError').textContent='';
     }
 
@@ -1479,7 +1452,7 @@
         $('authPageError').style.color='#b53a20';
         $('authPageError').textContent=e.message||'Could not create account';
       }finally{
-        btn.disabled=false;btn.textContent='Create Account';
+        btn.disabled=false;btn.textContent='Sign up';
       }
     }
 
@@ -1515,50 +1488,8 @@
       }catch(e){
         $('authPageError').textContent=e.message||'Could not sign in';
       }finally{
-        btn.disabled=false;btn.textContent='Sign in with Email & Password';
+        btn.disabled=false;btn.textContent='Login';
       }
-    }
-
-    async function sendEmailMagicLink(){
-      $('authPageError').textContent='';
-      const email=$('emailAddress').value.trim();
-      if(!/^\S+@\S+\.\S+$/.test(email)){
-        $('authPageError').textContent='Enter a valid email address';
-        return;
-      }
-
-      const btn=$('sendEmailLink');
-      try{
-        btn.disabled=true;btn.textContent='Sending link…';
-        const redirectTo=location.origin+location.pathname;
-        const r=await fetch(SUPA+'/auth/v1/otp',{
-          method:'POST',
-          headers:{apikey:KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({
-            email,
-            create_user:authPageMode==='signup',
-            options:{email_redirect_to:redirectTo}
-          })
-        });
-        const data=await r.json().catch(()=>({}));
-        if(!r.ok) throw new Error(data.msg||data.message||data.error_description||'Could not send sign-in link');
-
-        $('emailStep').classList.add('hidden');
-        $('emailSentStep').classList.remove('hidden');
-        $('emailSentCopy').textContent='We sent a secure sign-in link to '+email+'.';
-        toast('Sign-in link sent');
-      }catch(e){
-        $('authPageError').textContent=e.message||'Could not send sign-in link';
-      }finally{
-        btn.disabled=false;btn.textContent='Continue with Email';
-      }
-    }
-
-    function resetEmailStep(){
-      $('emailSentStep').classList.add('hidden');
-      $('emailStep').classList.remove('hidden');
-      $('authPageError').textContent='';
-      setTimeout(()=>$('emailAddress').focus(),50);
     }
 
     async function signOut(){
@@ -2264,9 +2195,6 @@
     $('signupPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signUpWithPassword()});
     $('passwordLoginBtn').addEventListener('click',signInWithPassword);
     $('passwordPassword').addEventListener('keydown',e=>{if(e.key==='Enter')signInWithPassword()});
-    $('sendEmailLink').addEventListener('click',sendEmailMagicLink);
-    $('changeEmail').addEventListener('click',resetEmailStep);
-    $('emailAddress').addEventListener('keydown',e=>{if(e.key==='Enter')sendEmailMagicLink()});
     $('signOutBtn').addEventListener('click',signOut);
     $('accountUpgrade').addEventListener('click',startLifetimePurchase);
     $('askHero').addEventListener('click',()=>hasLifetimeAccess()?showScreen('chatScreen'):showPaywall());
