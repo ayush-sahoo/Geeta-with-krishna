@@ -906,6 +906,181 @@
       border-radius:15px;
       font-size:15px;
     }
+
+    /* Paid-content preview/paywall */
+    .content-section-head{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:end;
+      gap:24px;
+      margin:34px 0 14px;
+      width:100%;
+    }
+    .content-section-head::after{display:none}
+    .section-title-block{min-width:0}
+    .section-title-block h2{
+      margin:4px 0 0;
+      font-size:28px;
+      line-height:1.15;
+      letter-spacing:-.02em;
+      color:#4a1900;
+    }
+    .section-meta{
+      justify-self:end;
+      text-align:right;
+      padding-bottom:3px;
+      white-space:nowrap;
+    }
+
+    .preview-paywall{
+      position:relative;
+      grid-column:1/-1;
+      width:100%;
+      min-height:240px;
+      border-radius:26px;
+      overflow:hidden;
+      border:1px solid rgba(128,61,19,.14);
+      background:#f4efe6;
+      box-shadow:0 14px 34px rgba(130,55,10,.10);
+      isolation:isolate;
+    }
+    .preview-paywall.chapter-preview-shell{min-height:330px}
+    .preview-content{
+      position:absolute;
+      inset:0;
+      padding:22px;
+      filter:blur(5.5px);
+      opacity:.62;
+      transform:scale(1.035);
+      pointer-events:none;
+      user-select:none;
+    }
+    .preview-content::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg,rgba(255,250,241,.05),rgba(255,247,232,.34));
+    }
+    .preview-topic-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      height:100%;
+      align-content:center;
+    }
+    .preview-topic-card{
+      border-radius:18px;
+      padding:18px 16px;
+      min-height:72px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+      background:linear-gradient(145deg,#fff7e6,#ffd98e);
+      border:1px solid rgba(146,65,10,.14);
+      color:#5a2100;
+      font-weight:900;
+      box-shadow:0 7px 18px rgba(165,67,0,.08);
+    }
+    .preview-chapter-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+    .preview-chapter-card{
+      border-radius:20px;
+      padding:18px;
+      min-height:104px;
+      background:linear-gradient(145deg,#fff5d7,#ffc867);
+      border:1px solid rgba(146,65,10,.14);
+      box-shadow:0 8px 20px rgba(165,67,0,.08);
+      color:#4a1900;
+    }
+    .preview-chapter-card b{
+      display:block;
+      font-size:14px;
+      margin-bottom:10px;
+      color:#a94000;
+    }
+    .preview-chapter-card strong{
+      display:block;
+      font-size:17px;
+      line-height:1.25;
+    }
+    .preview-overlay{
+      position:absolute;
+      inset:0;
+      z-index:2;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      padding:30px 24px;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(255,255,255,.80),rgba(255,248,236,.68) 44%,rgba(255,242,220,.86) 100%);
+      backdrop-filter:blur(7px);
+    }
+    .preview-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 11px;
+      border-radius:999px;
+      background:rgba(255,255,255,.76);
+      border:1px solid rgba(140,60,0,.11);
+      color:#a94000;
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:12px;
+    }
+    .preview-overlay h3{
+      margin:0;
+      color:#4a1900;
+      font-size:clamp(24px,3.8vw,34px);
+      line-height:1.08;
+      letter-spacing:-.025em;
+    }
+    .preview-overlay p{
+      max-width:560px;
+      margin:10px auto 18px;
+      color:#6b2c08;
+      font-size:15px;
+      line-height:1.55;
+    }
+    .preview-overlay button{
+      border:0;
+      border-radius:999px;
+      padding:13px 20px;
+      background:linear-gradient(145deg,#ffd166,#ff9f1c);
+      color:#4a1900;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 10px 22px rgba(255,159,28,.20);
+    }
+    .preview-note{
+      margin-top:9px;
+      color:#8a5a2b;
+      font-size:11px;
+      font-weight:700;
+    }
+
+    @media(max-width:760px){
+      .content-section-head{
+        grid-template-columns:1fr;
+        gap:6px;
+        align-items:start;
+      }
+      .section-meta{
+        justify-self:start;
+        text-align:left;
+        padding-bottom:0;
+      }
+      .preview-topic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .preview-chapter-grid{grid-template-columns:1fr}
+      .preview-paywall.chapter-preview-shell{min-height:390px}
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -992,13 +1167,19 @@
       </section>
 
       <div class="sacred-divider">☸</div>
-      <div class="section-head">
-        <div><div class="daily-label">Explore by life topic</div><h2>What are you dealing with?</h2></div>
-        <span class="meta">Gita guidance across multiple shlokas</span>
+      <div class="section-head content-section-head">
+        <div class="section-title-block">
+          <div class="daily-label">Explore by life topic</div>
+          <h2>What are you dealing with?</h2>
+        </div>
+        <span class="meta section-meta">Gita guidance across multiple shlokas</span>
       </div>
       <div id="topicGrid" class="topic-grid"></div>
 
-      <div class="section-head"><h2>18 Chapters</h2><span class="meta">701 verses</span></div>
+      <div class="section-head content-section-head">
+        <div class="section-title-block"><h2>18 Chapters</h2></div>
+        <span class="meta section-meta">701 verses</span>
+      </div>
       <div id="chapters" class="chapters"></div>
     </section>
 
@@ -1404,8 +1585,44 @@
           daily.querySelector('.daily-quote').textContent='🔒 Daily verse is available with Lifetime Access';
           daily.querySelector('.daily-ref').textContent='Sign in and complete the one-time ₹1,000 payment to unlock.';
         }
-        if($('topicGrid')) $('topicGrid').innerHTML='<div class="locked-state"><div class="lock-icon">🔒</div><strong>Life Topics are locked</strong><p>Unlock practical Gita guides on love, anger, fear, attachment, purpose and more.</p><button onclick="startLifetimePurchase()">Unlock Lifetime Access</button></div>';
-        if($('chapters')) $('chapters').innerHTML='<div class="locked-state"><div class="lock-icon">🔒</div><strong>18 chapters · 701 verses</strong><p>Full shlokas, meanings, deep explanations, audio and navigation unlock after payment.</p><button onclick="startLifetimePurchase()">Unlock Lifetime Access</button></div>';
+        if($('topicGrid')) $('topicGrid').innerHTML=`
+          <div class="preview-paywall">
+            <div class="preview-content">
+              <div class="preview-topic-grid">
+                <div class="preview-topic-card">♡ Love</div>
+                <div class="preview-topic-card">◇ Lust & Desire</div>
+                <div class="preview-topic-card">⚡ Anger</div>
+                <div class="preview-topic-card">◌ Fear & Anxiety</div>
+                <div class="preview-topic-card">∞ Attachment</div>
+                <div class="preview-topic-card">◎ Ego</div>
+              </div>
+            </div>
+            <div class="preview-overlay">
+              <div class="preview-pill">Preview</div>
+              <h3>Guidance for real-life moments</h3>
+              <p>Explore Gita wisdom on love, anger, fear, attachment, purpose and more.</p>
+              <button onclick="startLifetimePurchase()">Get Lifetime Access</button>
+              <div class="preview-note">One-time payment · No subscription</div>
+            </div>
+          </div>`;
+        if($('chapters')) $('chapters').innerHTML=`
+          <div class="preview-paywall chapter-preview-shell">
+            <div class="preview-content">
+              <div class="preview-chapter-grid">
+                <div class="preview-chapter-card"><b>Chapter 1</b><strong>Arjuna Vishada Yoga</strong></div>
+                <div class="preview-chapter-card"><b>Chapter 2</b><strong>Sankhya Yoga</strong></div>
+                <div class="preview-chapter-card"><b>Chapter 3</b><strong>Karma Yoga</strong></div>
+                <div class="preview-chapter-card"><b>Chapter 4</b><strong>Jnana Karma Sanyasa Yoga</strong></div>
+              </div>
+            </div>
+            <div class="preview-overlay">
+              <div class="preview-pill">18 chapters · 701 verses</div>
+              <h3>See what’s inside the complete Gita</h3>
+              <p>Read every shloka with meaning, deep explanation, audio narration and practical guidance.</p>
+              <button onclick="startLifetimePurchase()">Unlock Full Gita</button>
+              <div class="preview-note">Lifetime access · ₹1,000 one-time</div>
+            </div>
+          </div>`;
         chapters=[];
         return;
       }
