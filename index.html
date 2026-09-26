@@ -609,9 +609,9 @@
     }
 
     function spokenExplanation(v){
-      const meaning=cleanTranslation(v.translation_english||'').trim();
-      const first=(meaning.match(/^[^.!?]+[.!?]/)||[meaning])[0];
-      return first.trim();
+      return cleanTranslation(v.translation_english||'')
+        .replace(/[“”"]/g,'')
+        .trim();
     }
 
     async function speak(){
