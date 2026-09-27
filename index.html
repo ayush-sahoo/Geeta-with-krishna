@@ -2958,6 +2958,37 @@
       #home .hero-badge strong{font-size:20px !important}
       #home .hero-badge small{font-size:10px !important}
     }
+
+    /* FIX: keep HQ Krishna artwork above the card background */
+    #home .hero{position:relative!important; isolation:isolate!important; overflow:hidden!important;}
+    #home .hero .krishna-scene-art{
+      z-index:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      display:block!important;
+    }
+    #home .hero::after{z-index:1!important;}
+    #home .hero::before{z-index:1!important;}
+    #home .hero .eyebrow,
+    #home .hero h1,
+    #home .hero p,
+    #home .hero .cta,
+    #home .hero-badges{z-index:2!important;}
+
+    #chatScreen{position:relative!important; isolation:isolate!important; overflow:hidden!important;}
+    #chatScreen .krishna-chat-art{
+      z-index:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      display:block!important;
+    }
+    #chatScreen::before{z-index:1!important;}
+    #chatScreen::after{z-index:1!important;}
+    #chatScreen .chat-head,
+    #chatScreen .suggestions,
+    #chatScreen #chat,
+    #chatScreen .composer,
+    #chatScreen .chat-hint{position:relative!important; z-index:2!important;}
 </style>
   <!-- Meta Pixel Code -->
   <script>
