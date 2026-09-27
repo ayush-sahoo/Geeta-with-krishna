@@ -1,0 +1,29 @@
+/* Shared styles for the policy pages (privacy, terms, refund, contact),
+   matching the app's cream-to-gold theme. */
+:root{--gold:#f6c453;--cream:#fff8e9;--brown:#5a260e;--brown2:#7a3b18;--muted:#8a6955;--line:#ead9bd;--shadow:0 14px 35px rgba(91,45,12,.13)}
+*{box-sizing:border-box}
+html,body{margin:0;background:#27221e;color:var(--brown);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.legal-app{max-width:480px;min-height:100vh;margin:auto;background:linear-gradient(180deg,#fff7e8 0,#f9d979 45%,#f7c45c 100%);box-shadow:0 0 50px #0005;padding:0 16px 40px}
+.legal-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 2px 14px}
+.legal-brand{display:flex;align-items:center;gap:10px;color:var(--brown);text-decoration:none}
+.legal-brand .om{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f6c453,#e9a63a);color:#5a260e;font-size:22px;box-shadow:0 4px 12px #a4591c33}
+.legal-brand b{display:block;font:22px Georgia,serif}
+.legal-brand small{display:block;font-size:11px;color:var(--muted)}
+.legal-home{border:0;background:#fff8eb;color:#6b2d0e;border-radius:14px;padding:9px 13px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+.legal-card{background:linear-gradient(135deg,#fffdf5,#fff1d2);padding:24px 20px;border:1px solid #fff;border-radius:26px;box-shadow:var(--shadow)}
+.legal-label{font-size:10px;font-weight:800;letter-spacing:1.7px;color:#98511e;text-transform:uppercase}
+.legal-card h1{font:30px/1.2 Georgia,serif;margin:10px 0 4px}
+.legal-updated{font-size:12px;color:var(--muted);margin:0 0 18px}
+.legal-card h2{font:19px Georgia,serif;margin:22px 0 6px;color:var(--brown2)}
+.legal-card p,.legal-card li{font-size:14px;line-height:1.65}
+.legal-card p{margin:0 0 10px}
+.legal-card ul{margin:0 0 10px;padding-left:20px}
+.legal-card li{margin-bottom:4px}
+.legal-card a{color:#a4591c;font-weight:600}
+.legal-contact{display:block;margin:16px 0;padding:16px;border:1px solid #e4c28c;border-radius:16px;background:#fff5da;text-align:center;text-decoration:none}
+.legal-contact small{display:block;font-size:11px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.legal-contact strong{display:block;margin-top:4px;font-size:18px;color:var(--brown)}
+.legal-links{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin:22px 0 0;padding:0;list-style:none;font-size:12px}
+.legal-links a{color:#7a3b18;text-decoration:none;font-weight:600}
+.legal-links a[aria-current]{text-decoration:underline}
+.legal-foot{margin-top:10px;text-align:center;font-size:11px;color:#7a3b18}
