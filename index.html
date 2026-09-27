@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+// Send the old production hosts to the real domain (keeping ?payment=success etc.),
+// so logins, payments and Meta events all happen on gitaverse.co.in.
+if(/^geeta-with-krishna(-ayushsahoo2000-5300)?\.vercel\.app$/.test(location.hostname))location.replace('https://gitaverse.co.in'+location.pathname+location.search+location.hash);
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Gita Verse</title>
 <style>

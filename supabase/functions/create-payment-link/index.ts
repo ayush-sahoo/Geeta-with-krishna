@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
       customer: email ? { email } : undefined,
       notify: { sms: false, email: false },
       reminder_enable: false,
+      // Unpaid links expire so an old tab can't be paid long after a later purchase.
+      expire_by: Math.floor(Date.now() / 1000) + 60 * 60,
       callback_url: SITE_URL + "/?payment=success",
       callback_method: "get",
       notes: {
