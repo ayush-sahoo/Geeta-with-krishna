@@ -1,6 +1,5 @@
--- Verse of the day: free for everyone (anon included), one curated verse per
--- day that changes at midnight India time. SECURITY DEFINER so it keeps
--- working if gita_verses is later restricted to paying users.
+-- Verse of the day for the home card: one curated verse per day, changing at
+-- midnight India time. Callable by anon so the card renders before sign-in.
 drop function if exists public.get_daily_verse();
 create function public.get_daily_verse()
 returns table(id bigint, chapter_id smallint, verse_number smallint, sanskrit text, transliteration text, translation_english text)

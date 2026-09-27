@@ -627,14 +627,12 @@ function updateAccountUI(){
   $('accountAccessActive').style.display=paid?'block':'none';
   renderAccessState();
 }
-// Verse of the day, free for everyone (get_daily_verse changes it at midnight IST).
-let dailyVerse=null;
-const isDailyVerse=(ch,v)=>!!dailyVerse&&Number(dailyVerse.chapter_id)===Number(ch)&&Number(dailyVerse.verse_number)===Number(v);
+// Verse of the day on the home card (get_daily_verse changes it at midnight IST).
 async function loadDailyVerse(){
   try{
     const r=await fetch(SUPA+'/rest/v1/rpc/get_daily_verse',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:'{}'});
     if(!r.ok)return;const [v]=await r.json();if(!v)return;
-    dailyVerse=v;const ch=Number(v.chapter_id),n=Number(v.verse_number);
+    const ch=Number(v.chapter_id),n=Number(v.verse_number);
     const line=(v.sanskrit||'').replace(/^\s*(?:(?:धृतराष्ट्र|सञ्जय|संजय|अर्जुन)\s+उवाच|श्रीभगवानुवाच)\s*[।॥|]*\s*/,'').split('\n')[0].replace(/\s*\|+\s*$/,'\u00a0।').trim();
     const meaning=cleanTranslation(v.translation_english||'');
     $('dailyTag').textContent="TODAY'S WISDOM · "+ch+'.'+n;
@@ -644,8 +642,7 @@ async function loadDailyVerse(){
   }catch(e){}
 }
 async function openVerse(ch,v){
-  const freeDaily=!hasLifetimeAccess()&&isDailyVerse(ch,v);
-  if(!hasLifetimeAccess()&&!freeDaily){showPaywall();return}
+  if(!hasLifetimeAccess()){showPaywall();return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
   renderChapterPage();
   $('chapterKicker').textContent='CHAPTER '+ch;
@@ -657,7 +654,7 @@ async function openVerse(ch,v){
   $('detailSanskrit').textContent='Loading verse…';$('detailTranslit').textContent='';
   $('detailMeaning').textContent='';$('audioBtn').disabled=true;$('saveVerse').disabled=true;
   try{
-    let rows=freeDaily?[dailyVerse]:verseCache.get(Number(ch));
+    let rows=verseCache.get(Number(ch));
     if(!rows){rows=await api('gita_verses?select=*&chapter_id=eq.'+Number(ch)+'&order=verse_number.asc');verseCache.set(Number(ch),rows)}
     if(request!==verseRequest)return;
     const verse=rows.find(x=>Number(x.verse_number)===Number(v));
@@ -706,7 +703,7 @@ function playBlob(blob){return new Promise((resolve,reject)=>{
   a.play().catch(reject);
 })}
 async function speak(){
-  if(speaking){stopSpeech();return}if(!selectedVerse)return;if(!hasLifetimeAccess()){showPaywall('Get Annual Access to listen to verse narration.');return}
+  if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
   const v=selectedVerse; speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
   try{
     ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
