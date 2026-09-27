@@ -627,6 +627,20 @@ function updateAccountUI(){
   $('accountAccessActive').style.display=paid?'block':'none';
   renderAccessState();
 }
+// Verse of the day on the home card (get_daily_verse changes it at midnight IST).
+async function loadDailyVerse(){
+  try{
+    const r=await fetch(SUPA+'/rest/v1/rpc/get_daily_verse',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok)return;const [v]=await r.json();if(!v)return;
+    const ch=Number(v.chapter_id),n=Number(v.verse_number);
+    const line=(v.sanskrit||'').replace(/^\s*(?:(?:धृतराष्ट्र|सञ्जय|संजय|अर्जुन)\s+उवाच|श्रीभगवानुवाच)\s*[।॥|]*\s*/,'').split('\n')[0].replace(/\s*\|+\s*$/,'\u00a0।').trim();
+    const meaning=cleanTranslation(v.translation_english||'');
+    $('dailyTag').textContent="TODAY'S WISDOM · "+ch+'.'+n;
+    if(line)$('dailySanskrit').textContent=line;
+    $('dailyMeaning').textContent=meaning.length>150?meaning.slice(0,meaning.lastIndexOf(' ',147))+'…':meaning;
+    $('dailyRead').onclick=()=>openVerse(ch,n);
+  }catch(e){}
+}
 async function openVerse(ch,v){
   if(!hasLifetimeAccess()){showPaywall();return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
@@ -762,5 +776,5 @@ document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>render
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
-setAuthPageMode('login');updateAccountUI();showScreen('home');
+setAuthPageMode('login');updateAccountUI();showScreen('home');loadDailyVerse();
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
