@@ -2779,8 +2779,6 @@
   src="https://www.facebook.com/tr?id=2178415463100322&ev=PageView&noscript=1"
   /></noscript>
   <!-- End Meta Pixel Code -->
-
-  <script src="/krishna-image.js"></script>
 </head>
 <body>
   <div class="artifact-layer" aria-hidden="true">
@@ -2807,7 +2805,7 @@
 
     <section id="home" class="screen active">
       <div class="hero">
-        <img id="homeKrishnaArt" class="krishna-scene-art" alt="" aria-hidden="true">
+        <img id="homeKrishnaArt" class="krishna-scene-art" src="/krishna-scene.svg" alt="" aria-hidden="true">
         <div class="temple-arch"></div>
         <div class="eyebrow">श्रीमद्भगवद्गीता</div>
         <h1>Ancient wisdom.<br>For your life today.</h1>
@@ -2955,7 +2953,7 @@
     </section>
 
     <section id="chatScreen" class="screen">
-      <img id="chatKrishnaArt" class="krishna-chat-art" alt="" aria-hidden="true">
+      <img id="chatKrishnaArt" class="krishna-chat-art" src="/krishna-scene.svg" alt="" aria-hidden="true">
       <div class="chat-head">
         <div class="eyebrow">Ask through the lens of the Gita</div>
         <h2>What is on your mind?</h2>
@@ -3049,12 +3047,6 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    if(window.GITA_KRISHNA_IMAGE){
-      const homeArt=document.getElementById('homeKrishnaArt');
-      const chatArt=document.getElementById('chatKrishnaArt');
-      if(homeArt) homeArt.src=window.GITA_KRISHNA_IMAGE;
-      if(chatArt) chatArt.src=window.GITA_KRISHNA_IMAGE;
-    }
     const SUPA='https://bkwvuckznpaawmqrjjgk.supabase.co';
     const KEY='sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW';
     const headers={apikey:KEY,Authorization:'Bearer '+KEY};
