@@ -627,8 +627,25 @@ function updateAccountUI(){
   $('accountAccessActive').style.display=paid?'block':'none';
   renderAccessState();
 }
+// Verse of the day, free for everyone (get_daily_verse changes it at midnight IST).
+let dailyVerse=null;
+const isDailyVerse=(ch,v)=>!!dailyVerse&&Number(dailyVerse.chapter_id)===Number(ch)&&Number(dailyVerse.verse_number)===Number(v);
+async function loadDailyVerse(){
+  try{
+    const r=await fetch(SUPA+'/rest/v1/rpc/get_daily_verse',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok)return;const [v]=await r.json();if(!v)return;
+    dailyVerse=v;const ch=Number(v.chapter_id),n=Number(v.verse_number);
+    const line=(v.sanskrit||'').replace(/^\s*(?:(?:धृतराष्ट्र|सञ्जय|संजय|अर्जुन)\s+उवाच|श्रीभगवानुवाच)\s*[।॥|]*\s*/,'').split('\n')[0].replace(/\s*\|+\s*$/,'\u00a0।').trim();
+    const meaning=cleanTranslation(v.translation_english||'');
+    $('dailyTag').textContent="TODAY'S WISDOM · "+ch+'.'+n;
+    if(line)$('dailySanskrit').textContent=line;
+    $('dailyMeaning').textContent=meaning.length>150?meaning.slice(0,meaning.lastIndexOf(' ',147))+'…':meaning;
+    $('dailyRead').onclick=()=>openVerse(ch,n);
+  }catch(e){}
+}
 async function openVerse(ch,v){
-  if(!hasLifetimeAccess()){showPaywall();return}
+  const freeDaily=!hasLifetimeAccess()&&isDailyVerse(ch,v);
+  if(!hasLifetimeAccess()&&!freeDaily){showPaywall();return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
   renderChapterPage();
   $('chapterKicker').textContent='CHAPTER '+ch;
@@ -640,7 +657,7 @@ async function openVerse(ch,v){
   $('detailSanskrit').textContent='Loading verse…';$('detailTranslit').textContent='';
   $('detailMeaning').textContent='';$('audioBtn').disabled=true;$('saveVerse').disabled=true;
   try{
-    let rows=verseCache.get(Number(ch));
+    let rows=freeDaily?[dailyVerse]:verseCache.get(Number(ch));
     if(!rows){rows=await api('gita_verses?select=*&chapter_id=eq.'+Number(ch)+'&order=verse_number.asc');verseCache.set(Number(ch),rows)}
     if(request!==verseRequest)return;
     const verse=rows.find(x=>Number(x.verse_number)===Number(v));
@@ -689,7 +706,7 @@ function playBlob(blob){return new Promise((resolve,reject)=>{
   a.play().catch(reject);
 })}
 async function speak(){
-  if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
+  if(speaking){stopSpeech();return}if(!selectedVerse)return;if(!hasLifetimeAccess()){showPaywall('Get Annual Access to listen to verse narration.');return}
   const v=selectedVerse; speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
   try{
     ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
@@ -762,5 +779,5 @@ document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>render
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
-setAuthPageMode('login');updateAccountUI();showScreen('home');
+setAuthPageMode('login');updateAccountUI();showScreen('home');loadDailyVerse();
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
