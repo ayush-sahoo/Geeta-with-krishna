@@ -1714,25 +1714,25 @@
         <div class="daily-ref meta"></div>
       </div>
 
-      <section id="lifetimeOffer" class="lifetime-card hidden" aria-label="Lifetime access offer">
+      <section id="lifetimeOffer" class="lifetime-card hidden" aria-label="Annual access offer">
         <div>
-          <div class="lifetime-kicker">✦ Limited Lifetime Offer</div>
-          <h3>Unlock Gita Verse for life</h3>
-          <p>One payment. No subscription. Keep lifetime access to the complete Gita experience.</p>
+          <div class="lifetime-kicker">✦ Annual Access</div>
+          <h3>Unlock Gita Verse for a year</h3>
+          <p>₹1,000 gives you 12 months of complete Gita Verse access.</p>
           <div class="lifetime-price">
             <strong>₹1,000</strong>
-            <s>₹10,000</s>
-            <span class="discount-pill">90% OFF</span>
+            
+            <span class="discount-pill">₹1,000 / year</span>
           </div>
           <div class="lifetime-benefits">
-            <span>✓ One-time payment</span>
-            <span>✓ Lifetime access</span>
-            <span>✓ No recurring charges</span>
+            <span>✓ 12 months access</span>
+            <span>✓ Full Gita access</span>
+            <span>✓ Renew annually</span>
           </div>
         </div>
         <div>
-          <button id="buyLifetime" class="lifetime-buy">Get Lifetime Access →</button>
-          <div class="lifetime-note">Secure payment via Razorpay</div>
+          <button id="buyLifetime" class="lifetime-buy">Get Annual Access →</button>
+          <div class="lifetime-note">₹1,000 for 1 year · Secure payment via Razorpay</div>
         </div>
       </section>
 
@@ -1924,8 +1924,9 @@
         <div class="account-row"><span>Plan</span><strong id="accountPlan" class="plan-pill">Free</strong></div>
         <div class="account-row"><span>Payment</span><strong id="accountPayment">Unpaid</strong></div>
         <div class="account-row"><span>Purchased</span><strong id="accountPurchased">—</strong></div>
-        <button id="accountUpgrade" class="auth-main-btn">Get Lifetime Access — ₹1,000</button>
-        <div id="accountAccessActive" class="access-active account-access-active" style="display:none">✓ Lifetime Access Active</div>
+        <div class="account-row"><span>Access until</span><strong id="accountExpires">—</strong></div>
+        <button id="accountUpgrade" class="auth-main-btn">Get Annual Access — ₹1,000/year</button>
+        <div id="accountAccessActive" class="access-active account-access-active" style="display:none">✓ Annual Access Active</div>
         <button id="signOutBtn" class="auth-signout">Sign out</button>
       </div>
     </section>
@@ -1996,12 +1997,11 @@
     function hasLifetimeAccess(){
       return !!(
         authSession?.access_token &&
-        accountProfile?.plan_status==='lifetime' &&
-        accountProfile?.payment_status==='paid'
+        accountProfile?.access_active === true
       );
     }
 
-    function showPaywall(message='Lifetime Access is required to open this content.'){
+    function showPaywall(message='Annual Access is required to open this content.'){
       showScreen('home',true);
       const offer=$('lifetimeOffer');
       if(offer){
@@ -2014,8 +2014,8 @@
       const protectedScreens=new Set(['topicScreen','chapterScreen','verseScreen','chatScreen']);
       if(!bypassGate && protectedScreens.has(id) && !hasLifetimeAccess()){
         showPaywall(authSession?.access_token
-          ? 'Complete the lifetime payment to unlock all Gita content.'
-          : 'Sign in and purchase Lifetime Access to continue.');
+          ? 'Complete the annual payment to unlock all Gita content.'
+          : 'Sign in and purchase Annual Access to continue.');
         return;
       }
       document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -2026,7 +2026,7 @@
     }
 
     async function api(path){
-      if(!hasLifetimeAccess()) throw new Error('Lifetime Access required');
+      if(!hasLifetimeAccess()) throw new Error('Annual Access required');
       const r=await fetch(SUPA+'/rest/v1/'+path,{
         headers:{apikey:KEY,Authorization:'Bearer '+authSession.access_token}
       });
@@ -2095,7 +2095,7 @@
             fbq('track','Purchase',{
               value:1000,
               currency:'INR',
-              content_name:'Gita Verse Lifetime Access'
+              content_name:'Gita Verse Annual Access'
             });
             localStorage.setItem('metaPurchaseTracked',paymentId);
           }
@@ -2103,7 +2103,7 @@
           history.replaceState({},document.title,location.pathname);
           renderAccessState();
           showScreen('accountScreen',true);
-          toast('Lifetime Access unlocked ✓');
+          toast('Annual Access unlocked ✓');
           return true;
         }
         await new Promise(r=>setTimeout(r,1200));
@@ -2217,13 +2217,16 @@
 
         $('accountEmail').textContent=email||'—';
         $('accountProvider').textContent=provider==='email'?'Email':provider;
-        $('accountPlan').textContent=plan==='lifetime'?'Lifetime':'Free';
-        $('accountPlan').classList.toggle('lifetime',plan==='lifetime');
+        $('accountPlan').textContent=plan==='annual'?'Annual':'Free';
+        $('accountPlan').classList.toggle('lifetime',plan==='annual');
         $('accountPayment').textContent=payment.charAt(0).toUpperCase()+payment.slice(1);
         $('accountPurchased').textContent=accountProfile?.purchased_at
           ? new Date(accountProfile.purchased_at).toLocaleDateString()
           : '—';
-        const paidActive=plan==='lifetime' && payment==='paid';
+        if($('accountExpires')) $('accountExpires').textContent=accountProfile?.access_expires_at
+          ? new Date(accountProfile.access_expires_at).toLocaleDateString()
+          : '—';
+        const paidActive=accountProfile?.access_active===true;
         $('accountUpgrade').style.display=paidActive?'none':'block';
         $('accountAccessActive').style.display=paidActive?'flex':'none';
         if($('lifetimeOffer')) $('lifetimeOffer').classList.toggle('hidden',paidActive);
@@ -2245,8 +2248,8 @@
 
               '<h3>Explore guidance for life</h3>'+
               '<p>The actual topics are visible below. Unlock them to open the full guides and referenced shlokas.</p>'+
-              '<button onclick="startLifetimePurchase()">Get Lifetime Access</button>'+
-              '<div class="preview-note">One-time payment · No subscription</div>'+
+              '<button onclick="startLifetimePurchase()">Get Annual Access</button>'+
+              '<div class="preview-note">₹1,000 · 12 months access</div>'+
             '</div>'+
           '</div>';
       }
@@ -2270,7 +2273,7 @@
               '<h3>Preview the complete Gita</h3>'+
               '<p>These are the same chapter cards you get after unlocking, shown as a faded preview.</p>'+
               '<button onclick="startLifetimePurchase()">Unlock Full Gita</button>'+
-              '<div class="preview-note">Lifetime access · ₹1,000 one-time</div>'+
+              '<div class="preview-note">Annual access · ₹1,000/year</div>'+
             '</div>'+
           '</div>';
       }
@@ -2294,15 +2297,15 @@
 
       if(!paid){
         if(daily){
-          daily.querySelector('.daily-quote').textContent='🔒 Daily verse is available with Lifetime Access';
-          daily.querySelector('.daily-ref').textContent='Sign in and complete the one-time ₹1,000 payment to unlock.';
+          daily.querySelector('.daily-quote').textContent='🔒 Daily verse is available with Annual Access';
+          daily.querySelector('.daily-ref').textContent='Sign in and pay ₹1,000 for 12 months of access.';
         }
         renderLockedActualPreviews();
         chapters=[];
         return;
       }
 
-      if(daily) daily.querySelector('.daily-ref').innerHTML='<span class="access-active">✓ Lifetime Access active</span>';
+      if(daily) daily.querySelector('.daily-ref').innerHTML='<span class="access-active">✓ Annual Access active</span>';
       loadPaidContent().catch(e=>toast('Could not load content'));
     }
 
@@ -2429,12 +2432,12 @@
     async function startLifetimePurchase(){
       if(!authSession?.access_token){
         showScreen('authScreen');
-        $('authPageError').textContent='Sign up or log in first so your lifetime purchase can be linked to your account.';
+        $('authPageError').textContent='Sign up or log in first so your annual purchase can be linked to your account.';
         return;
       }
 
       if(hasLifetimeAccess()){
-        toast('Lifetime Access is already active');
+        toast('Annual Access is already active');
         return;
       }
 
@@ -2457,7 +2460,7 @@
 
         if(d.already_paid){
           await loadAccountProfile();
-          toast('Lifetime Access is already active');
+          toast('Annual Access is already active');
           showScreen('accountScreen');
           return;
         }
@@ -2468,7 +2471,7 @@
           fbq('track','InitiateCheckout',{
             value:1000,
             currency:'INR',
-            content_name:'Gita Verse Lifetime Access'
+            content_name:'Gita Verse Annual Access'
           });
         }
 
@@ -2476,7 +2479,7 @@
       }catch(e){
         toast(e.message||'Could not start payment');
       }finally{
-        buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Lifetime Access →'});
+        buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Annual Access →'});
       }
     }
     const LOCKED_CHAPTER_PREVIEW=[
