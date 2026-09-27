@@ -2761,6 +2761,203 @@
         margin-top:135px !important;
       }
     }
+
+    /* HOME HERO — exact target composition */
+    #home .hero{
+      min-height:520px !important;
+      height:520px !important;
+      margin:12px 14px 0 !important;
+      padding:38px 22px 116px !important;
+      border-radius:24px !important;
+      overflow:hidden !important;
+      border:1px solid rgba(164,92,27,.30) !important;
+      box-shadow:0 10px 28px rgba(80,43,15,.10) !important;
+      background:#fff8e8 !important;
+      isolation:isolate !important;
+    }
+    #home .hero .krishna-scene-art{
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      object-position:68% 50% !important;
+      z-index:-3 !important;
+      display:block !important;
+      opacity:1 !important;
+      filter:none !important;
+      image-rendering:auto !important;
+    }
+    #home .hero::after{
+      content:"" !important;
+      position:absolute !important;
+      inset:0 !important;
+      z-index:-2 !important;
+      display:block !important;
+      background:
+        linear-gradient(90deg,
+          rgba(255,250,238,.98) 0%,
+          rgba(255,248,232,.96) 27%,
+          rgba(255,246,225,.80) 43%,
+          rgba(255,238,203,.35) 58%,
+          rgba(255,226,174,.05) 74%,
+          rgba(255,226,174,0) 100%) !important;
+      pointer-events:none !important;
+    }
+    #home .hero::before{
+      content:"" !important;
+      position:absolute !important;
+      inset:0 !important;
+      z-index:-1 !important;
+      display:block !important;
+      background:linear-gradient(180deg,rgba(255,255,255,.03) 55%,rgba(255,248,232,.18) 76%,rgba(255,248,232,.40) 100%) !important;
+      pointer-events:none !important;
+    }
+    #home .hero .eyebrow{
+      position:relative !important;
+      z-index:2 !important;
+      width:58% !important;
+      max-width:245px !important;
+      margin:0 0 17px !important;
+      color:#9a4c18 !important;
+      font-family:Arial,sans-serif !important;
+      font-size:10px !important;
+      font-weight:900 !important;
+      line-height:1.7 !important;
+      letter-spacing:2.2px !important;
+      text-transform:uppercase !important;
+    }
+    #home .hero h1{
+      position:relative !important;
+      z-index:2 !important;
+      width:66% !important;
+      max-width:285px !important;
+      margin:0 0 19px !important;
+      color:#4c200c !important;
+      font:500 40px/.98 Georgia,serif !important;
+      letter-spacing:-1.2px !important;
+    }
+    #home .hero p{
+      position:relative !important;
+      z-index:2 !important;
+      width:56% !important;
+      max-width:255px !important;
+      margin:0 !important;
+      color:#744529 !important;
+      font-size:14px !important;
+      line-height:1.7 !important;
+    }
+    #home .hero .cta{
+      position:relative !important;
+      z-index:3 !important;
+      display:grid !important;
+      grid-template-columns:1fr 1fr !important;
+      gap:9px !important;
+      width:66% !important;
+      max-width:295px !important;
+      margin:22px 0 0 !important;
+    }
+    #home .hero .cta button{
+      height:47px !important;
+      min-height:47px !important;
+      padding:0 12px !important;
+      border-radius:13px !important;
+      font-size:12px !important;
+      font-weight:800 !important;
+      white-space:nowrap !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      gap:7px !important;
+    }
+    #home .hero .cta .primary{
+      background:linear-gradient(180deg,#ffd363,#f8bb31) !important;
+      border:1px solid #e7a925 !important;
+      color:#4a220c !important;
+      box-shadow:0 7px 14px rgba(169,94,17,.13) !important;
+    }
+    #home .hero .cta .secondary{
+      background:rgba(255,252,246,.93) !important;
+      border:1px solid rgba(179,122,65,.32) !important;
+      color:#4a220c !important;
+      box-shadow:0 7px 14px rgba(91,52,23,.07) !important;
+    }
+    #home .hero .cta-icon{
+      font-size:15px !important;
+      line-height:1 !important;
+    }
+    #home .hero-badges{
+      position:absolute !important;
+      left:13px !important;
+      right:13px !important;
+      bottom:13px !important;
+      z-index:4 !important;
+      display:grid !important;
+      grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+      gap:8px !important;
+      padding:0 !important;
+      margin:0 !important;
+      border:0 !important;
+    }
+    #home .hero-badge{
+      min-width:0 !important;
+      min-height:72px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      justify-content:center !important;
+      gap:4px !important;
+      padding:8px 4px !important;
+      border:1px solid rgba(255,255,255,.94) !important;
+      border-radius:15px !important;
+      background:rgba(255,250,240,.80) !important;
+      box-shadow:0 5px 14px rgba(80,44,16,.06) !important;
+      backdrop-filter:blur(8px) !important;
+      color:#742f0f !important;
+      text-align:center !important;
+    }
+    #home .hero-badge strong{
+      display:block !important;
+      font:600 22px/1 Georgia,serif !important;
+      color:#8b3f13 !important;
+    }
+    #home .hero-badge small{
+      display:block !important;
+      font-size:11px !important;
+      line-height:1.15 !important;
+      color:#7d3512 !important;
+      white-space:normal !important;
+    }
+    @media(max-width:390px){
+      #home .hero{
+        height:505px !important;
+        min-height:505px !important;
+        padding:35px 19px 111px !important;
+      }
+      #home .hero .krishna-scene-art{object-position:70% 50% !important}
+      #home .hero h1{
+        width:67% !important;
+        max-width:250px !important;
+        font-size:37px !important;
+      }
+      #home .hero p{
+        width:59% !important;
+        max-width:230px !important;
+        font-size:13px !important;
+        line-height:1.62 !important;
+      }
+      #home .hero .cta{
+        width:70% !important;
+        max-width:270px !important;
+      }
+      #home .hero .cta button{
+        font-size:11px !important;
+        padding:0 9px !important;
+      }
+      #home .hero-badge{min-height:68px !important}
+      #home .hero-badge strong{font-size:20px !important}
+      #home .hero-badge small{font-size:10px !important}
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -2809,18 +3006,17 @@
     <section id="home" class="screen active">
       <div class="hero">
         <img id="homeKrishnaArt" class="krishna-scene-art" src="" alt="" aria-hidden="true">
-        <div class="temple-arch"></div>
-        <div class="eyebrow">श्रीमद्भगवद्गीता</div>
+        <div class="eyebrow">TIMELESS WISDOM · A CALMER YOU</div>
         <h1>Ancient wisdom.<br>For your life today.</h1>
-        <p>Explore all 18 chapters, understand each verse at multiple depths, hear the shloka first and its meaning second, and ask questions grounded in the Gita.</p>
+        <p>Explore the Gita, understand its deeper meaning, and bring its wisdom into the choices you face today.</p>
         <div class="cta">
-          <button id="startReading" class="primary">Start reading</button>
-          <button id="askHero" class="secondary">Ask Krishna</button>
+          <button id="startReading" class="primary"><span class="cta-icon">▤</span> Start reading</button>
+          <button id="askHero" class="secondary"><span class="cta-icon">♧</span> Ask Krishna</button>
         </div>
         <div class="hero-badges">
-          <span class="hero-badge">☸ 18 अध्याय</span>
-          <span class="hero-badge">🪷 701 श्लोक</span>
-          <span class="hero-badge">✦ जीवन मार्गदर्शन</span>
+          <span class="hero-badge"><strong>18</strong><small>अध्याय</small></span>
+          <span class="hero-badge"><strong>701</strong><small>श्लोक</small></span>
+          <span class="hero-badge"><strong>∞</strong><small>जीवन मार्गदर्शन</small></span>
         </div>
       </div>
 
