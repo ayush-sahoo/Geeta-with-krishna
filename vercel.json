@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "geeta-with-krishna.vercel.app" }],
+      "destination": "https://gitaverse.co.in/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "geeta-with-krishna-ayushsahoo2000-5300.vercel.app" }],
+      "destination": "https://gitaverse.co.in/:path*",
+      "permanent": false
+    }
+  ]
+}

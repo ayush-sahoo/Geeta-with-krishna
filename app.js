@@ -203,6 +203,17 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       else localStorage.removeItem('gitaAuthSession');
       updateAccountUI();
     }
+    // A Google sign-in creates the account on first use, so count it as a
+    // registration when the user was created in the last few minutes.
+    function trackGoogleRegistration(user){
+      const created=Date.parse(user?.created_at||'');
+      if(!user?.id||!created||Date.now()-created>10*60*1000)return;
+      const key='gitaMetaRegistration:'+user.id;
+      try{if(localStorage.getItem(key))return}catch(e){}
+      if(trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'google'},false,'gita_reg_'+user.id)){
+        try{localStorage.setItem(key,'1')}catch(e){}
+      }
+    }
     async function consumeOAuthHash(){
       const hash=new URLSearchParams(location.hash.replace(/^#/,''));
       const access=hash.get('access_token');
@@ -225,6 +236,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       await loadAccountProfile();
       showScreen('accountScreen');
       trackMeta('Login',{method:'google'},true);
+      trackGoogleRegistration(user);
       toast('Signed in with Google');
       return true;
     }
@@ -574,7 +586,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     async function fetchTTS(text,kind,verse){
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
-        headers:{apikey:KEY,'Content-Type':'application/json'},
+        headers:authHeaders(authSession?.access_token||''),
         cache:'no-store',
         body:JSON.stringify({
           text,
