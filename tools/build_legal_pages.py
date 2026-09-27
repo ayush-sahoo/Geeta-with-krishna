@@ -80,7 +80,7 @@ PAGES = {
 <ul>
 <li>Annual Access costs <strong>₹1,000</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
 <li>It is a one-time payment. It does <strong>not</strong> renew automatically, and you will never be charged again unless you choose to buy another year.</li>
-<li>Payments are processed securely by Razorpay. Refunds are covered by our <a href="refund.html">Refund Policy</a>.</li>
+<li>Payments are processed securely by Razorpay. All purchases are final and non-refundable, except for billing errors described in our <a href="refund.html">Refund Policy</a>.</li>
 <li>We may change prices for future purchases; this never affects access you have already paid for.</li>
 </ul>
 
@@ -107,30 +107,24 @@ PAGES = {
 """),
 
 "refund.html": ("Refund Policy", "Refunds", f"""
-<p>We want Gita Verse to be worth it for you. This policy explains when you can get your money back for Annual Access (₹1,000 for 12 months).</p>
+<p>This policy applies to Annual Access (₹1,000 for 12 months) on Gita Verse.</p>
 
-<h2>7-day refund</h2>
-<p>If you are not satisfied, you can request a full refund within <strong>7 days</strong> of your purchase. Email {MAIL} from the email address on your account with your payment ID or the date of purchase. After 7 days, purchases are non-refundable.</p>
+<h2>No refunds</h2>
+<p>All purchases of Annual Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>
+<p>You can explore today's verse and the free parts of Gita Verse before you buy.</p>
 
-<h2>Duplicate or failed payments</h2>
-<p>If you were charged twice, or money was deducted but your access was not activated, contact us at any time and we will fix your access or refund the extra charge in full.</p>
-
-<h2>How refunds are paid</h2>
-<ul>
-<li>Approved refunds are made to your original payment method through Razorpay.</li>
-<li>We process approved refunds within 2 business days. Your bank or UPI app may then take <strong>5–7 business days</strong> to show the credit.</li>
-<li>When a refund is issued, Annual Access on that account ends.</li>
-</ul>
+<h2>Billing errors</h2>
+<p>If you were charged more than once for the same purchase, or money was deducted but your Annual Access was not activated, email {MAIL} with your payment ID or the date and time of payment. We will activate your access or return the extra charge to your original payment method through Razorpay.</p>
 
 <h2>No automatic renewals</h2>
 <p>Annual Access is a one-time payment and never renews automatically, so there is nothing to cancel. You will not be charged again unless you choose to buy another year.</p>
 
 <h2>Contact</h2>
-<p>For any refund or payment question, email {MAIL}. We usually reply within 2 business days.</p>
+<p>For any payment question, email {MAIL}. We usually reply within 2 business days.</p>
 """),
 
 "contact.html": ("Contact Us", "Contact", f"""
-<p>We are happy to help with your account, payments, refunds, or any question about Gita Verse.</p>
+<p>We are happy to help with your account, payments, or any question about Gita Verse.</p>
 <a class="legal-contact" href="mailto:{EMAIL}"><small>Email us</small><strong>{EMAIL}</strong></a>
 <p>We usually reply within <strong>2 business days</strong>.</p>
 
@@ -139,7 +133,7 @@ PAGES = {
 
 <h2>Useful links</h2>
 <ul>
-<li><a href="refund.html">Refund Policy</a>: 7-day refund, duplicate charges</li>
+<li><a href="refund.html">Refund Policy</a>: all sales final; billing errors</li>
 <li><a href="privacy.html">Privacy Policy</a>: your data and how to delete it</li>
 <li><a href="terms.html">Terms of Service</a></li>
 </ul>
