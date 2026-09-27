@@ -89,7 +89,18 @@ Deno.serve(async (req) => {
 
     const paidDate = new Date();
     const paidAt = paidDate.toISOString();
-    const expires = new Date(paidDate);
+
+    // A second payment while access is still active (e.g. two links opened in
+    // two tabs) adds a year on top of the current expiry instead of resetting it.
+    const { data: account } = await admin
+      .from("user_accounts")
+      .select("payment_status,access_expires_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const currentExpiry = account?.payment_status === "paid" && account?.access_expires_at
+      ? new Date(account.access_expires_at)
+      : null;
+    const expires = currentExpiry && currentExpiry > paidDate ? new Date(currentExpiry) : new Date(paidDate);
     expires.setUTCFullYear(expires.getUTCFullYear() + 1);
     const accessExpiresAt = expires.toISOString();
 
