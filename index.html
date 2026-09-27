@@ -3521,6 +3521,155 @@
       #chatScreen .suggestions{margin-top:150px!important}
       #chatScreen .suggestions button{font-size:11px!important;padding:10px 8px!important}
     }
+
+    /* Life guidance carousel — match second reference */
+    .topic-section-head{
+      padding:22px 16px 0 !important;
+      margin:0 0 14px !important;
+      display:flex !important;
+      align-items:flex-start !important;
+      justify-content:space-between !important;
+      gap:10px !important;
+    }
+    .topic-section-head .section-title-block{
+      min-width:0 !important;
+      flex:1 !important;
+    }
+    .topic-section-head h2{
+      margin:0 !important;
+      color:#4c210d !important;
+      font:500 25px/1.08 Georgia,serif !important;
+      letter-spacing:-.6px !important;
+      white-space:normal !important;
+    }
+    .topic-section-head .section-meta{
+      flex:0 0 auto !important;
+      margin-top:5px !important;
+      color:#8e4519 !important;
+      font-size:9px !important;
+      font-weight:900 !important;
+      letter-spacing:1.25px !important;
+      text-align:right !important;
+      white-space:nowrap !important;
+    }
+
+    #home > .topic-grid,
+    .actual-topic-grid{
+      display:flex !important;
+      grid-template-columns:none !important;
+      gap:12px !important;
+      width:100% !important;
+      margin:0 !important;
+      padding:0 16px 14px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      scroll-snap-type:x mandatory !important;
+      scroll-padding-left:16px !important;
+      scrollbar-width:none !important;
+      box-sizing:border-box !important;
+      flex-wrap:nowrap !important;
+    }
+    #home > .topic-grid::-webkit-scrollbar,
+    .actual-topic-grid::-webkit-scrollbar{display:none !important}
+
+    #home > .topic-grid .topic-chip,
+    .actual-topic-grid .topic-chip{
+      position:relative !important;
+      flex:0 0 168px !important;
+      width:168px !important;
+      min-width:168px !important;
+      max-width:168px !important;
+      min-height:186px !important;
+      padding:16px 15px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:flex-start !important;
+      justify-content:flex-start !important;
+      gap:0 !important;
+      border-radius:18px !important;
+      border:1px solid rgba(165,99,38,.34) !important;
+      background:
+        radial-gradient(circle at 103% 103%,transparent 0 31px,rgba(209,145,72,.13) 32px 33px,transparent 34px 49px,rgba(209,145,72,.09) 50px 51px,transparent 52px),
+        linear-gradient(145deg,#fffaf0,#fff6e7) !important;
+      box-shadow:0 7px 18px rgba(98,55,22,.07) !important;
+      color:#5a260e !important;
+      text-align:left !important;
+      white-space:normal !important;
+      overflow:hidden !important;
+      scroll-snap-align:start !important;
+      cursor:pointer !important;
+      font-family:inherit !important;
+    }
+    #home > .topic-grid .topic-chip:hover{
+      transform:translateY(-1px) !important;
+      border-color:rgba(174,103,35,.55) !important;
+    }
+    #home > .topic-grid .topic-chip .topic-icon,
+    .actual-topic-grid .topic-chip .topic-icon{
+      flex:0 0 auto !important;
+      width:46px !important;
+      height:46px !important;
+      margin:0 0 24px !important;
+      display:grid !important;
+      place-items:center !important;
+      border-radius:13px !important;
+      border:1px solid rgba(208,146,65,.48) !important;
+      background:linear-gradient(145deg,#ffe8a9,#ffd279) !important;
+      color:#a75b18 !important;
+      font:700 22px/1 Georgia,serif !important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.65) !important;
+    }
+    #home > .topic-grid .topic-chip small,
+    .actual-topic-grid .topic-chip small{
+      display:block !important;
+      margin:0 0 7px !important;
+      color:#a85c28 !important;
+      font-size:10px !important;
+      line-height:1.1 !important;
+      letter-spacing:.35px !important;
+      font-weight:500 !important;
+    }
+    #home > .topic-grid .topic-chip strong,
+    .actual-topic-grid .topic-chip strong{
+      position:relative !important;
+      z-index:2 !important;
+      display:block !important;
+      max-width:132px !important;
+      color:#64270d !important;
+      font:500 20px/1.08 Georgia,serif !important;
+      letter-spacing:-.35px !important;
+      overflow-wrap:normal !important;
+    }
+
+    /* Locked preview keeps the same real card design underneath */
+    .topic-actual-preview{
+      min-height:214px !important;
+    }
+    .topic-actual-preview .actual-preview-content{
+      padding:0 !important;
+    }
+
+    @media(max-width:390px){
+      .topic-section-head h2{font-size:23px !important}
+      #home > .topic-grid,
+      .actual-topic-grid{
+        gap:10px !important;
+        padding-left:14px !important;
+        padding-right:14px !important;
+      }
+      #home > .topic-grid .topic-chip,
+      .actual-topic-grid .topic-chip{
+        flex-basis:160px !important;
+        width:160px !important;
+        min-width:160px !important;
+        max-width:160px !important;
+        min-height:180px !important;
+      }
+      #home > .topic-grid .topic-chip strong,
+      .actual-topic-grid .topic-chip strong{
+        font-size:19px !important;
+      }
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -3613,12 +3762,11 @@
       </section>
 
       <div class="sacred-divider">☸</div>
-      <div class="section-head content-section-head">
+      <div class="section-head content-section-head topic-section-head">
         <div class="section-title-block">
-          <div class="daily-label">Explore by life topic</div>
-          <h2>What are you dealing with?</h2>
+          <h2>Guidance for your everyday journey</h2>
         </div>
-        <span class="meta section-meta">Gita guidance across multiple shlokas</span>
+        <span class="meta section-meta">EXPLORE</span>
       </div>
       <div id="topicGrid" class="topic-grid"></div>
 
@@ -4114,7 +4262,7 @@
       const topicGrid=$('topicGrid');
       if(topicGrid){
         const topicMarkup=Object.values(LIFE_TOPICS).map(t=>
-          '<button class="topic-chip" tabindex="-1" aria-hidden="true"><span>'+t.icon+'</span>'+t.label+'</button>'
+          '<button class="topic-chip" tabindex="-1" aria-hidden="true"><span class="topic-icon">'+t.icon+'</span><small>Guidance for</small><strong>'+t.label+'</strong></button>'
         ).join('');
 
         topicGrid.innerHTML=
@@ -4519,7 +4667,7 @@
       Object.entries(LIFE_TOPICS).forEach(([key,t])=>{
         const b=document.createElement('button');
         b.className='topic-chip';
-        b.innerHTML='<span>'+t.icon+'</span>'+t.label;
+        b.innerHTML='<span class="topic-icon">'+t.icon+'</span><small>Guidance for</small><strong>'+t.label+'</strong>';
         b.addEventListener('click',()=>openTopic(key));
         grid.appendChild(b);
       });
