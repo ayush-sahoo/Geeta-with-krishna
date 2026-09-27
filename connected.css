@@ -3,3 +3,5 @@
 /* The Save toolbar overlaps the back row visually; only its button receives clicks. */
 .verse-toolbar{pointer-events:none}
 .verse-toolbar .back{pointer-events:auto}
+
+.bubble.assistant p{margin:0 0 12px}.chat-ref{display:inline;border:0;padding:1px 5px;margin:0;border-radius:8px;background:#fbe3b0;color:var(--brown);font:inherit;font-size:12px;font-weight:600;white-space:nowrap}.chat-follow-up{font-style:italic;color:var(--brown)}

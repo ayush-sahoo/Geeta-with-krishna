@@ -700,23 +700,47 @@ async function speak(){
   }catch(e){stopSpeech();toast(e.message||'Narration could not be played');}
 }
 function appendText(parent,tag,text,className){const el=document.createElement(tag);el.textContent=text||'';if(className)el.className=className;parent.appendChild(el);return el;}
+// Recent turns sent with each question so Krishna can follow the conversation.
+const chatHistory=[];
+function refButton(parent,ref){
+  const [c,v]=ref.replace('BG ','').split('.').map(Number);
+  const b=appendText(parent,'button',ref,'chat-ref');b.type='button';b.onclick=()=>openVerse(c,v);return b;
+}
+// Paragraph text with inline "(BG 2.47)" references turned into tappable links.
+function appendWithRefs(parent,text){
+  const p=document.createElement('p');
+  String(text||'').split(/(BG \d+\.\d+)/).forEach(part=>{
+    if(/^BG \d+\.\d+$/.test(part))refButton(p,part);else if(part)p.appendChild(document.createTextNode(part));
+  });
+  parent.appendChild(p);return p;
+}
+function replyText(d){
+  return [d.title,...(d.paragraphs||[d.opening,d.explanation]),...(d.actions||[]),d.follow_up].filter(Boolean).join('\n');
+}
 async function sendAsk(){
   if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
   trackMeta('AskKrishnaUsed',{},true);
   chatBusy=true;$('sendAskButton').disabled=true;$('askInput').value='';
-  appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Reflecting on the Gita…','bubble assistant');
+  appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
   try{
-    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q})});
+    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,history:chatHistory.slice(-8)})});
     const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';
     if(d.style==='krishna_inspired'){
-      appendText(answer,'small','Krishna-inspired guidance');appendText(answer,'h3',d.title);appendText(answer,'p',d.opening);appendText(answer,'p',d.explanation);
+      appendText(answer,'small','Sri Krishna says');if(d.title)appendText(answer,'h3',d.title);
+      (d.paragraphs||[d.opening,d.explanation]).filter(Boolean).forEach(t=>appendWithRefs(answer,t));
       if(d.actions?.length){appendText(answer,'strong','What to do now');const ul=document.createElement('ul');d.actions.forEach(x=>appendText(ul,'li',x));answer.appendChild(ul)}
+      if(d.follow_up)appendWithRefs(answer,d.follow_up).className='chat-follow-up';
       (d.verses||[]).forEach(v=>{const b=appendText(answer,'button',v.ref+' · '+(v.translation||''),'chat-verse-card');b.onclick=()=>openVerse(Number(v.chapter),Number(v.verse));});
-      appendText(answer,'small',d.disclaimer||'Devotional guidance inspired by the Bhagavad Gita.');
-    }else answer.textContent=d.answer||'No response was returned. Please try again.';
+      appendText(answer,'small',d.disclaimer||'Devotional reflection inspired by the Bhagavad Gita.');
+      chatHistory.push({role:'user',text:q},{role:'assistant',text:replyText(d)});
+    }else{
+      answer.textContent=d.answer||'No response was returned. Please try again.';
+      if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
+    }
+    if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
   }catch(e){answer.textContent=e.message||'Could not reach the guide. Please try again.';}
   finally{chatBusy=false;$('sendAskButton').disabled=false;}
 }
