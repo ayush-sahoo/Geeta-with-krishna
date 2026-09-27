@@ -3670,6 +3670,43 @@
         font-size:19px !important;
       }
     }
+
+    /* Home discovery sections */
+    #home{background:linear-gradient(180deg,#fff1c7 0%,#ffda78 35%,#f7c65f 100%)!important}
+    #home .sacred-divider{margin:24px auto 0!important;color:#ae681d!important}
+    #home .content-section-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:18px 17px 0!important;margin:0 0 15px!important;gap:12px!important}
+    #home .content-section-head h2{font:500 clamp(22px,5.3vw,28px)/1.12 Georgia,serif!important;letter-spacing:-.7px!important;color:#46200e!important;margin:0!important}
+    #home .section-link{flex:none;border:0;background:none;color:#884117;font:800 10px/1.2 system-ui,sans-serif;letter-spacing:1px;padding:8px 0;cursor:pointer}
+    #home .featured-head{margin-top:4px!important}
+    #home .featured-chapters{display:flex;gap:12px;overflow-x:auto;padding:0 17px 18px;scroll-snap-type:x mandatory;scrollbar-width:none}
+    #home .featured-chapters::-webkit-scrollbar{display:none}
+    #home .featured-chapter{flex:0 0 204px;height:309px;border-radius:21px;border:1px solid #d7ad65;display:flex;flex-direction:column;align-items:center;padding:20px 17px;text-align:center;scroll-snap-align:start;cursor:pointer;box-shadow:0 6px 16px #75401618}
+    #home .featured-chapter.dark{background:linear-gradient(150deg,#7b3519,#a04b23);color:#fff2d2}
+    #home .featured-chapter.light{background:linear-gradient(150deg,#fff1c9,#f9e2a5);color:#602e19}
+    #home .featured-kicker{font:800 10px system-ui,sans-serif;letter-spacing:1.5px}
+    #home .featured-art{height:145px;width:100%;display:grid;place-items:center;font:90px Georgia,serif;opacity:.55}
+    #home .featured-chapter strong{font:500 23px/1.1 Georgia,serif;max-width:160px;min-height:52px}
+    #home .featured-description{font:13px/1.5 system-ui,sans-serif;margin-top:8px}
+    #home .devotee-line{display:flex;align-items:center;justify-content:center;gap:7px;margin:19px 17px 20px;padding-top:18px;border-top:1px solid #c9953e66;color:#964717;font:12px system-ui,sans-serif}
+    #home .devotee-line strong{color:#51250e}
+    #home #lifetimeOffer.lifetime-card{display:flex!important;align-items:center!important;gap:10px!important;margin:0 12px 19px!important;padding:15px 14px!important;min-height:86px!important;border-radius:19px!important;background:linear-gradient(110deg,#172b45,#3b5470)!important;color:#fff!important;border:0!important;box-shadow:0 9px 23px #4a2a1940!important}
+    #home #lifetimeOffer.hidden{display:none!important}
+    #home .offer-emblem{flex:0 0 36px;width:36px;height:40px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(#ffdf80,#f2b938);color:#67380d;font-size:22px}
+    #home .offer-copy{min-width:0;flex:1}
+    #home .lifetime-kicker{font:800 9px system-ui,sans-serif;letter-spacing:.4px;color:#ffd674;margin:0 0 4px}
+    #home #lifetimeOffer h3{font:700 20px/1.05 Georgia,serif;color:#fff;margin:0 0 6px}
+    #home #lifetimeOffer p{font:10px/1.3 system-ui,sans-serif;color:#fff;margin:0}
+    #home .lifetime-buy{flex:0 0 auto;border:0!important;border-radius:12px!important;background:#ffd05c!important;color:#45210c!important;font:700 11px system-ui,sans-serif!important;padding:14px 10px!important;white-space:nowrap}
+    #home .chapter-list-head{padding-top:10px!important}
+    #home .chapter-list-head .section-meta{color:#784115!important;font:800 10px system-ui,sans-serif!important;letter-spacing:.8px}
+    #home .chapters{padding:0 12px 20px!important;gap:6px!important}
+    #home .chapter{display:flex!important;align-items:center!important;text-align:left!important;gap:20px!important;min-height:119px!important;padding:17px!important;background:#fffaf1!important;border:0!important;border-radius:20px!important;box-shadow:none!important}
+    #home .chapter-num{flex:0 0 44px!important;width:44px!important;height:54px!important;border-radius:13px!important;background:linear-gradient(#ffe18e,#f8c752)!important;color:#9f541d!important;display:grid!important;place-items:center!important;font:25px Georgia,serif!important}
+    #home .chapter-info{display:flex;flex-direction:column;min-width:0}
+    #home .chapter h3{font:500 21px/1.15 Georgia,serif!important;color:#5e2a16!important;margin:0 0 6px!important}
+    #home .chapter .sans{font-size:15px!important;color:#94745f!important}
+    #home .chapter .meta{font:500 10px system-ui,sans-serif!important;color:#aa5626!important;margin-top:10px!important}
+    @media(max-width:390px){#home .featured-chapter{flex-basis:190px}#home .lifetime-buy{font-size:10px!important;padding:12px 8px!important}#home #lifetimeOffer h3{font-size:18px}}
 </style>
   <!-- Meta Pixel Code -->
   <script>
@@ -3739,38 +3776,31 @@
         <div class="daily-ref meta"></div>
       </div>
 
-      <section id="lifetimeOffer" class="lifetime-card hidden" aria-label="Annual access offer">
-        <div>
-          <div class="lifetime-kicker">✦ Annual Access</div>
-          <h3>Unlock Gita Verse for a year</h3>
-          <p>₹1,000 gives you 12 months of complete Gita Verse access.</p>
-          <div class="lifetime-price">
-            <strong>₹1,000</strong>
-            
-            <span class="discount-pill">₹1,000 / year</span>
-          </div>
-          <div class="lifetime-benefits">
-            <span>✓ 12 months access</span>
-            <span>✓ Full Gita access</span>
-            <span>✓ Renew annually</span>
-          </div>
-        </div>
-        <div>
-          <button id="buyLifetime" class="lifetime-buy">Get Annual Access →</button>
-          <div class="lifetime-note">₹1,000 for 1 year · Secure payment via Razorpay</div>
-        </div>
-      </section>
-
       <div class="sacred-divider">☸</div>
       <div class="section-head content-section-head topic-section-head">
         <div class="section-title-block">
           <h2>Guidance for your everyday journey</h2>
         </div>
-        <span class="meta section-meta">EXPLORE</span>
+        <button class="section-link" id="exploreTopics">EXPLORE →</button>
       </div>
       <div id="topicGrid" class="topic-grid"></div>
 
-      <div class="section-head content-section-head">
+      <div class="section-head content-section-head featured-head">
+        <div class="section-title-block"><h2>Explore the 18 Chapters</h2></div>
+        <button class="section-link" id="viewAllChapters">VIEW ALL →</button>
+      </div>
+      <div id="featuredChapters" class="featured-chapters"></div>
+      <div class="devotee-line">♡ <span>Loved by <strong>100,000+</strong> devotees in Bharat</span></div>
+      <section id="lifetimeOffer" class="lifetime-card hidden" aria-label="Annual access offer">
+        <div class="offer-emblem">♛</div>
+        <div class="offer-copy">
+          <div class="lifetime-kicker">SPECIAL 1-YEAR ACCESS</div>
+          <h3>₹1,000 for 1 year</h3>
+          <p>Full Gita Verse access · no monthly subscription</p>
+        </div>
+        <button id="buyLifetime" class="lifetime-buy">Get access →</button>
+      </section>
+      <div class="section-head content-section-head chapter-list-head" id="allChapters">
         <div class="section-title-block"><h2>18 Chapters</h2></div>
         <span class="meta section-meta">701 verses</span>
       </div>
@@ -4261,45 +4291,12 @@
     function renderLockedActualPreviews(){
       const topicGrid=$('topicGrid');
       if(topicGrid){
-        const topicMarkup=Object.values(LIFE_TOPICS).map(t=>
-          '<button class="topic-chip" tabindex="-1" aria-hidden="true"><span class="topic-icon">'+t.icon+'</span><small>Guidance for</small><strong>'+t.label+'</strong></button>'
-        ).join('');
-
-        topicGrid.innerHTML=
-          '<div class="actual-preview-shell topic-actual-preview">'+
-            '<div class="actual-preview-content topic-grid actual-topic-grid">'+topicMarkup+'</div>'+
-            '<div class="actual-preview-overlay">'+
-
-              '<h3>Explore guidance for life</h3>'+
-              '<p>The actual topics are visible below. Unlock them to open the full guides and referenced shlokas.</p>'+
-              '<button onclick="startLifetimePurchase()">Get Annual Access</button>'+
-              '<div class="preview-note">₹1,000 · 12 months access</div>'+
-            '</div>'+
-          '</div>';
+        renderTopicGrid();
       }
 
       const chapterGrid=$('chapters');
       if(chapterGrid){
-        const chapterMarkup=LOCKED_CHAPTER_PREVIEW.map(c=>
-          '<button class="chapter" tabindex="-1" aria-hidden="true">'+
-            '<span class="chapter-num">'+c.id+'</span>'+
-            '<h3>'+c.name_english+'</h3>'+
-            '<div class="sans">'+c.name_sanskrit+'</div>'+
-            '<div class="meta" style="margin-top:10px">'+c.verse_count+' verses</div>'+
-          '</button>'
-        ).join('');
-
-        chapterGrid.innerHTML=
-          '<div class="actual-preview-shell chapter-actual-preview">'+
-            '<div class="actual-preview-content chapters actual-chapter-grid">'+chapterMarkup+'</div>'+
-            '<div class="actual-preview-overlay">'+
-              '<div class="preview-pill">18 chapters · 701 verses</div>'+
-              '<h3>Preview the complete Gita</h3>'+
-              '<p>These are the same chapter cards you get after unlocking, shown as a faded preview.</p>'+
-              '<button onclick="startLifetimePurchase()">Unlock Full Gita</button>'+
-              '<div class="preview-note">Annual access · ₹1,000/year</div>'+
-            '</div>'+
-          '</div>';
+        renderChapterCards(LOCKED_CHAPTER_PREVIEW);
       }
     }
 
@@ -4673,6 +4670,9 @@
       });
     }
 
+    $('exploreTopics').addEventListener('click',()=>$('topicGrid').scrollBy({left:190,behavior:'smooth'}));
+    $('viewAllChapters').addEventListener('click',()=>$('allChapters').scrollIntoView({behavior:'smooth',block:'start'}));
+
     function openTopic(key){
       if(!hasLifetimeAccess()){showPaywall();return}
       const t=LIFE_TOPICS[key];
@@ -4802,17 +4802,28 @@
     }
 
     function renderChapterCards(list){
-      if(!hasLifetimeAccess() || !Array.isArray(list)) return;
-      chapters=list;
+      if(!Array.isArray(list)) return;
+      if(hasLifetimeAccess()) chapters=list;
       renderTopicGrid();
       $('chapters').innerHTML='';
       list.forEach(c=>{
         const b=document.createElement('button');
         b.className='chapter';
-        b.innerHTML='<span class="chapter-num">'+c.id+'</span><h3>'+c.name_english+'</h3><div class="sans">'+c.name_sanskrit+'</div><div class="meta" style="margin-top:10px">'+c.verse_count+' verses</div>';
-        b.addEventListener('click',()=>openChapter(c));
+        b.innerHTML='<span class="chapter-num">'+c.id+'</span><span class="chapter-info"><h3>'+c.name_english+'</h3><span class="sans">'+c.name_sanskrit+'</span><span class="meta">'+c.verse_count+' VERSES</span></span>';
+        b.addEventListener('click',()=>hasLifetimeAccess()?openChapter(c):showPaywall());
         $('chapters').appendChild(b);
       });
+      const descriptions=['The moment of uncertainty before action.','Clarity, action and the nature of the self.','The path of selfless action.','Wisdom in action.'];
+      $('featuredChapters').innerHTML=list.slice(0,4).map((c,i)=>
+        '<button class="featured-chapter '+(i%2?'light':'dark')+'" data-chapter="'+c.id+'">'+
+        '<span class="featured-kicker">CHAPTER '+String(c.id).padStart(2,'0')+'</span>'+
+        '<span class="featured-art" aria-hidden="true">'+(i%2?'ॐ':'⚔')+'</span>'+
+        '<strong>'+(["Arjuna’s Dilemma",'Sankhya Yoga','Karma Yoga','Wisdom in Action'][i])+'</strong>'+
+        '<span class="featured-description">'+descriptions[i]+'</span></button>'
+      ).join('');
+      $('featuredChapters').querySelectorAll('button').forEach((button,i)=>
+        button.addEventListener('click',()=>hasLifetimeAccess()?openChapter(list[i]):showPaywall())
+      );
     }
 
     function renderDailyVerse(verse){
