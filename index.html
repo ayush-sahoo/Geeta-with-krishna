@@ -2386,6 +2386,57 @@
       .hero h1{font-size:39px !important}
       .hero-badges{left:20px;right:20px}
     }
+
+    /* Fix life-topic cards to fit the mobile canvas */
+    .topic-grid{
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      gap:10px !important;
+      overflow:visible !important;
+      padding:2px 14px 14px !important;
+      width:100% !important;
+      box-sizing:border-box !important;
+    }
+
+    .topic-chip{
+      width:100% !important;
+      min-width:0 !important;
+      max-width:none !important;
+      flex:none !important;
+      min-height:104px !important;
+      padding:14px 12px !important;
+      display:flex !important;
+      align-items:center !important;
+      gap:10px !important;
+      text-align:left !important;
+      white-space:normal !important;
+      overflow-wrap:anywhere !important;
+      font:600 14px/1.16 Georgia,serif !important;
+    }
+
+    .topic-chip span{
+      flex:0 0 auto !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      width:24px !important;
+      margin:0 !important;
+      font-size:21px !important;
+    }
+
+    @media(max-width:360px){
+      .topic-grid{
+        gap:8px !important;
+        padding-left:12px !important;
+        padding-right:12px !important;
+      }
+      .topic-chip{
+        min-height:98px !important;
+        padding:12px 10px !important;
+        gap:8px !important;
+        font-size:13px !important;
+      }
+    }
 </style>
   <!-- Meta Pixel Code -->
   <script>
