@@ -1,3 +1,21 @@
+// Meta events contain product/activity metadata only, never questions or credentials.
+function trackMeta(name,data={},custom=false,eventId){
+  try{if(typeof fbq!=='function')return false;
+    if(eventId)fbq(custom?'trackCustom':'track',name,data,{eventID:eventId});
+    else fbq(custom?'trackCustom':'track',name,data);
+    return true;
+  }catch(e){return false}
+}
+const annualEvent={value:1000,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+function trackConfirmedPurchase(){
+  const id=accountProfile?.payment_id;
+  if(!hasLifetimeAccess()||!id)return;
+  const key='gitaMetaPurchase:'+id;
+  try{if(localStorage.getItem(key)||localStorage.getItem('metaPurchaseTracked')===id)return}catch(e){}
+  if(trackMeta('Purchase',annualEvent,false,'gita_purchase_'+id)){
+    try{localStorage.setItem(key,'1');localStorage.setItem('metaPurchaseTracked',id)}catch(e){}
+  }
+}
 // Reference design with the existing Gita Verse service integrations.
 const SUPA='https://bkwvuckznpaawmqrjjgk.supabase.co';
 const KEY='sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW';
@@ -206,6 +224,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       history.replaceState({},document.title,location.pathname+location.search);
       await loadAccountProfile();
       showScreen('accountScreen');
+      trackMeta('Login',{method:'google'},true);
       toast('Signed in with Google');
       return true;
     }
@@ -218,16 +237,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       for(let i=0;i<8;i++){
         await loadAccountProfile();
         if(hasLifetimeAccess()){
-          const paymentId=accountProfile?.payment_id||'paid';
-          const tracked=localStorage.getItem('metaPurchaseTracked');
-          if(tracked!==paymentId && typeof fbq==='function'){
-            fbq('track','Purchase',{
-              value:1000,
-              currency:'INR',
-              content_name:'Gita Verse Annual Access'
-            });
-            localStorage.setItem('metaPurchaseTracked',paymentId);
-          }
+          trackConfirmedPurchase();
 
           history.replaceState({},document.title,location.pathname);
           renderAccessState();
@@ -368,8 +378,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           saveSession(data);
           await loadAccountProfile();
           showScreen('accountScreen');
+          trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'email'});
           toast('Account created');
         }else{
+          trackMeta('RegistrationSubmitted',{registration_method:'email'},true);
           $('authPageError').style.color='#2f7d32';
           $('authPageError').textContent='Account created. Check your email to confirm, then log in.';
           setAuthPageMode('login');
@@ -412,6 +424,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         saveSession(data);
         await loadAccountProfile();
         showScreen('accountScreen');
+        trackMeta('Login',{method:'email'},true);
         toast('Signed in');
       }catch(e){
         $('authPageError').textContent=e.message||'Could not sign in';
@@ -428,6 +441,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
     }
     async function startLifetimePurchase(){
+      trackMeta('CheckoutClick',annualEvent,true);
       if(!authSession?.access_token){
         showScreen('authScreen');
         $('authPageError').textContent='Sign up or log in first so your annual purchase can be linked to your account.';
@@ -465,16 +479,11 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         if(!d.short_url) throw new Error('Payment link was not returned');
 
-        if(typeof fbq==='function'){
-          fbq('track','InitiateCheckout',{
-            value:1000,
-            currency:'INR',
-            content_name:'Gita Verse Annual Access'
-          });
-        }
+        trackMeta('InitiateCheckout',annualEvent);
 
         window.location.href=d.short_url;
       }catch(e){
+        trackMeta('CheckoutError',{stage:'create_payment_link'},true);
         toast(e.message||'Could not start payment');
       }finally{
         buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Annual Access →'});
@@ -589,6 +598,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
 function showScreen(id){
   const next=$(id);if(!next)return;
+  if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
   if(id!=='detail')stopSpeech();
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
@@ -636,6 +646,7 @@ async function openVerse(ch,v){
     const verse=rows.find(x=>Number(x.verse_number)===Number(v));
     if(!verse)throw new Error('This verse is unavailable. Please choose another verse.');
     selectedVerse=verse;currentTab='meaning';
+    trackMeta('ViewContent',{content_name:'Bhagavad Gita verse',content_category:'verse',content_ids:['gita_'+Number(ch)+'_'+Number(v)]});
     const text=verse.sanskrit||'';
     const speaker=text.match(/^\s*((?:धृतराष्ट्र|सञ्जय|संजय|अर्जुन)\s+उवाच\s*[।॥]?|श्रीभगवानुवाच\s*[।॥]?)/);
     document.querySelector('#detail h1').textContent=speaker?speaker[1]:'';
@@ -659,6 +670,7 @@ function stepVerse(delta){if(selectedVerse)openVerse(Number(selectedVerse.chapte
 function toggleSave(){
   if(!selectedVerse)return;const id=selectedVerse.id;
   saved.has(id)?saved.delete(id):saved.add(id);
+  if(saved.has(id))trackMeta('SaveVerse',{content_category:'verse'},true);
   localStorage.setItem('savedVerses',JSON.stringify([...saved]));
   $('saveVerse').textContent=saved.has(id)?'★ Saved':'☆ Save';
   toast(saved.has(id)?'Verse saved':'Removed from saved');
@@ -691,6 +703,7 @@ function appendText(parent,tag,text,className){const el=document.createElement(t
 async function sendAsk(){
   if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
+  trackMeta('AskKrishnaUsed',{},true);
   chatBusy=true;$('sendAskButton').disabled=true;$('askInput').value='';
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Reflecting on the Gita…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
