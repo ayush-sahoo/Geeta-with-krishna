@@ -835,7 +835,7 @@ function renderTab(tab){
     try{
       const [text,reflect]=await Promise.all([translateText(source,language),translateText(reflection,language).catch(()=>reflection)]);
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
-      show(text,reflect,language);$('translationStatus').textContent='AI-translated meaning';
+      show(text,reflect,language);$('translationStatus').textContent='';
       return {text,language};
     }catch(e){
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
