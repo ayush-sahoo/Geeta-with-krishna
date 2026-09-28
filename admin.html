@@ -51,6 +51,7 @@ td.r,th.r{text-align:right}
 tr:last-child td{border-bottom:0}
 .who b{display:block;font-weight:600}.who span{color:var(--muted);font-size:12px}
 .src{color:var(--ink2);font-size:12px;max-width:240px}
+.place span{display:block;color:var(--muted);font-size:11px}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 .toolbar input,.toolbar select{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 9px;font-family:inherit;font-size:13px;min-width:0}
 .toolbar input{flex:1 1 200px}
@@ -69,6 +70,7 @@ tr:last-child td{border-bottom:0}
 .gate p{color:var(--ink2)}
 .login{display:grid;gap:6px;text-align:left}.login label{font-size:12px;font-weight:600;color:var(--ink2)}.login input{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;margin-bottom:6px}.login .btn{padding:10px;font-size:14px;margin-top:4px}.login-msg{min-height:1.2em;margin:6px 0 0;font-size:13px;color:var(--bad)}
 .empty{color:var(--muted);font-size:13px}
+.note{color:var(--muted);font-size:12px;margin:10px 0 0}
 footer{color:var(--muted);font-size:12px}
 </style>
 </head>
@@ -134,15 +136,15 @@ footer{color:var(--muted);font-size:12px}
         <span class="sub" id="ucount"></span>
       </div>
       <div class="tablewrap"><table>
-        <thead><tr><th>User</th><th>Signed up (IST)</th><th>Via</th><th>Plan</th><th>Came from</th><th class="r">Checkouts</th><th>Access until</th></tr></thead>
-        <tbody id="users"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        <thead><tr><th>User</th><th>Signed up (IST)</th><th>Via</th><th>Plan</th><th>Came from</th><th>Location</th><th class="r">Checkouts</th><th>Access until</th></tr></thead>
+        <tbody id="users"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
       </table></div>
     </section>
 
     <div class="grid3">
       <section class="card"><h2>Traffic sources</h2><div id="sources" class="empty">Loading…</div></section>
       <section class="card"><h2>Browsers</h2><div id="browsers" class="empty">Loading…</div></section>
-      <section class="card"><h2>Countries</h2><div id="countries" class="empty">Loading…</div></section>
+      <section class="card"><h2>Locations</h2><div id="countries" class="empty">Loading…</div><p id="countryline" class="note"></p></section>
     </div>
 
     <section class="card">
@@ -259,7 +261,11 @@ footer{color:var(--muted);font-size:12px}
     renderTimeline(data.timeline || []);
     renderBars('sources', data.sources, (r) => r.source, (r) => `${fmt(r.visitors)}${r.signups ? ' · ' + r.signups + ' sign-up' + (r.signups > 1 ? 's' : '') : ''}${r.paid ? ' · ' + r.paid + ' paid' : ''}`);
     renderBars('browsers', data.browsers, (r) => r.browser, (r) => fmt(r.visitors));
-    renderBars('countries', data.countries, (r) => r.country === 'IN' ? 'India' : r.country, (r) => fmt(r.visitors));
+    const cname = (c) => c === 'IN' ? 'India' : (c || '??');
+    const cities = data.cities || [];
+    if (cities.length) renderBars('countries', cities, (r) => r.city + (r.region && r.region !== r.city ? ', ' + r.region : '') + (r.country !== 'IN' ? ' (' + cname(r.country) + ')' : ''), (r) => fmt(r.visitors));
+    else renderBars('countries', data.countries, (r) => cname(r.country), (r) => fmt(r.visitors));
+    $('countryline').textContent = cities.length && (data.countries || []).length ? 'By country: ' + data.countries.map((r) => cname(r.country) + ' ' + fmt(r.visitors)).join(' · ') : '';
 
     const c = data.campaigns || [];
     $('campaigns').innerHTML = c.length ? c.map((r) => `<tr><td>${esc(r.campaign)}</td><td>${esc(r.ad)}</td><td class="r num">${fmt(r.visitors)}</td><td class="r num">${fmt(r.signups)}</td><td class="r num">${fmt(r.paid)}</td><td class="r num">${pctTxt(pct(r.signups, r.visitors))}</td></tr>`).join('')
@@ -291,10 +297,17 @@ footer{color:var(--muted);font-size:12px}
   }
 
   function sourceText(src) {
-    if (!src || !Object.values(src).some(Boolean)) return '<span class="empty">before tracking</span>';
+    if (!src || !Object.values(src).some(Boolean) || (src.backfilled && !src.in_app)) return '<span class="empty">before tracking</span>';
     const parts = [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean);
     const first = parts.length ? parts.join(' / ') : (src.has_fbclid ? 'Facebook/Instagram ad' : src.in_app ? src.in_app + ' app' : src.referrer ? new URL(src.referrer, location.href).hostname : 'direct');
-    return esc(first) + (src.in_app && parts.length ? ' · ' + esc(src.in_app) : '') + (src.country ? ' · ' + esc(src.country) : '');
+    return esc(first) + (src.in_app && parts.length ? ' · ' + esc(src.in_app) : '');
+  }
+
+  function placeText(src) {
+    if (!src || !(src.city || src.country)) return '<span class="empty">–</span>';
+    const place = src.city ? src.city + (src.region && src.region !== src.city ? ', ' + src.region : '') + (src.country && src.country !== 'IN' ? ', ' + src.country : '') : (src.country === 'IN' ? 'India' : src.country);
+    const dev = { android: 'Android', ios: 'iPhone', desktop: 'Desktop' }[src.device];
+    return esc(place) + (dev ? `<span>${dev}${src.backfilled ? ' · from server logs' : ''}</span>` : '');
   }
 
   function userRows() {
@@ -315,15 +328,15 @@ footer{color:var(--muted);font-size:12px}
     $('users').innerHTML = rows.length ? rows.map((u) => {
       const paid = u.payment_status === 'paid';
       const chips = (paid ? '<span class="chip paid">Paid</span>' : (u.checkouts ? '<span class="chip checkout">Checkout, unpaid</span>' : '<span class="chip free">Free</span>')) + (u.is_test ? ' <span class="chip test">Test</span>' : '');
-      return `<tr><td class="who"><b>${esc(u.name || u.email)}</b>${u.name ? `<span>${esc(u.email)}</span>` : ''}</td><td class="num">${ist(u.signed_up_at)}</td><td>${esc(u.provider || '–')}</td><td>${chips}</td><td class="src">${sourceText(u.signup_source)}</td><td class="r num">${fmt(u.checkouts)}</td><td class="num">${paid ? ist(u.access_expires_at, { hour: undefined, minute: undefined, year: 'numeric' }) : '–'}</td></tr>`;
-    }).join('') : '<tr><td colspan="7" class="empty">No users match.</td></tr>';
+      return `<tr><td class="who"><b>${esc(u.name || u.email)}</b>${u.name ? `<span>${esc(u.email)}</span>` : ''}</td><td class="num">${ist(u.signed_up_at)}</td><td>${esc(u.provider || '–')}</td><td>${chips}</td><td class="src">${sourceText(u.signup_source)}</td><td class="src place">${placeText(u.signup_source)}</td><td class="r num">${fmt(u.checkouts)}</td><td class="num">${paid ? ist(u.access_expires_at, { hour: undefined, minute: undefined, year: 'numeric' }) : '–'}</td></tr>`;
+    }).join('') : '<tr><td colspan="8" class="empty">No users match.</td></tr>';
   }
 
   function exportCsv() {
     const rows = userRows();
-    const cols = ['email', 'name', 'provider', 'signed_up_at', 'last_sign_in_at', 'payment_status', 'checkouts', 'purchased_at', 'access_expires_at', 'utm_source', 'utm_campaign', 'utm_content', 'in_app', 'country', 'is_test'];
+    const cols = ['email', 'name', 'provider', 'signed_up_at', 'last_sign_in_at', 'payment_status', 'checkouts', 'purchased_at', 'access_expires_at', 'utm_source', 'utm_campaign', 'utm_content', 'in_app', 'city', 'region', 'country', 'is_test'];
     const cell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const lines = [cols.join(',')].concat(rows.map((u) => { const s = u.signup_source || {}; return [u.email, u.name, u.provider, u.signed_up_at, u.last_sign_in_at, u.payment_status, u.checkouts, u.purchased_at, u.access_expires_at, s.utm_source, s.utm_campaign, s.utm_content, s.in_app, s.country, u.is_test].map(cell).join(','); }));
+    const lines = [cols.join(',')].concat(rows.map((u) => { const s = u.signup_source || {}; return [u.email, u.name, u.provider, u.signed_up_at, u.last_sign_in_at, u.payment_status, u.checkouts, u.purchased_at, u.access_expires_at, s.utm_source, s.utm_campaign, s.utm_content, s.in_app, s.city, s.region, s.country, u.is_test].map(cell).join(','); }));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
     a.download = 'gita-verse-users-' + new Date().toISOString().slice(0, 10) + '.csv';
