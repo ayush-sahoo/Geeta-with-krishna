@@ -593,12 +593,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(/knowledge|wisdom|ignorance/.test(t))return 'wisdom';
       return 'balance';
     }
-    function deepMeaning(v){
-      const base=cleanTranslation(v.translation_english||'').trim();
-      const t=base.toLowerCase();
-      const chapter=Number(v.chapter_id||0);
-
-      const chapterLens={
+    // Verse texts are built from these fixed pieces plus each verse's meaning.
+    // Translations are stored per piece (text_translations), and
+    // tools/translation_sources.mjs reads these constants to seed them.
+    const CHAPTER_LENS={
         1:'This chapter places us inside Arjuna’s moral and emotional crisis. Its deeper question is not merely what happens on the battlefield, but what happens when duty, attachment, fear, and identity collide.',
         2:'This chapter establishes the Gita’s central foundations: the enduring Self, disciplined action, equanimity, and wisdom that is not shaken by changing circumstances.',
         3:'This chapter develops Karma Yoga — acting fully in the world without becoming psychologically owned by the fruits of action.',
@@ -617,55 +615,50 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         16:'This chapter contrasts qualities that lead toward inner freedom with those that deepen confusion, ego, and bondage.',
         17:'This chapter shows how faith takes different forms according to a person’s nature and influences worship, discipline, food, and conduct.',
         18:'This final chapter integrates the paths of action, knowledge, devotion, renunciation, and surrender into a unified teaching.'
-      }[chapter]||'This verse belongs to the Gita’s wider inquiry into right action, clear understanding, and inner freedom.';
-
-      let specific='';
-      if(/dhritarashtra|sanjaya|army|battle|warrior|pandava|duryodhana|drona|kurukshetra/.test(t)){
-        specific='The verse is first of all doing narrative work: it locates people, motives, loyalties, and tensions. Its deeper value comes from noticing the psychological state behind the action — who is attached, who is afraid, who is calculating, and who is trying to see clearly.';
-      }else if(/fruit|fruits|result|results|action|work|duty|perform/.test(t)){
-        specific='The key distinction here is between action and ownership of the outcome. Krishna does not argue for passivity; he asks for complete participation without making one’s peace, identity, or integrity dependent on success or failure.';
-      }else if(/soul|self|born|death|dies|eternal|body|slain/.test(t)){
-        specific='This verse separates the changing body and personality from the deeper Self. The practical implication is not indifference to life, but a shift in identity: what is most essential in a person is not exhausted by physical change, status, gain, or loss.';
-      }else if(/mind|sense|senses|desire|anger|lust|attachment/.test(t)){
-        specific='The verse describes an inner chain of causation. Attention becomes attachment, attachment can become craving, and unchecked craving can distort judgment. The teaching is therefore about intervening early — at the level of attention and identification — rather than only fighting the final emotion.';
-      }else if(/yoga|meditat|concentrat|steady|still|discipline/.test(t)){
-        specific='Here yoga means trained steadiness rather than escape. The verse points to a mind that can remain present without being dragged around by every impulse, memory, fear, or reward. That steadiness is what makes clear action possible.';
-      }else if(/devot|worship|love|faith|offer|surrender/.test(t)){
-        specific='The deeper movement here is from ego-centred action toward offering. Devotion in the Gita is not merely emotion; it changes the centre from which one acts, reducing the need to control, possess, and constantly prove oneself.';
-      }else if(/knowledge|wisdom|know|ignorance|understand/.test(t)){
-        specific='The verse treats knowledge as a transformation in perception, not just information. To know truly is to see relationships, causes, and identity differently enough that one’s actions also change.';
-      }else if(/equal|pleasure|pain|gain|loss|victory|defeat/.test(t)){
-        specific='The teaching here is equanimity: not flattening emotion, but refusing to let opposite experiences dictate one’s inner direction. Pleasure and pain still occur; the freedom lies in not becoming completely governed by either.';
-      }else if(/nature|guna|sattva|rajas|tamas/.test(t)){
-        specific='This verse asks us to notice how behaviour is shaped by underlying tendencies. Instead of reducing everything to “my personality,” the Gita invites observation of the forces moving through the mind — clarity, restlessness, and inertia — so they can be understood rather than blindly obeyed.';
-      }else if(/supreme|divine|lord|god|brahman|creator|creation/.test(t)){
-        specific='The verse widens the frame from the individual ego to a larger order. Its deeper point is that the sacred is not presented as separate from existence, but as the source, support, or intelligence through which existence becomes intelligible.';
-      }else{
-        specific='Read literally first: the verse is making a precise claim about a human situation. Its deeper meaning emerges by asking what assumption about identity, control, fear, or responsibility the verse is challenging in that situation.';
-      }
-
-      return specific+'\n\n'+chapterLens+'\n\nVerse meaning: '+base;
-    }
-    function applyToday(v){
-      return {
+      };
+    const CHAPTER_LENS_DEFAULT='This verse belongs to the Gita’s wider inquiry into right action, clear understanding, and inner freedom.';
+    const DEEP_RULES=[
+      [/dhritarashtra|sanjaya|army|battle|warrior|pandava|duryodhana|drona|kurukshetra/,'The verse is first of all doing narrative work: it locates people, motives, loyalties, and tensions. Its deeper value comes from noticing the psychological state behind the action — who is attached, who is afraid, who is calculating, and who is trying to see clearly.'],
+      [/fruit|fruits|result|results|action|work|duty|perform/,'The key distinction here is between action and ownership of the outcome. Krishna does not argue for passivity; he asks for complete participation without making one’s peace, identity, or integrity dependent on success or failure.'],
+      [/soul|self|born|death|dies|eternal|body|slain/,'This verse separates the changing body and personality from the deeper Self. The practical implication is not indifference to life, but a shift in identity: what is most essential in a person is not exhausted by physical change, status, gain, or loss.'],
+      [/mind|sense|senses|desire|anger|lust|attachment/,'The verse describes an inner chain of causation. Attention becomes attachment, attachment can become craving, and unchecked craving can distort judgment. The teaching is therefore about intervening early — at the level of attention and identification — rather than only fighting the final emotion.'],
+      [/yoga|meditat|concentrat|steady|still|discipline/,'Here yoga means trained steadiness rather than escape. The verse points to a mind that can remain present without being dragged around by every impulse, memory, fear, or reward. That steadiness is what makes clear action possible.'],
+      [/devot|worship|love|faith|offer|surrender/,'The deeper movement here is from ego-centred action toward offering. Devotion in the Gita is not merely emotion; it changes the centre from which one acts, reducing the need to control, possess, and constantly prove oneself.'],
+      [/knowledge|wisdom|know|ignorance|understand/,'The verse treats knowledge as a transformation in perception, not just information. To know truly is to see relationships, causes, and identity differently enough that one’s actions also change.'],
+      [/equal|pleasure|pain|gain|loss|victory|defeat/,'The teaching here is equanimity: not flattening emotion, but refusing to let opposite experiences dictate one’s inner direction. Pleasure and pain still occur; the freedom lies in not becoming completely governed by either.'],
+      [/nature|guna|sattva|rajas|tamas/,'This verse asks us to notice how behaviour is shaped by underlying tendencies. Instead of reducing everything to “my personality,” the Gita invites observation of the forces moving through the mind — clarity, restlessness, and inertia — so they can be understood rather than blindly obeyed.'],
+      [/supreme|divine|lord|god|brahman|creator|creation/,'The verse widens the frame from the individual ego to a larger order. Its deeper point is that the sacred is not presented as separate from existence, but as the source, support, or intelligence through which existence becomes intelligible.']
+    ];
+    const DEEP_FALLBACK='Read literally first: the verse is making a precise claim about a human situation. Its deeper meaning emerges by asking what assumption about identity, control, fear, or responsibility the verse is challenging in that situation.';
+    const DEEP_LABEL='Verse meaning:';
+    const APPLY_TODAY={
         action:'Choose one important task today. Give it your best attention for 30 minutes without checking whether it is “working” yet. Measure yourself by the quality of your effort, not the immediate result.',
         mind:'Before your next emotional reaction, create a 10-second gap. Name what you are feeling, breathe once slowly, and then choose your response instead of letting the impulse choose for you.',
         self:'Notice one identity you are clinging to today — job title, approval, success, failure, appearance. Ask: “If this changed, what in me would still remain?”',
         devotion:'Take one ordinary action — a meal, a task, a conversation — and do it as an offering rather than as a transaction. Focus on sincerity instead of reward.',
         wisdom:'When you face a decision today, write two columns: what is temporary and what is principled. Let the principled side influence the next action.',
         balance:'When something goes unusually well or badly today, delay your conclusion about what it “means.” Return to the next right action before judging the whole situation.'
-      }[themeOf(v)];
-    }
-    function reflectionFor(v){
-      return {
+      };
+    const REFLECTIONS={
         action:'Reflection: What action is mine to do, even if the outcome is uncertain?',
         mind:'Reflection: What emotion is currently asking to make a decision for me?',
         self:'Reflection: What part of me remains steady when circumstances change?',
         devotion:'Reflection: What would change if I treated this action as an offering?',
         wisdom:'Reflection: What am I seeing clearly, and what am I assuming?',
         balance:'Reflection: Can I stay steady long enough to choose rather than react?'
-      }[themeOf(v)];
+      };
+    const TAB_REFLECTION={meaning:'Read slowly. Notice which phrase creates the strongest reaction in you.',today:'Keep the practice small enough that you can actually do it today.'};
+    function deepParts(v){
+      const base=cleanTranslation(v.translation_english||'').trim(),t=base.toLowerCase();
+      const specific=(DEEP_RULES.find(([rx])=>rx.test(t))||[,DEEP_FALLBACK])[1];
+      return {specific,lens:CHAPTER_LENS[Number(v.chapter_id||0)]||CHAPTER_LENS_DEFAULT,base};
     }
+    function deepMeaning(v){
+      const d=deepParts(v);
+      return d.specific+'\n\n'+d.lens+'\n\n'+DEEP_LABEL+' '+d.base;
+    }
+    function applyToday(v){return APPLY_TODAY[themeOf(v)];}
+    function reflectionFor(v){return REFLECTIONS[themeOf(v)];}
     async function fetchTTS(text,kind,verse,language=meaningLanguage){
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
@@ -784,10 +777,11 @@ function restoreLanguagePreferences(){
   meaningLanguage=saved.meaning==='en-hi'||Object.hasOwn(GITA_LANGUAGES,saved.meaning)?saved.meaning:'en-hi';
   $('chatLanguage').value=chatLanguage;$('meaningLanguage').value=meaningLanguage;
   if($('appLanguage').options?.length)syncAppLanguage();
+  preloadTranslations();
 }
 function saveLanguages(){
   try{localStorage.setItem(languageKey(),JSON.stringify({chat:chatLanguage,meaning:meaningLanguage}))}catch(e){}
-  syncAppLanguage();
+  syncAppLanguage();preloadTranslations();
 }
 // The header 🌐 picker shows one app-wide language; 'custom' when the chat
 // and meaning screens were set to different languages.
@@ -829,17 +823,59 @@ function detectLanguage(text){
   const scripts=[[/[\u0900-\u097F]/,'hi'],[/[\u0980-\u09FF]/,'bn'],[/[\u0A00-\u0A7F]/,'pa'],[/[\u0A80-\u0AFF]/,'gu'],[/[\u0B80-\u0BFF]/,'ta'],[/[\u0C00-\u0C7F]/,'te'],[/[\u0C80-\u0CFF]/,'kn'],[/[\u0D00-\u0D7F]/,'ml'],[/[\u0600-\u06FF]/,'ur']];
   return (scripts.find(([rx])=>rx.test(text))||[,'en'])[1];
 }
+// Stored translations (text_translations): each language's set is loaded once,
+// keyed by the SHA-256 of the English piece, so most text appears instantly.
+const storedTranslations=new Map();
+async function sha256Hex(text){
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function loadStoredTranslations(language){
+  if(language==='en'||!authSession?.access_token||!window.crypto?.subtle)return Promise.resolve(new Map());
+  if(!storedTranslations.has(language)){
+    const load=(async()=>{
+      const map=new Map();
+      for(let from=0;;from+=1000){
+        const r=await fetch(SUPA+'/rest/v1/text_translations?select=source_hash,translated&language=eq.'+encodeURIComponent(language),{headers:{...authHeaders(authSession.access_token),Range:from+'-'+(from+999)}});
+        if(!r.ok)throw new Error('Stored translations unavailable');
+        const rows=await r.json();rows.forEach(x=>map.set(x.source_hash,x.translated));
+        if(rows.length<1000)return map;
+      }
+    })();
+    // A failed load is retried next time instead of being remembered.
+    load.catch(()=>storedTranslations.delete(language));
+    storedTranslations.set(language,load);
+  }
+  return storedTranslations.get(language).catch(()=>new Map());
+}
+function preloadTranslations(){
+  const lang=meaningLanguage==='en-hi'?'hi':meaningLanguage;
+  if(lang!=='en')loadStoredTranslations(lang);
+}
 async function translateText(text,language){
-  if(language==='en')return text;
+  if(language==='en'||!text.trim())return text;
   const key=language+'|'+text;
   if(translationCache.has(key))return translationCache.get(key);
+  try{
+    const stored=(await loadStoredTranslations(language)).get(await sha256Hex(text));
+    if(stored){translationCache.set(key,stored);return stored;}
+  }catch(e){}
   const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
     method:'POST',headers:authHeaders(authSession?.access_token||''),signal:AbortSignal.timeout(30000),
     body:JSON.stringify({operation:'translate',text,language,kind:'meaning'})
   });
   const d=await r.json();if(!r.ok||!d.text)throw new Error(d.error||'Translation unavailable. Please retry.');
-  if(translationCache.size>=60)translationCache.delete(translationCache.keys().next().value);
+  if(translationCache.size>=400)translationCache.delete(translationCache.keys().next().value);
   translationCache.set(key,d.text);return d.text;
+}
+// Translates a tab piece by piece, the same pieces stored in text_translations.
+async function translateTab(verse,tab,language){
+  const reflection=tab==='deep'?reflectionFor(verse):TAB_REFLECTION[tab==='today'?'today':'meaning'];
+  let parts;
+  if(tab==='deep'){const d=deepParts(verse);parts=[d.specific,d.lens,DEEP_LABEL,d.base];}
+  else parts=[tab==='meaning'?cleanTranslation(verse.translation_english||'Meaning unavailable.'):applyToday(verse)];
+  const [out,reflect]=await Promise.all([Promise.all(parts.map(p=>translateText(p,language))),translateText(reflection,language).catch(()=>reflection)]);
+  return {text:tab==='deep'?out[0]+'\n\n'+out[1]+'\n\n'+out[2]+' '+out[3]:out[0],reflection:reflect};
 }
 function renderTab(tab){
   if(!selectedVerse)return;currentTab=tab;stopSpeech();
@@ -847,26 +883,29 @@ function renderTab(tab){
   document.querySelectorAll('#meaningTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   $('panelTitle').textContent={meaning:'MEANING',deep:'DEEP MEANING',today:'APPLY TODAY'}[tab];
   const source=tab==='meaning'?cleanTranslation(verse.translation_english||'Meaning unavailable.'):tab==='deep'?deepMeaning(verse):applyToday(verse);
-  const reflection=tab==='deep'?reflectionFor(verse):tab==='today'?'Keep the practice small enough that you can actually do it today.':'Read slowly. Notice which phrase creates the strongest reaction in you.';
+  const reflection=tab==='deep'?reflectionFor(verse):TAB_REFLECTION[tab==='today'?'today':'meaning'];
   const show=(text,reflect,lang)=>{$('detailMeaning').textContent=text;$('detailMeaning').lang=lang;$('reflection').textContent=reflect;$('reflection').lang=lang;};
   $('detailMeaning').dir='auto';$('reflection').dir='auto';
   $('translationStatus').textContent='';$('retryTranslation').hidden=true;
   // Show English straight away; a translation replaces it when ready.
   show(source,reflection,'en');
-  if(language!=='en')$('translationStatus').textContent='Translating to '+GITA_LANGUAGES[language].split(' · ')[0]+'…';
+  // Stored translations arrive almost instantly; only note a slow one.
+  const note=language==='en'?0:setTimeout(()=>{if(generation===translationGeneration)$('translationStatus').textContent='Translating to '+GITA_LANGUAGES[language].split(' · ')[0]+'…';},300);
   // Resolves to the text and language narration should use.
   meaningReady=(async()=>{
-    if(language==='en')return {text:source,language:'en'};
+    if(language==='en')return {text:source,language:'en',verse,tab};
     try{
-      const [text,reflect]=await Promise.all([translateText(source,language),translateText(reflection,language).catch(()=>reflection)]);
+      const {text,reflection:reflect}=await translateTab(verse,tab,language);
+      clearTimeout(note);
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
       show(text,reflect,language);$('translationStatus').textContent='';
-      return {text,language};
+      return {text,language,verse,tab};
     }catch(e){
+      clearTimeout(note);
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
       // Keep the verse readable: fall back to English and offer a retry.
       show(source,reflection,'en');$('translationStatus').textContent='Translation unavailable, showing English.';$('retryTranslation').hidden=false;
-      return {text:source,language:'en'};
+      return {text:source,language:'en',verse,tab};
     }
   })();
 }
@@ -939,7 +978,7 @@ async function speak(){
     const chantClip=fetchTTS(v.sanskrit,'verse',v,'hi');chantClip.catch(()=>{});
     const meaning=await ready;if(!meaning||generation!==narrationGeneration)return;
     let {text,language}=meaning;
-    if(language==='en'&&meaningLanguage==='en-hi'){text=await translateText(text,'hi');language='hi';if(generation!==narrationGeneration)return;}
+    if(language==='en'&&meaningLanguage==='en-hi'){({text}=await translateTab(meaning.verse,meaning.tab,'hi'));language='hi';if(generation!==narrationGeneration)return;}
     // Fetch the meaning audio while the chant plays.
     const meaningClip=fetchTTS(textClips(text)[0],'meaning',null,language);meaningClip.catch(()=>{});
     const chant=await chantClip;if(generation!==narrationGeneration)return;

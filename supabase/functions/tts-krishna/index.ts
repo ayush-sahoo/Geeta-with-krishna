@@ -38,6 +38,41 @@ async function translateMeaning(text:string, language:string){
   return translated.trim();
 }
 
+// Verse-text pieces are translated once and stored (text_translations, filled
+// ahead of time by translation-worker). Only known pieces are saved, so this
+// endpoint can't be used to fill the table with arbitrary text.
+function adminClient() {
+  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
+  let key = "";
+  if (raw) { try { key = JSON.parse(raw)["default"] || ""; } catch {} }
+  key = key || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  return url && key ? createClient(url, key) : null;
+}
+async function sha256Hex(text: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function storedOrTranslate(text: string, language: string) {
+  if (language === "en") return text;
+  const admin = adminClient();
+  const hash = await sha256Hex(text);
+  // Storage problems must never block a translation: fall back to the model.
+  try {
+    const { data } = await admin!.from("text_translations").select("translated").eq("source_hash", hash).eq("language", language).maybeSingle();
+    if (data?.translated) return data.translated as string;
+  } catch (e) { console.error("text_translations read failed", String(e)); }
+  const translated = await translateMeaning(text, language);
+  try {
+    const { data: known } = await admin!.from("translation_sources").select("source_hash").eq("source_hash", hash).maybeSingle();
+    if (known) {
+      const { error } = await admin!.from("text_translations").upsert({ source_hash: hash, language, translated }, { onConflict: "source_hash,language", ignoreDuplicates: true });
+      if (error) console.error("text_translations write failed", error.message);
+    }
+  } catch (e) { console.error("text_translations write failed", String(e)); }
+  return translated;
+}
+
 function cleanVerseText(input: string) {
   return input
     // Remove verse markers such as ||1-1||, |1.1|, ॥ १.१ ॥
@@ -103,7 +138,7 @@ Deno.serve(async (req: Request) => {
     if(!rawText)return json({error:"Text is required"},400);
     if(rawText.length>12000)return json({error:"Text is too long"},400);
     const text = kind === "verse" ? cleanVerseText(rawText)
-      : body?.translated === true ? rawText : await translateMeaning(rawText,language);
+      : body?.translated === true ? rawText : await storedOrTranslate(rawText,language);
     if(body?.operation==="translate")return json({text,language},200);
     if(text.length>4500)return json({error:"Text is too long for one audio clip"},400);
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
