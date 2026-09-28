@@ -809,7 +809,7 @@ async function translateText(text,language){
   const key=language+'|'+text;
   if(translationCache.has(key))return translationCache.get(key);
   const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
-    method:'POST',headers:authHeaders(authSession?.access_token||''),
+    method:'POST',headers:authHeaders(authSession?.access_token||''),signal:AbortSignal.timeout(30000),
     body:JSON.stringify({operation:'translate',text,language,kind:'meaning'})
   });
   const d=await r.json();if(!r.ok||!d.text)throw new Error(d.error||'Translation unavailable. Please retry.');
@@ -826,7 +826,9 @@ function renderTab(tab){
   const show=(text,reflect,lang)=>{$('detailMeaning').textContent=text;$('detailMeaning').lang=lang;$('reflection').textContent=reflect;$('reflection').lang=lang;};
   $('detailMeaning').dir='auto';$('reflection').dir='auto';
   $('translationStatus').textContent='';$('retryTranslation').hidden=true;
-  if(language==='en')show(source,reflection,'en');else{show('Translating…','',language);$('audioBtn').disabled=true;}
+  // Show English straight away; a translation replaces it when ready.
+  show(source,reflection,'en');
+  if(language!=='en')$('translationStatus').textContent='Translating to '+GITA_LANGUAGES[language].split(' · ')[0]+'…';
   // Resolves to the text and language narration should use.
   meaningReady=(async()=>{
     if(language==='en')return {text:source,language:'en'};
@@ -834,12 +836,12 @@ function renderTab(tab){
       const [text,reflect]=await Promise.all([translateText(source,language),translateText(reflection,language).catch(()=>reflection)]);
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
       show(text,reflect,language);$('translationStatus').textContent='AI-translated meaning';
-      $('audioBtn').disabled=false;return {text,language};
+      return {text,language};
     }catch(e){
       if(generation!==translationGeneration||selectedVerse!==verse)return null;
       // Keep the verse readable: fall back to English and offer a retry.
       show(source,reflection,'en');$('translationStatus').textContent='Translation unavailable, showing English.';$('retryTranslation').hidden=false;
-      $('audioBtn').disabled=false;return {text:source,language:'en'};
+      return {text:source,language:'en'};
     }
   })();
 }
