@@ -1,3 +1,4 @@
+import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -193,7 +194,7 @@ function validateModelReply(parsed:any, verses:Verse[]){
   return shapeReply({title:parsed.title,paragraphs,actions,follow_up:parsed.follow_up},[...cited].map(ref=>byRef.get(ref)!));
 }
 
-async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:number, withThinking:boolean){
+async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:number, withThinking:boolean, language=""){
   const generationConfig:Record<string,unknown>={
     responseMimeType:"application/json",
     temperature:0.8,
@@ -206,14 +207,14 @@ async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:
     signal:AbortSignal.timeout(25000),
     headers:{ "x-goog-api-key":apiKey, "Content-Type":"application/json" },
     body:JSON.stringify({
-      systemInstruction:{ parts:[{text:SYSTEM_PROMPT}] },
+      systemInstruction:{ parts:[{text:SYSTEM_PROMPT+(language?`\nRESPONSE LANGUAGE: ${GITA_LANGUAGES[language]}. Use its native script for all prose, including actions and follow_up. Keep references in exactly BG chapter.verse format. This overrides language inferred from the user message.`:"")}] },
       contents,
       generationConfig,
     }),
   });
 }
 
-async function callGemini(question:string, history:Turn[], verses:Verse[]){
+async function callGemini(question:string, history:Turn[], verses:Verse[], language=""){
   const apiKey=Deno.env.get("GEMINI_API_KEY") ?? "";
   if(!apiKey) return null;
 
@@ -230,7 +231,7 @@ async function callGemini(question:string, history:Turn[], verses:Verse[]){
   let budget=4096;
   for(let attempt=0; attempt<3; attempt++){
     let r:Response;
-    try{r=await geminiRequest(apiKey,contents,budget,withThinking);}
+    try{r=await geminiRequest(apiKey,contents,budget,withThinking,language);}
     catch{console.error("Gemini request failed");return null;}
     if(!r.ok){
       console.error("Gemini error",r.status);
@@ -312,6 +313,8 @@ Deno.serve(async (req:Request)=>{
     const body=await req.json();
     const question=String(body?.question ?? "").trim().slice(0,MAX_QUESTION);
     const history=sanitizeHistory(body?.history);
+    const language=typeof body?.language==="string"?body.language:"";
+    if(language&&!Object.hasOwn(GITA_LANGUAGES,language))return json({error:"Unsupported language"},400);
 
     if(!question) return json({error:"Question is required"},400);
 
@@ -344,7 +347,7 @@ Deno.serve(async (req:Request)=>{
     if(!annualActive) return json({error:"Annual Access required"},403);
 
     const verses=await retrieveVerses(supabase,question,history);
-    const ai=await callGemini(question,history,verses);
+    const ai=await callGemini(question,history,verses,language);
     return ai ? json(ai) : json({error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
   }catch(e){
     console.error("ask-krishna failed",String(e));

@@ -243,6 +243,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       authSession=session||null;
       if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
+      restoreLanguagePreferences();
       updateAccountUI();
     }
     // A Google sign-in creates the account on first use, so count it as a
@@ -665,7 +666,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         balance:'Reflection: Can I stay steady long enough to choose rather than react?'
       }[themeOf(v)];
     }
-    async function fetchTTS(text,kind,verse){
+    async function fetchTTS(text,kind,verse,language=meaningLanguage){
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
         headers:authHeaders(authSession?.access_token||''),
@@ -673,6 +674,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         body:JSON.stringify({
           text,
           kind,
+          language,
+          translated:kind!=='verse',
           chapter_id:verse?.chapter_id,
           verse_number:verse?.verse_number
         })
@@ -768,13 +771,64 @@ async function openVerse(ch,v){
     renderTab('meaning');
   }catch(e){if(request===verseRequest){$('detailSanskrit').textContent='Could not load this verse.';$('detailMeaning').textContent=e.message;}}
 }
+let chatLanguage='en',meaningLanguage='hi',translationGeneration=0;
+const translationCache=new Map();
+let meaningReady=Promise.resolve(null),narrationGeneration=0,audioButton=null,cancelPlayback=null;
+function languageKey(){return 'gitaLanguages:'+ (authSession?.user?.id||'guest');}
+function restoreLanguagePreferences(){
+  let saved={};try{saved=JSON.parse(localStorage.getItem(languageKey())||'{}')}catch(e){}
+  chatLanguage=Object.hasOwn(GITA_LANGUAGES,saved.chat)?saved.chat:'en';
+  meaningLanguage=Object.hasOwn(GITA_LANGUAGES,saved.meaning)?saved.meaning:'hi';
+  $('chatLanguage').value=chatLanguage;$('meaningLanguage').value=meaningLanguage;
+}
+function setupLanguages(){
+  for(const id of ['chatLanguage','meaningLanguage']){
+    for(const [code,name] of Object.entries(GITA_LANGUAGES)){
+      const option=document.createElement('option');option.value=code;option.textContent=name;$(id).appendChild(option);
+    }
+    $(id).onchange=()=>{
+      stopSpeech();chatLanguage=$('chatLanguage').value;meaningLanguage=$('meaningLanguage').value;
+      try{localStorage.setItem(languageKey(),JSON.stringify({chat:chatLanguage,meaning:meaningLanguage}))}catch(e){}
+      if(id==='meaningLanguage'&&selectedVerse)renderTab(currentTab);
+    };
+  }
+  restoreLanguagePreferences();
+}
+async function translateText(text,language){
+  if(language==='en')return text;
+  const key=language+'|'+text;
+  if(translationCache.has(key))return translationCache.get(key);
+  const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
+    method:'POST',headers:authHeaders(authSession?.access_token||''),
+    body:JSON.stringify({operation:'translate',text,language,kind:'meaning'})
+  });
+  const d=await r.json();if(!r.ok||!d.text)throw new Error(d.error||'Translation unavailable. Please retry.');
+  if(translationCache.size>=60)translationCache.delete(translationCache.keys().next().value);
+  translationCache.set(key,d.text);return d.text;
+}
 function renderTab(tab){
-  if(!selectedVerse)return;currentTab=tab;
+  if(!selectedVerse)return;currentTab=tab;stopSpeech();
+  const generation=++translationGeneration,verse=selectedVerse,language=meaningLanguage;
   document.querySelectorAll('#meaningTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   $('panelTitle').textContent={meaning:'MEANING',deep:'DEEP MEANING',today:'APPLY TODAY'}[tab];
-  $('detailMeaning').textContent=tab==='meaning'?cleanTranslation(selectedVerse.translation_english||'Meaning unavailable.'):tab==='deep'?deepMeaning(selectedVerse):applyToday(selectedVerse);
-  $('reflection').textContent=tab==='deep'?reflectionFor(selectedVerse):tab==='today'?'Keep the practice small enough that you can actually do it today.':'Read slowly. Notice which phrase creates the strongest reaction in you.';
+  const source=tab==='meaning'?cleanTranslation(verse.translation_english||'Meaning unavailable.'):tab==='deep'?deepMeaning(verse):applyToday(verse);
+  $('detailMeaning').textContent=language==='en'?source:'Translating…';
+  $('detailMeaning').dir='auto';$('detailMeaning').lang=language;
+  $('reflection').textContent='';$('translationStatus').textContent='';$('retryTranslation').hidden=true;
+  $('audioBtn').disabled=true;
+  meaningReady=(async()=>{
+    try{
+      const text=await translateText(source,language);
+      if(generation!==translationGeneration||selectedVerse!==verse)return null;
+      $('detailMeaning').textContent=text;$('translationStatus').textContent=language==='en'?'':'AI-translated meaning';
+      $('audioBtn').disabled=false;return text;
+    }catch(e){
+      if(generation===translationGeneration){$('detailMeaning').textContent='';$('translationStatus').textContent='Translation unavailable. Please retry.';$('retryTranslation').hidden=false;}
+      return null;
+    }
+  })();
 }
+
 function stepVerse(delta){if(selectedVerse)openVerse(Number(selectedVerse.chapter_id),Number(selectedVerse.verse_number)+delta)}
 function toggleSave(){
   if(!selectedVerse)return;const id=selectedVerse.id;
@@ -785,6 +839,8 @@ function toggleSave(){
   toast(saved.has(id)?'Verse saved':'Removed from saved');
 }
 function stopSpeech(){
+  narrationGeneration++;cancelPlayback?.();cancelPlayback=null;
+  if(audioButton){audioButton.textContent='▶ Listen';audioButton=null;}
   speaking=false;
   if(currentAudio){currentAudio.pause();currentAudio=null;}
   if(ambientAudio){ambientAudio.pause();ambientAudio=null;}
@@ -792,27 +848,50 @@ function stopSpeech(){
   if($('audioBtn')){$('audioBtn').textContent='▶';$('audioBtn').setAttribute('aria-label','Play verse and meaning');}
 }
 function playBlob(blob){return new Promise((resolve,reject)=>{
-  audioUrl=URL.createObjectURL(blob);const a=new Audio(audioUrl);currentAudio=a;
-  const clean=()=>{if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null;}currentAudio=null;};
+  const url=URL.createObjectURL(blob),a=new Audio(url);audioUrl=url;currentAudio=a;
+  const clean=()=>{URL.revokeObjectURL(url);if(currentAudio===a){currentAudio=null;audioUrl=null;}cancelPlayback=null;};
+  cancelPlayback=()=>{a.pause();clean();resolve()};
   a.onended=()=>{clean();resolve()};a.onerror=()=>{clean();reject(new Error('Audio playback failed'))};
-  a.play().catch(reject);
+  a.play().catch(e=>{clean();reject(e)});
 })}
+async function playText(text,language,generation){
+  // Split long meanings into provider-sized clips without cutting a surrogate pair.
+  const chars=Array.from(text);
+  for(let offset=0;offset<chars.length;offset+=3000){
+    if(generation!==narrationGeneration)return;
+    const blob=await fetchTTS(chars.slice(offset,offset+3000).join(''),'meaning',null,language);
+    if(generation!==narrationGeneration)return;
+    await playBlob(blob);
+  }
+}
+async function listenReply(text,language,button){
+  if(!hasLifetimeAccess()){showPaywall();return;}
+  if(audioButton===button){stopSpeech();return;}
+  stopSpeech();const generation=narrationGeneration;audioButton=button;button.textContent='■ Stop';speaking=true;
+  try{await playText(text,language,generation);}
+  catch(e){if(generation===narrationGeneration)toast(e.message||'Audio unavailable. Please retry.');}
+  finally{if(generation===narrationGeneration)stopSpeech();}
+}
 async function speak(){
   if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
-  const v=selectedVerse; speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
+  stopSpeech();const generation=narrationGeneration,v=selectedVerse,language=meaningLanguage,ready=meaningReady;
+  speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
   try{
+    const text=await ready;if(!text||generation!==narrationGeneration)return;
     ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
-    const chant=await fetchTTS(v.sanskrit,'verse',v);if(!speaking||selectedVerse!==v)return;
-    await playBlob(chant);if(!speaking||selectedVerse!==v)return;
-    const meaning=await fetchTTS(spokenExplanation(v),'meaning',v);if(!speaking||selectedVerse!==v)return;
-    await playBlob(meaning);stopSpeech();
-  }catch(e){stopSpeech();toast(e.message||'Narration could not be played');}
+    const chant=await fetchTTS(v.sanskrit,'verse',v,language);if(generation!==narrationGeneration)return;
+    await playBlob(chant);if(generation!==narrationGeneration)return;
+    await playText(text,language,generation);
+  }catch(e){if(generation===narrationGeneration)toast(e.message||'Narration could not be played');}
+  finally{if(generation===narrationGeneration)stopSpeech();}
 }
+
 function appendText(parent,tag,text,className){const el=document.createElement(tag);el.textContent=text||'';if(className)el.className=className;parent.appendChild(el);return el;}
 // Recent turns sent with each question so Krishna can follow the conversation.
 const chatHistory=[];
 let chatGeneration=0,chatRequest=null;
 function clearChatConversation(){
+  stopSpeech();translationGeneration++;translationCache.clear();
   chatGeneration++;chatRequest?.abort();chatRequest=null;chatHistory.length=0;
   $('chat').replaceChildren();$('askInput').value='';
   chatBusy=false;$('sendAskButton').disabled=false;
@@ -836,16 +915,16 @@ async function sendAsk(){
   if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
-  const generation=chatGeneration;
+  const generation=chatGeneration,language=chatLanguage;
   const controller=new AbortController();chatRequest=controller;
   chatBusy=true;$('sendAskButton').disabled=true;$('askInput').value='';
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
   try{
-    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,history:chatHistory.slice(-8)})});
+    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
-    answer.textContent='';
+    answer.textContent='';answer.dir='auto';answer.lang=language;
     if(d.style==='krishna_inspired'){
       appendText(answer,'small','Sri Krishna says');if(d.title)appendText(answer,'h3',d.title);
       (d.paragraphs||[d.opening,d.explanation]).filter(Boolean).forEach(t=>appendWithRefs(answer,t));
@@ -858,6 +937,8 @@ async function sendAsk(){
       answer.textContent=d.answer||'No response was returned. Please try again.';
       if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
     }
+    const spoken=d.style==='krishna_inspired'?replyText(d):d.answer;
+    if(spoken){const listen=appendText(answer,'button','▶ Listen','listen-reply');listen.type='button';listen.onclick=()=>listenReply(spoken,language,listen);}
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
   finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
@@ -880,6 +961,7 @@ document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>render
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
+setupLanguages();
 logVisit();
 setupInAppAuth();
 let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
