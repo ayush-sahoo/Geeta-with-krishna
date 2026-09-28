@@ -364,7 +364,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 <div class="app">
 <header class="topbar">
   <div class="toprow"><div class="brand"><div class="om">ॐ</div><div class="brandcopy"><b>Gita Verse</b><small>Read · Reflect · Ask</small></div></div><button class="welcome" id="welcomeUser" onclick="openAccount()">Sign in 🙏</button></div>
-  <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button onclick="toast('Language: English')">EN</button></nav>
+  <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button aria-label="Choose language" onclick="showScreen('ask');document.getElementById('chatLanguage').focus()">🌐</button></nav>
 </header>
 
 <main id="home" class="screen active home">
