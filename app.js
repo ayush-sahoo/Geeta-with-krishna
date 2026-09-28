@@ -20,6 +20,36 @@ function trackConfirmedPurchase(){
 const SUPA='https://bkwvuckznpaawmqrjjgk.supabase.co';
 const KEY='sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW';
 const $=id=>document.getElementById(id);
+// First-party analytics for the admin dashboard: an anonymous per-browser id,
+// page visits with their ad/UTM source, and funnel events (see log_visit /
+// log_event / set_my_attribution in Supabase).
+const VISITOR_ID=(()=>{
+  const ok=v=>/^[A-Za-z0-9_-]{8,64}$/.test(v||'');
+  let id=null;
+  try{
+    const handed=new URLSearchParams(location.search).get('vid');
+    id=ok(handed)?handed:localStorage.getItem('gitaVisitorId');
+    if(!ok(id))id='v_'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Math.random().toString(36).slice(2)+Date.now().toString(36));
+    localStorage.setItem('gitaVisitorId',id);
+  }catch(e){id=id||'v_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
+  return id;
+})();
+function rpc(fn,args,opts={}){
+  const headers={apikey:KEY,'Content-Type':'application/json'};
+  const tok=(typeof authSession!=='undefined'&&authSession?.access_token)||null;
+  if(tok)headers.Authorization='Bearer '+tok;
+  return fetch(SUPA+'/rest/v1/rpc/'+fn,{method:'POST',headers,body:JSON.stringify(args),keepalive:!!opts.keepalive}).catch(()=>{});
+}
+function logEvent(event,opts){rpc('log_event',{p_visitor_id:VISITOR_ID,p_event:event},opts)}
+function logVisit(){
+  const q=new URLSearchParams(location.search);
+  const ua=navigator.userAgent||'';
+  const inApp=/Instagram/i.test(ua)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
+  rpc('log_visit',{p_visitor_id:VISITOR_ID,p_path:location.pathname+(location.hash||''),p_referrer:document.referrer||null,
+    p_utm_source:q.get('utm_source'),p_utm_medium:q.get('utm_medium'),p_utm_campaign:q.get('utm_campaign'),p_utm_content:q.get('utm_content'),
+    p_has_fbclid:q.has('fbclid'),p_in_app:inApp,p_device:/Android/i.test(ua)?'android':/iPhone|iPad|iPod/i.test(ua)?'ios':'desktop'});
+}
+function attributeSignup(){if(authSession?.access_token)rpc('set_my_attribution',{p_visitor_id:VISITOR_ID})}
 let authSession=null,accountProfile=null,authPageMode='login',selectedVerse=null,currentTab='meaning';
 let speaking=false,currentAudio=null,ambientAudio=null,audioUrl=null,chatBusy=false,verseRequest=0;
 const verseCache=new Map();
@@ -199,7 +229,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     }
     function saveSession(session){
       authSession=session||null;
-      if(session) localStorage.setItem('gitaAuthSession',JSON.stringify(session));
+      if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
       updateAccountUI();
     }
@@ -210,6 +240,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(!user?.id||!created||Date.now()-created>10*60*1000)return;
       const key='gitaMetaRegistration:'+user.id;
       try{if(localStorage.getItem(key))return}catch(e){}
+      logEvent('signup');
       if(trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'google'},false,'gita_reg_'+user.id)){
         try{localStorage.setItem(key,'1')}catch(e){}
       }
@@ -235,7 +266,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       history.replaceState({},document.title,location.pathname+location.search);
       await loadAccountProfile();
       showScreen('accountScreen');
-      trackMeta('Login',{method:'google'},true);
+      trackMeta('Login',{method:'google'},true);logEvent('login');
       trackGoogleRegistration(user);
       toast('Signed in with Google');
       return true;
@@ -347,10 +378,11 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     const IS_ANDROID=/Android/i.test(UA);
     function chromeIntentUrl(){
       const path=(location.pathname||'/').replace(/^\//,'');
-      return 'intent://'+location.host+'/'+path+'?from=inapp#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.origin+'/'+path+'?from=inapp')+';end';
+      const q='?from=inapp&vid='+encodeURIComponent(VISITOR_ID);
+      return 'intent://'+location.host+'/'+path+q+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.origin+'/'+path+q)+';end';
     }
     function openInChrome(){
-      trackMeta('OpenInBrowser',{app:IN_APP_NAME||'unknown'},true);
+      trackMeta('OpenInBrowser',{app:IN_APP_NAME||'unknown'},true);logEvent('open_in_browser',{keepalive:true});
       location.href=chromeIntentUrl();
     }
     function setupInAppAuth(){
@@ -367,8 +399,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       $('openInChrome').onclick=openInChrome;
     }
     async function startGoogleLogin(){
+      logEvent('google_click');
       if(IN_APP_NAME){
-        trackMeta('GoogleBlockedInApp',{app:IN_APP_NAME},true);
+        trackMeta('GoogleBlockedInApp',{app:IN_APP_NAME},true);logEvent('google_blocked_in_app');
         if(IS_ANDROID){openInChrome();return}
         $('authPageError').style.color='#7a3b18';
         $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Sign up with email above, or tap ••• → Open in external browser.';
@@ -397,7 +430,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       $('authPageError').textContent='';
     }
     async function signUpWithPassword(){
-      $('authPageError').textContent='';
+      $('authPageError').textContent='';logEvent('signin_start');
       const email=$('signupEmail').value.trim();
       const password=$('signupPassword').value;
 
@@ -426,6 +459,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           await loadAccountProfile();
           showScreen('accountScreen');
           trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'email'});
+          logEvent('signup');
           toast('Account created');
         }else{
           trackMeta('RegistrationSubmitted',{registration_method:'email'},true);
@@ -441,7 +475,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
     }
     async function signInWithPassword(event){
-      if(event?.preventDefault) event.preventDefault();
+      if(event?.preventDefault) event.preventDefault();logEvent('signin_start');
       $('authPageError').textContent='';
       const email=$('passwordEmail').value.trim();
       const password=$('passwordPassword').value;
@@ -471,7 +505,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         saveSession(data);
         await loadAccountProfile();
         showScreen('accountScreen');
-        trackMeta('Login',{method:'email'},true);
+        trackMeta('Login',{method:'email'},true);logEvent('login');
         toast('Signed in');
       }catch(e){
         $('authPageError').textContent=e.message||'Could not sign in';
@@ -488,7 +522,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
     }
     async function startLifetimePurchase(){
-      trackMeta('CheckoutClick',annualEvent,true);
+      trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
       if(!authSession?.access_token){
         showScreen('authScreen');
         $('authPageError').textContent='Sign up or log in first so your annual purchase can be linked to your account.';
@@ -655,6 +689,7 @@ function showScreen(id){
   window.scrollTo({top:0,behavior:'instant'});
 }
 function showPaywall(message='Sign in and get Annual Access to continue.'){
+  logEvent('paywall_view');
   openAccount();toast(authSession?.access_token?'Get Annual Access to unlock all verses and guidance.':message);
 }
 function renderAccessState(){
@@ -781,7 +816,7 @@ function replyText(d){
 async function sendAsk(){
   if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
-  trackMeta('AskKrishnaUsed',{},true);
+  trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
   chatBusy=true;$('sendAskButton').disabled=true;$('askInput').value='';
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
@@ -823,6 +858,7 @@ document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>render
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
+logVisit();
 setupInAppAuth();
 let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
 setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();
