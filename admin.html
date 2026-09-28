@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Gita Verse Admin</title>
+<style>
+:root{--bg:#fbf6ec;--card:#fffdf8;--ink:#3a1c0b;--ink2:#6b4a33;--muted:#977a63;--line:#ecdcc3;--gold:#e9a63a;--bar:#dc8a3a;--bar-dim:#f1dcc1;--good:#2e7d4f;--good-bg:#e3f2e8;--warn:#9a6412;--warn-bg:#fbefd9;--bad:#b3402a;--bad-bg:#f9e1db}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:18px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:18px}
+.num{font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.om{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f6c453,#e9a63a);font-size:21px;color:#5a260e}
+h1{font:400 26px/1.1 Georgia,serif;margin:0}
+.sub{color:var(--muted);font-size:12px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 11px;border-radius:7px;font-family:inherit;font-weight:600;font-size:12px;color:var(--ink2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fbe6c4;color:#7a3b18}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:9px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;text-decoration:none}
+.btn.primary{background:#f6c453;border-color:#e9a63a;color:#4a1e08}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #c8661a;outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card h2{margin:0 0 12px;font-family:inherit;font-weight:700;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi small{display:block;color:var(--muted);font-size:12px}
+.kpi b{display:block;font:600 24px/1.2 Georgia,serif;margin-top:2px}
+.kpi em{font-style:normal;color:var(--muted);font-size:12px}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.stage{display:grid;grid-template-columns:140px 1fr 110px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.stage:first-child{border-top:0}
+.stage small{display:block;color:var(--muted);font-size:11px}
+.track{height:24px;background:var(--bar-dim);border-radius:4px;overflow:hidden}
+.fill{height:100%;background:var(--bar);border-radius:0 4px 4px 0;min-width:2px}
+.count{text-align:right}.count b{font:600 18px Georgia,serif}.count span{display:block;font-size:11px;color:var(--muted)}
+@media(max-width:520px){.stage{grid-template-columns:1fr 90px}.stage .track{grid-column:1/-1;grid-row:2}}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.chip.paid{background:var(--good-bg);color:var(--good)}.chip.free{background:#f3ece2;color:var(--ink2)}.chip.test{background:var(--warn-bg);color:var(--warn)}.chip.checkout{background:var(--bad-bg);color:var(--bad)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:0}
+.who b{display:block;font-weight:600}.who span{color:var(--muted);font-size:12px}
+.src{color:var(--ink2);font-size:12px;max-width:240px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.toolbar input,.toolbar select{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 9px;font-family:inherit;font-size:13px;min-width:0}
+.toolbar input{flex:1 1 200px}
+.hbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;margin-bottom:8px;font-size:13px}
+.hbar .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar .t{grid-column:1/-1;height:7px;background:var(--bar-dim);border-radius:4px;overflow:hidden}
+.hbar .t i{display:block;height:100%;background:var(--bar)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font:10px ui-monospace,monospace}
+.chart line{stroke:var(--line)}
+.chart rect{fill:var(--bar)}
+.state{padding:14px;border-radius:12px;background:#f6ecdd;color:var(--ink2)}
+.state.err{background:var(--bad-bg);color:var(--bad)}
+.gate{max-width:440px;margin:60px auto;text-align:center}
+.gate h1{margin-bottom:8px}
+.gate p{color:var(--ink2)}
+.empty{color:var(--muted);font-size:13px}
+footer{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="gate" class="gate card" hidden>
+    <div class="om" style="margin:0 auto 10px">ॐ</div>
+    <h1>Gita Verse Admin</h1>
+    <p id="gateMsg">Sign in on gitaverse.co.in with an admin account, then come back to this page.</p>
+    <p><a class="btn primary" href="/">Go to sign in</a> <button class="btn" id="gateRetry" type="button">I've signed in, reload</button></p>
+  </div>
+
+  <div id="app" hidden>
+    <header>
+      <div class="brand"><div class="om">ॐ</div><div><h1>Gita Verse Admin</h1><div class="sub" id="who">–</div></div></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Date range">
+          <button id="r-today" data-r="today" aria-pressed="false">Today</button>
+          <button id="r-7d" data-r="7d" aria-pressed="true">7 days</button>
+          <button id="r-30d" data-r="30d" aria-pressed="false">30 days</button>
+          <button id="r-all" data-r="all" aria-pressed="false">All time</button>
+        </div>
+        <button class="btn" id="refresh" type="button">Refresh</button>
+        <span class="sub" id="updated"></span>
+      </div>
+    </header>
+
+    <div id="banner" class="state err" hidden></div>
+
+    <section class="kpis" aria-label="Summary">
+      <div class="kpi"><small>Visitors</small><b class="num" id="k-vis">–</b><em id="k-views">–</em></div>
+      <div class="kpi"><small>Sign-ups</small><b class="num" id="k-sign">–</b><em id="k-signrate">–</em></div>
+      <div class="kpi"><small>Started checkout</small><b class="num" id="k-chk">–</b><em id="k-chkrate">–</em></div>
+      <div class="kpi"><small>Purchases</small><b class="num" id="k-paid">–</b><em id="k-paidrate">–</em></div>
+      <div class="kpi"><small>Revenue</small><b class="num" id="k-rev">–</b><em>Razorpay confirmed</em></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card"><h2>Funnel</h2><div id="funnel" class="empty">Loading…</div></section>
+      <section class="card"><h2>Visitors over time (IST)</h2><div id="timeline" class="empty">Loading…</div></section>
+    </div>
+
+    <section class="card">
+      <h2>Signed-up users</h2>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Search email or name" aria-label="Search users">
+        <select id="f" aria-label="Filter users">
+          <option value="all">All users</option>
+          <option value="paid">Paid</option>
+          <option value="free">Free</option>
+          <option value="checkout">Checkout, not paid</option>
+          <option value="real">Hide test accounts</option>
+        </select>
+        <button class="btn" id="csv" type="button">Export CSV</button>
+        <span class="sub" id="ucount"></span>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>User</th><th>Signed up (IST)</th><th>Via</th><th>Plan</th><th>Came from</th><th class="r">Checkouts</th><th>Access until</th></tr></thead>
+        <tbody id="users"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <div class="grid3">
+      <section class="card"><h2>Traffic sources</h2><div id="sources" class="empty">Loading…</div></section>
+      <section class="card"><h2>Browsers</h2><div id="browsers" class="empty">Loading…</div></section>
+      <section class="card"><h2>Countries</h2><div id="countries" class="empty">Loading…</div></section>
+    </div>
+
+    <section class="card">
+      <h2>Ad campaigns (UTM)</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Campaign</th><th>Ad</th><th class="r">Visitors</th><th class="r">Sign-ups</th><th class="r">Paid</th><th class="r">Visit → sign-up</th></tr></thead>
+        <tbody id="campaigns"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+      <p class="sub" style="margin:10px 0 0">Add UTM tags to your Meta ad URL to fill this in, e.g. <span class="num">https://gitaverse.co.in/?utm_source=facebook&amp;utm_medium=paid&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</span></p>
+    </section>
+
+    <footer id="foot">Visits are recorded by the site itself (bots and crawlers that don't run JavaScript aren't counted). Sign-ups, checkouts and payments come from the database. Your own test accounts are listed but excluded from the funnel counts.</footer>
+  </div>
+</div>
+
+<script>
+(() => {
+  const SUPA = 'https://bkwvuckznpaawmqrjjgk.supabase.co';
+  const KEY = 'sb_publishable_xiYHK1Q_5FcGkaSbug89Qg_yeDuR3KW';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = (n) => (n == null || isNaN(n)) ? '–' : Number(n).toLocaleString('en-IN');
+  const pct = (a, b) => b ? ((a / b) * 100) : null;
+  const pctTxt = (p) => p == null ? '–' : (p >= 10 ? p.toFixed(0) : p.toFixed(1)) + '%';
+  const ist = (t, o) => t ? new Date(t).toLocaleString('en-IN', Object.assign({ timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }, o)) : '–';
+
+  let range = 'today', data = null, busy = false;
+  try { range = localStorage.getItem('gvAdminRange') || '7d'; } catch (e) { range = '7d'; }
+
+  // ---- session (shared with the main site on the same domain) ----
+  function readSession() { try { return JSON.parse(localStorage.getItem('gitaAuthSession') || 'null'); } catch (e) { return null; } }
+  async function refreshSession(s) {
+    if (!s?.refresh_token) return null;
+    const r = await fetch(SUPA + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+    if (!r.ok) return null;
+    const n = await r.json();
+    try { localStorage.setItem('gitaAuthSession', JSON.stringify(n)); } catch (e) {}
+    return n;
+  }
+
+  function sinceFor(r) {
+    const now = new Date();
+    if (r === 'all') return new Date(0).toISOString();
+    if (r === 'today') return new Date(now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) + 'T00:00:00+05:30').toISOString();
+    return new Date(now.getTime() - (r === '7d' ? 7 : 30) * 864e5).toISOString();
+  }
+
+  async function fetchStats(retry = true) {
+    let s = readSession();
+    if (!s?.access_token) return { gate: 'Sign in on gitaverse.co.in with an admin account, then come back to this page.' };
+    let r = await fetch(SUPA + '/functions/v1/admin-stats', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' }, body: JSON.stringify({ since: sinceFor(range) }) });
+    if (r.status === 401 && retry) { s = await refreshSession(s); if (s) return fetchStats(false); return { gate: 'Your session expired. Sign in again on gitaverse.co.in, then come back.' }; }
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 403) return { gate: 'This account (' + esc(s.user?.email || '') + ') is not an admin. Sign out on the main site and sign in with an admin email.' };
+    if (!r.ok) throw new Error(d.error || ('Request failed (' + r.status + ')'));
+    return { data: d };
+  }
+
+  function showGate(msg) { $('app').hidden = true; $('gate').hidden = false; $('gateMsg').innerHTML = msg; }
+
+  async function load() {
+    if (busy) return; busy = true; $('refresh').disabled = true; $('updated').textContent = 'Loading…';
+    try {
+      const res = await fetchStats();
+      if (res.gate) { showGate(res.gate); return; }
+      data = res.data; $('gate').hidden = true; $('app').hidden = false; $('banner').hidden = true;
+      render();
+      $('updated').textContent = 'Updated ' + ist(data.generated_at, { day: undefined, month: undefined, second: '2-digit' });
+    } catch (e) {
+      $('app').hidden = false; $('banner').hidden = false; $('banner').textContent = 'Could not load the dashboard: ' + e.message + '. Press Refresh to try again.';
+      $('updated').textContent = '';
+    } finally { busy = false; $('refresh').disabled = false; }
+  }
+
+  // ---- rendering ----
+  function render() {
+    const f = data.funnel || {};
+    $('who').textContent = 'Signed in as ' + data.admin + (data.tracking_since ? ' · visit tracking since ' + ist(data.tracking_since) : ' · visit tracking starts with the next visitor');
+    $('k-vis').textContent = fmt(f.visitors); $('k-views').textContent = fmt(f.page_views) + ' page views';
+    $('k-sign').textContent = fmt(f.signups); $('k-signrate').textContent = pctTxt(pct(f.signups, f.visitors)) + ' of visitors';
+    $('k-chk').textContent = fmt(f.checkout); $('k-chkrate').textContent = pctTxt(pct(f.checkout, f.signups)) + ' of sign-ups';
+    $('k-paid').textContent = fmt(f.purchases); $('k-paidrate').textContent = pctTxt(pct(f.purchases, f.visitors)) + ' of visitors';
+    $('k-rev').textContent = '₹' + fmt(Math.round((f.revenue_paise || 0) / 100));
+
+    const stages = [['Visited', 'unique visitors', f.visitors], ['Started sign-in', 'email or Google', f.signin_start], ['Signed up', 'new accounts', f.signups], ['Started checkout', 'opened Razorpay', f.checkout], ['Paid ₹1,000', 'confirmed', f.purchases]];
+    const top = Math.max(f.visitors || 0, f.signups || 0, 1);
+    $('funnel').className = '';
+    $('funnel').innerHTML = stages.map(([n, h, v], i) => `<div class="stage"><div>${n}<small>${h}</small></div><div class="track"><div class="fill" style="width:${v ? Math.max(1.5, (v / top) * 100) : 0}%"></div></div><div class="count"><b class="num">${fmt(v)}</b><span>${i ? pctTxt(pct(v, stages[i - 1][2])) + ' of previous' : fmt(f.page_views) + ' views'}</span></div></div>`).join('');
+
+    renderTimeline(data.timeline || []);
+    renderBars('sources', data.sources, (r) => r.source, (r) => `${fmt(r.visitors)}${r.signups ? ' · ' + r.signups + ' sign-up' + (r.signups > 1 ? 's' : '') : ''}${r.paid ? ' · ' + r.paid + ' paid' : ''}`);
+    renderBars('browsers', data.browsers, (r) => r.browser, (r) => fmt(r.visitors));
+    renderBars('countries', data.countries, (r) => r.country === 'IN' ? 'India' : r.country, (r) => fmt(r.visitors));
+
+    const c = data.campaigns || [];
+    $('campaigns').innerHTML = c.length ? c.map((r) => `<tr><td>${esc(r.campaign)}</td><td>${esc(r.ad)}</td><td class="r num">${fmt(r.visitors)}</td><td class="r num">${fmt(r.signups)}</td><td class="r num">${fmt(r.paid)}</td><td class="r num">${pctTxt(pct(r.signups, r.visitors))}</td></tr>`).join('')
+      : `<tr><td colspan="6" class="empty">No UTM-tagged visits yet in this range.</td></tr>`;
+    renderUsers();
+  }
+
+  function renderBars(id, rows, label, value) {
+    const el = $(id); el.className = '';
+    if (!rows || !rows.length) { el.innerHTML = '<div class="empty">No visits in this range yet.</div>'; return; }
+    const max = Math.max(...rows.map((r) => r.visitors), 1);
+    el.innerHTML = rows.slice(0, 8).map((r) => `<div class="hbar"><span class="name">${esc(label(r))}</span><span class="num">${esc(value(r))}</span><span class="t"><i style="width:${(r.visitors / max) * 100}%"></i></span></div>`).join('');
+  }
+
+  function renderTimeline(rows) {
+    const el = $('timeline'); el.className = '';
+    if (!rows.length) { el.innerHTML = '<div class="empty">No visits in this range yet.</div>'; return; }
+    const byDay = rows.length > 72;
+    const pts = new Map();
+    rows.forEach((r) => { const t = new Date(r.t); const key = byDay ? new Date(t.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) + 'T00:00:00+05:30').getTime() : t.getTime(); pts.set(key, (pts.get(key) || 0) + r.visitors); });
+    const arr = [...pts.entries()].sort((a, b) => a[0] - b[0]);
+    const W = 560, H = 170, L = 26, R = 6, T = 8, B = 24, max = Math.max(...arr.map((p) => p[1])), nm = max <= 4 ? 4 : Math.ceil(max / 4) * 4;
+    const bw = (W - L - R) / arr.length, y = (v) => T + (H - T - B) * (1 - v / nm), every = Math.ceil(arr.length / 6);
+    const lab = (t) => byDay ? new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }) : new Date(t).toLocaleString('en-IN', { day: 'numeric', hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' });
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Visitors per ${byDay ? 'day' : 'hour'}">`;
+    [0, nm / 2, nm].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 5}" y="${y(v) + 3}" text-anchor="end">${v}</text>`; });
+    arr.forEach(([t, v], i) => { const x = L + i * bw + 1; s += `<rect x="${x.toFixed(1)}" y="${y(v).toFixed(1)}" width="${Math.max(bw - 2, 1).toFixed(1)}" height="${((H - T - B) * v / nm).toFixed(1)}" rx="2"><title>${lab(t)}: ${v} visitor${v === 1 ? '' : 's'}</title></rect>`; if (i % every === 0) s += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle">${lab(t)}</text>`; });
+    el.innerHTML = s + '</svg>';
+  }
+
+  function sourceText(src) {
+    if (!src || !Object.values(src).some(Boolean)) return '<span class="empty">before tracking</span>';
+    const parts = [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean);
+    const first = parts.length ? parts.join(' / ') : (src.has_fbclid ? 'Facebook/Instagram ad' : src.in_app ? src.in_app + ' app' : src.referrer ? new URL(src.referrer, location.href).hostname : 'direct');
+    return esc(first) + (src.in_app && parts.length ? ' · ' + esc(src.in_app) : '') + (src.country ? ' · ' + esc(src.country) : '');
+  }
+
+  function userRows() {
+    const q = $('q').value.trim().toLowerCase(), f = $('f').value;
+    return (data.users || []).filter((u) => {
+      if (q && !((u.email || '') + ' ' + (u.name || '')).toLowerCase().includes(q)) return false;
+      if (f === 'paid') return u.payment_status === 'paid';
+      if (f === 'free') return u.payment_status !== 'paid';
+      if (f === 'checkout') return u.payment_status !== 'paid' && u.checkouts > 0;
+      if (f === 'real') return !u.is_test;
+      return true;
+    });
+  }
+
+  function renderUsers() {
+    const rows = userRows();
+    $('ucount').textContent = rows.length + ' of ' + (data.users || []).length + ' users';
+    $('users').innerHTML = rows.length ? rows.map((u) => {
+      const paid = u.payment_status === 'paid';
+      const chips = (paid ? '<span class="chip paid">Paid</span>' : (u.checkouts ? '<span class="chip checkout">Checkout, unpaid</span>' : '<span class="chip free">Free</span>')) + (u.is_test ? ' <span class="chip test">Test</span>' : '');
+      return `<tr><td class="who"><b>${esc(u.name || u.email)}</b>${u.name ? `<span>${esc(u.email)}</span>` : ''}</td><td class="num">${ist(u.signed_up_at)}</td><td>${esc(u.provider || '–')}</td><td>${chips}</td><td class="src">${sourceText(u.signup_source)}</td><td class="r num">${fmt(u.checkouts)}</td><td class="num">${paid ? ist(u.access_expires_at, { hour: undefined, minute: undefined, year: 'numeric' }) : '–'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">No users match.</td></tr>';
+  }
+
+  function exportCsv() {
+    const rows = userRows();
+    const cols = ['email', 'name', 'provider', 'signed_up_at', 'last_sign_in_at', 'payment_status', 'checkouts', 'purchased_at', 'access_expires_at', 'utm_source', 'utm_campaign', 'utm_content', 'in_app', 'country', 'is_test'];
+    const cell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const lines = [cols.join(',')].concat(rows.map((u) => { const s = u.signup_source || {}; return [u.email, u.name, u.provider, u.signed_up_at, u.last_sign_in_at, u.payment_status, u.checkouts, u.purchased_at, u.access_expires_at, s.utm_source, s.utm_campaign, s.utm_content, s.in_app, s.country, u.is_test].map(cell).join(','); }));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = 'gita-verse-users-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  document.querySelectorAll('.seg button').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.r === range));
+    b.addEventListener('click', () => {
+      range = b.dataset.r; try { localStorage.setItem('gvAdminRange', range); } catch (e) {}
+      document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      load();
+    });
+  });
+  $('refresh').addEventListener('click', load);
+  $('gateRetry').addEventListener('click', load);
+  $('q').addEventListener('input', () => data && renderUsers());
+  $('f').addEventListener('change', () => data && renderUsers());
+  $('csv').addEventListener('click', () => data && exportCsv());
+  setInterval(() => { if (document.visibilityState === 'visible' && !$('app').hidden) load(); }, 120000);
+  load();
+})();
+</script>
+</body>
+</html>
