@@ -239,6 +239,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       return {apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
     }
     function saveSession(session){
+      if(!session || session.user?.id!==authSession?.user?.id)clearChatConversation();
       authSession=session||null;
       if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
@@ -302,7 +303,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         await new Promise(r=>setTimeout(r,1200));
       }
 
-      toast('Payment received. Access may take a moment to update.');
+      toast('Payment is not confirmed yet. If you paid, wait a moment and refresh to check your access.');
       return false;
     }
     async function refreshAuthSession(){
@@ -525,12 +526,13 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
     }
     async function signOut(){
+      const token=authSession?.access_token;
+      accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
       try{
-        if(authSession?.access_token){
-          await fetch(SUPA+'/auth/v1/logout',{method:'POST',headers:authHeaders(authSession.access_token)});
+        if(token){
+          await fetch(SUPA+'/auth/v1/logout',{method:'POST',headers:authHeaders(token)});
         }
       }catch(e){}
-      accountProfile=null;saveSession(null);showScreen('home');toast('Signed out');
     }
     async function startLifetimePurchase(){
       trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
@@ -809,6 +811,12 @@ async function speak(){
 function appendText(parent,tag,text,className){const el=document.createElement(tag);el.textContent=text||'';if(className)el.className=className;parent.appendChild(el);return el;}
 // Recent turns sent with each question so Krishna can follow the conversation.
 const chatHistory=[];
+let chatGeneration=0,chatRequest=null;
+function clearChatConversation(){
+  chatGeneration++;chatRequest?.abort();chatRequest=null;chatHistory.length=0;
+  $('chat').replaceChildren();$('askInput').value='';
+  chatBusy=false;$('sendAskButton').disabled=false;
+}
 function refButton(parent,ref){
   const [c,v]=ref.replace('BG ','').split('.').map(Number);
   const b=appendText(parent,'button',ref,'chat-ref');b.type='button';b.onclick=()=>openVerse(c,v);return b;
@@ -828,12 +836,15 @@ async function sendAsk(){
   if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
+  const generation=chatGeneration;
+  const controller=new AbortController();chatRequest=controller;
   chatBusy=true;$('sendAskButton').disabled=true;$('askInput').value='';
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
   try{
-    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,history:chatHistory.slice(-8)})});
-    const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
+    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,history:chatHistory.slice(-8)})});
+    const d=await r.json();if(generation!==chatGeneration)return;
+    if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';
     if(d.style==='krishna_inspired'){
       appendText(answer,'small','Sri Krishna says');if(d.title)appendText(answer,'h3',d.title);
@@ -848,8 +859,8 @@ async function sendAsk(){
       if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
     }
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
-  }catch(e){answer.textContent=e.message||'Could not reach the guide. Please try again.';}
-  finally{chatBusy=false;$('sendAskButton').disabled=false;}
+  }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
+  finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
 }
 function openTopic(key,title){
   if(!hasLifetimeAccess()){showPaywall();return}const t=LIFE_TOPICS[key];if(!t)return;

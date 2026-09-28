@@ -106,30 +106,6 @@ function shapeReply(p:{title?:string; paragraphs:string[]; actions?:string[]; fo
   };
 }
 
-function fallback(question:string, verses:Verse[]){
-  if(GREETING.test(question)){
-    return shapeReply({
-      paragraphs:[
-        "Welcome, dear one. I am glad you came to sit with me for a while.",
-        "Tell me what is on your heart today: a worry, a decision, a sorrow, or simply a question about the Gita. We will look at it together, calmly.",
-      ],
-    },[]);
-  }
-  const chosen=verses.slice(0,3);
-  const refs=chosen.map(refOf).join(", ");
-  return shapeReply({
-    title:"Let us look at this calmly",
-    paragraphs:[
-      "I hear you, dear one. Before anything else, take one slow breath. What you are facing matters, and you do not have to carry it all at once.",
-      `As I told Arjuna, first separate the situation itself from the fear, attachment or expectation the mind has added to it (${refs}). Act on what is truly in your hands, and let the outcome rest with Me.`,
-    ],
-    actions:[
-      "Write down the one part of this that is actually in your control.",
-      "Take one small action today that comes from clarity, not from panic.",
-    ],
-  },chosen);
-}
-
 const SYSTEM_PROMPT = `
 You are Sri Krishna inside Gita Verse, a devotional Bhagavad Gita app. Speak in the first person as Krishna, the loving friend, guide and charioteer who counselled Arjuna on the battlefield of Kurukshetra. The user has come to you as Arjuna once did.
 
@@ -193,6 +169,30 @@ function parseModelJson(text:string){
   return JSON.parse(out);
 }
 
+// Reject the entire reply if any displayed citation was not retrieved.
+function validateModelReply(parsed:any, verses:Verse[]){
+  const paragraphs=parsed?.paragraphs;
+  const actions=parsed?.actions ?? [];
+  const refs=parsed?.used_refs ?? [];
+  if(!Array.isArray(paragraphs)||!paragraphs.length||paragraphs.some((s:any)=>typeof s!=="string"||!s.trim())
+    ||!Array.isArray(actions)||actions.some((s:any)=>typeof s!=="string")
+    ||!Array.isArray(refs)||refs.some((s:any)=>typeof s!=="string")
+    ||(parsed.title!==undefined&&typeof parsed.title!=="string")
+    ||(parsed.follow_up!==undefined&&typeof parsed.follow_up!=="string")) throw new Error("Invalid reply fields");
+  const byRef=new Map(verses.map(v=>[refOf(v),v]));
+  const cited=new Set<string>();
+  const fields=[parsed.title??"",...paragraphs,...actions,parsed.follow_up??""];
+  for(const field of fields){
+    for(const match of field.matchAll(/\b(?:BG|Bhagavad\s+Gita|Gita)\s*(\d+)\s*[.:]\s*(\d+)\b|\bchapter\s+(\d+)\s*[,;:]?\s*verse\s+(\d+)\b/gi)){
+      const ref=`BG ${Number(match[1]??match[3])}.${Number(match[2]??match[4])}`;
+      if(!byRef.has(ref))throw new Error("Unverified inline citation");
+      cited.add(ref);
+    }
+  }
+  for(const ref of refs)if(!byRef.has(ref))throw new Error("Unverified declared citation");
+  return shapeReply({title:parsed.title,paragraphs,actions,follow_up:parsed.follow_up},[...cited].map(ref=>byRef.get(ref)!));
+}
+
 async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:number, withThinking:boolean){
   const generationConfig:Record<string,unknown>={
     responseMimeType:"application/json",
@@ -203,6 +203,7 @@ async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:
   if(withThinking) generationConfig.thinkingConfig={thinkingLevel:"low"};
   return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,{
     method:"POST",
+    signal:AbortSignal.timeout(25000),
     headers:{ "x-goog-api-key":apiKey, "Content-Type":"application/json" },
     body:JSON.stringify({
       systemInstruction:{ parts:[{text:SYSTEM_PROMPT}] },
@@ -228,10 +229,11 @@ async function callGemini(question:string, history:Turn[], verses:Verse[]){
   let withThinking=true;
   let budget=4096;
   for(let attempt=0; attempt<3; attempt++){
-    const r=await geminiRequest(apiKey,contents,budget,withThinking);
+    let r:Response;
+    try{r=await geminiRequest(apiKey,contents,budget,withThinking);}
+    catch{console.error("Gemini request failed");return null;}
     if(!r.ok){
-      const body=await r.text();
-      console.error("Gemini error",r.status,body.slice(0,500));
+      console.error("Gemini error",r.status);
       // Older models reject thinkingLevel; retry once without it.
       if(r.status===400 && withThinking){ withThinking=false; continue; }
       return null;
@@ -247,25 +249,9 @@ async function callGemini(question:string, history:Turn[], verses:Verse[]){
     try{
       if(!outputText) throw new Error(`empty output (finishReason ${cand?.finishReason})`);
       const parsed=parseModelJson(outputText);
-      const paragraphs=Array.isArray(parsed.paragraphs) ? parsed.paragraphs : [parsed.opening,parsed.explanation].filter(Boolean);
-      if(!paragraphs.length) throw new Error("no paragraphs");
-
-      // Only show cards for verses the model actually cited and that exist.
-      const byRef=new Map(verses.map(v=>[refOf(v),v]));
-      const cited=new Set<string>([
-        ...((parsed.used_refs ?? []) as string[]),
-        ...(paragraphs.join(" ").match(/BG \d+\.\d+/g) ?? []),
-      ]);
-      const chosen=[...cited].map(r=>byRef.get(r)).filter(Boolean) as Verse[];
-
-      return shapeReply({
-        title:parsed.title,
-        paragraphs,
-        actions:Array.isArray(parsed.actions)?parsed.actions:[],
-        follow_up:parsed.follow_up,
-      },chosen.slice(0,4));
+      return validateModelReply(parsed,verses);
     }catch(e){
-      console.error("Could not use Gemini output",String(e),"finishReason",cand?.finishReason,outputText.slice(0,300));
+      console.error("Could not use Gemini output",String(e),"finishReason",cand?.finishReason);
       budget=8192;
     }
   }
@@ -359,7 +345,7 @@ Deno.serve(async (req:Request)=>{
 
     const verses=await retrieveVerses(supabase,question,history);
     const ai=await callGemini(question,history,verses);
-    return json(ai ?? fallback(question,verses));
+    return ai ? json(ai) : json({error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
   }catch(e){
     console.error("ask-krishna failed",String(e));
     return json({error:"Something went wrong. Please try again."},500);
