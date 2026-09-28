@@ -889,27 +889,40 @@ function stopSpeech(){
   if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null;}
   if($('audioBtn')){$('audioBtn').textContent='▶';$('audioBtn').setAttribute('aria-label','Play verse and meaning');}
 }
+// Safari (iPhone and Mac) only lets audio start close to a tap. Narration
+// clips arrive seconds later, so one player is unlocked during the tap
+// (unlockVoice) and reused for every clip.
+const SILENT_AUDIO='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+let voicePlayer=null;
+function unlockVoice(){
+  voicePlayer=voicePlayer||new Audio();
+  voicePlayer.src=SILENT_AUDIO;voicePlayer.play().catch(()=>{});
+}
 function playBlob(blob){return new Promise((resolve,reject)=>{
-  const url=URL.createObjectURL(blob),a=new Audio(url);audioUrl=url;currentAudio=a;
+  const url=URL.createObjectURL(blob),a=voicePlayer||new Audio();a.src=url;audioUrl=url;currentAudio=a;
   const clean=()=>{URL.revokeObjectURL(url);if(currentAudio===a){currentAudio=null;audioUrl=null;}cancelPlayback=null;};
-  cancelPlayback=()=>{a.pause();clean();resolve()};
-  a.onended=()=>{clean();resolve()};a.onerror=()=>{clean();reject(new Error('Audio playback failed'))};
+  cancelPlayback=()=>{a.onended=a.onerror=null;a.pause();clean();resolve()};
+  a.onended=()=>{a.onended=a.onerror=null;clean();resolve()};a.onerror=()=>{a.onended=a.onerror=null;clean();reject(new Error('Audio playback failed'))};
   a.play().catch(e=>{clean();reject(e)});
 })}
-async function playText(text,language,generation){
-  // Split long meanings into provider-sized clips without cutting a surrogate pair.
-  const chars=Array.from(text);
-  for(let offset=0;offset<chars.length;offset+=3000){
+// Split long meanings into provider-sized clips without cutting a surrogate pair.
+function textClips(text){const chars=Array.from(text),out=[];for(let i=0;i<chars.length;i+=3000)out.push(chars.slice(i,i+3000).join(''));return out;}
+async function playText(text,language,generation,firstClip){
+  // Each clip is fetched while the previous one plays, so there is no silent gap.
+  const clips=textClips(text);
+  let next=firstClip||fetchTTS(clips[0],'meaning',null,language);
+  for(let i=0;i<clips.length;i++){
+    const blob=await next;
     if(generation!==narrationGeneration)return;
-    const blob=await fetchTTS(chars.slice(offset,offset+3000).join(''),'meaning',null,language);
-    if(generation!==narrationGeneration)return;
+    next=i+1<clips.length?fetchTTS(clips[i+1],'meaning',null,language):null;next?.catch(()=>{});
     await playBlob(blob);
+    if(generation!==narrationGeneration)return;
   }
 }
 async function listenReply(text,language,button){
   if(!hasLifetimeAccess()){showPaywall();return;}
   if(audioButton===button){stopSpeech();return;}
-  stopSpeech();const generation=narrationGeneration;audioButton=button;button.textContent='■ Stop';speaking=true;
+  stopSpeech();unlockVoice();const generation=narrationGeneration;audioButton=button;button.textContent='■ Stop';speaking=true;
   try{await playText(text,language,generation);}
   catch(e){if(generation===narrationGeneration)toast(e.message||'Audio unavailable. Please retry.');}
   finally{if(generation===narrationGeneration)stopSpeech();}
@@ -917,15 +930,21 @@ async function listenReply(text,language,button){
 async function speak(){
   if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
   stopSpeech();const generation=narrationGeneration,v=selectedVerse,ready=meaningReady;
+  // Start both players inside the tap so Safari allows them to play later.
+  unlockVoice();
+  ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
   speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
   try{
+    // The chant is Sanskrit whatever the chosen language.
+    const chantClip=fetchTTS(v.sanskrit,'verse',v,'hi');chantClip.catch(()=>{});
     const meaning=await ready;if(!meaning||generation!==narrationGeneration)return;
     let {text,language}=meaning;
     if(language==='en'&&meaningLanguage==='en-hi'){text=await translateText(text,'hi');language='hi';if(generation!==narrationGeneration)return;}
-    ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
-    const chant=await fetchTTS(v.sanskrit,'verse',v,language);if(generation!==narrationGeneration)return;
+    // Fetch the meaning audio while the chant plays.
+    const meaningClip=fetchTTS(textClips(text)[0],'meaning',null,language);meaningClip.catch(()=>{});
+    const chant=await chantClip;if(generation!==narrationGeneration)return;
     await playBlob(chant);if(generation!==narrationGeneration)return;
-    await playText(text,language,generation);
+    await playText(text,language,generation,meaningClip);
   }catch(e){if(generation===narrationGeneration)toast(e.message||'Narration could not be played');}
   finally{if(generation===narrationGeneration)stopSpeech();}
 }
