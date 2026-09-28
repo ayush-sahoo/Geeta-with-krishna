@@ -6,7 +6,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // ADMIN_EMAILS secret (comma-separated).
 const DEFAULT_ADMINS = ["ayushsahoo2000@gmail.com", "ayush@edumorph.in"];
 // Your own test accounts: shown in the users list, excluded from funnel counts.
-const DEFAULT_TEST_USERS = ["9ebada1d-bd5a-4318-a604-ce232f88cbf7", "97d6832f-5c25-4360-a712-a38858d6eb7b"];
+const DEFAULT_TEST_USERS = [
+  "9ebada1d-bd5a-4318-a604-ce232f88cbf7", // ayushsahoo2000@gmail.com
+  "97d6832f-5c25-4360-a712-a38858d6eb7b", // ayushpicbackup2.0@gmail.com
+  "d4dd8e62-ccb3-49c1-82af-76f4b367f059", // ayush@edumoprh.in
+];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
