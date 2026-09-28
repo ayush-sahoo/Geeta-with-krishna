@@ -783,20 +783,45 @@ function restoreLanguagePreferences(){
   chatLanguage=saved.chat==='auto'||Object.hasOwn(GITA_LANGUAGES,saved.chat)?saved.chat:'auto';
   meaningLanguage=saved.meaning==='en-hi'||Object.hasOwn(GITA_LANGUAGES,saved.meaning)?saved.meaning:'en-hi';
   $('chatLanguage').value=chatLanguage;$('meaningLanguage').value=meaningLanguage;
+  if($('appLanguage').options?.length)syncAppLanguage();
+}
+function saveLanguages(){
+  try{localStorage.setItem(languageKey(),JSON.stringify({chat:chatLanguage,meaning:meaningLanguage}))}catch(e){}
+  syncAppLanguage();
+}
+// The header 🌐 picker shows one app-wide language; 'custom' when the chat
+// and meaning screens were set to different languages.
+function syncAppLanguage(){
+  $('appLanguage').value=chatLanguage==='auto'&&meaningLanguage==='en-hi'?'default':chatLanguage===meaningLanguage?chatLanguage:'custom';
+}
+function toggleLanguageMenu(open=$('langMenu').hidden){
+  $('langMenu').hidden=!open;$('langButton').setAttribute('aria-expanded',String(open));
+  if(open)$('appLanguage').focus();
 }
 function setupLanguages(){
-  const extra=(id,value,label)=>{const o=document.createElement('option');o.value=value;o.textContent=label;$(id).appendChild(o);};
+  const extra=(id,value,label,hidden)=>{const o=document.createElement('option');o.value=value;o.textContent=label;if(hidden)o.hidden=true;$(id).appendChild(o);};
   extra('chatLanguage','auto','Auto · same as your message');extra('meaningLanguage','en-hi','English text · Hindi audio');
-  for(const id of ['chatLanguage','meaningLanguage']){
+  extra('appLanguage','default','Default');extra('appLanguage','custom','Custom (set on each screen)',true);
+  for(const id of ['chatLanguage','meaningLanguage','appLanguage']){
     for(const [code,name] of Object.entries(GITA_LANGUAGES)){
       const option=document.createElement('option');option.value=code;option.textContent=name;$(id).appendChild(option);
     }
+  }
+  for(const id of ['chatLanguage','meaningLanguage']){
     $(id).onchange=()=>{
-      stopSpeech();chatLanguage=$('chatLanguage').value;meaningLanguage=$('meaningLanguage').value;
-      try{localStorage.setItem(languageKey(),JSON.stringify({chat:chatLanguage,meaning:meaningLanguage}))}catch(e){}
+      stopSpeech();chatLanguage=$('chatLanguage').value;meaningLanguage=$('meaningLanguage').value;saveLanguages();
       if(id==='meaningLanguage'&&selectedVerse)renderTab(currentTab);
     };
   }
+  $('appLanguage').onchange=()=>{
+    const v=$('appLanguage').value;if(v==='custom')return;
+    stopSpeech();
+    [chatLanguage,meaningLanguage]=v==='default'?['auto','en-hi']:[v,v];
+    $('chatLanguage').value=chatLanguage;$('meaningLanguage').value=meaningLanguage;saveLanguages();
+    if(selectedVerse)renderTab(currentTab);
+    toggleLanguageMenu(false);toast(v==='default'?'Language: default':'Language: '+GITA_LANGUAGES[v].split(' · ')[0]);
+  };
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('langMenu').hidden){toggleLanguageMenu(false);$('langButton').focus();}});
   restoreLanguagePreferences();
 }
 // Voice language for an 'auto' chat reply, from the script it was written in.

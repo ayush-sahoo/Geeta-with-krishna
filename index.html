@@ -339,6 +339,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 .devotee-footer p{font-size:12px;line-height:1.5;letter-spacing:0;white-space:nowrap}
 .devotee-footer strong{font-weight:700}
 @media(max-width:360px){.devotee-footer{gap:5px;margin-left:12px;margin-right:12px}.devotee-footer p{font-size:11px}}
+.lang-menu{margin-top:10px;padding:12px;background:#fff8eb;border:1px solid #eadcc8;border-radius:14px;color:#674633;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lang-menu[hidden]{display:none}.lang-menu label{font-weight:600;font-size:13px}.lang-menu select{flex:1;min-width:0;max-width:100%;padding:10px;border:1px solid #d9bd95;border-radius:10px;background:#fffdf8;font-size:16px;color:#51351f}.lang-menu small{flex-basis:100%;font-size:11px}
 .language-control{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px;padding:14px;background:#fff8eb;border:1px solid #eadcc8;border-radius:16px;color:#674633}.language-control label{font-weight:600;font-size:13px}.language-control select{max-width:100%;min-width:0;flex:1;padding:10px;border:1px solid #d9bd95;border-radius:10px;background:#fffdf8;font-size:16px;color:#51351f}.language-control small{flex-basis:100%;font-size:11px}.listen-reply{margin-top:12px;border:1px solid #d9bd95;border-radius:16px;padding:9px 14px;background:#fff3d9;color:#633811}#translationStatus{font-size:12px;color:#805625}[dir="auto"]{unicode-bidi:plaintext}
 </style>
 <link rel="stylesheet" href="connected.css">
@@ -364,7 +365,8 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 <div class="app">
 <header class="topbar">
   <div class="toprow"><div class="brand"><div class="om">ॐ</div><div class="brandcopy"><b>Gita Verse</b><small>Read · Reflect · Ask</small></div></div><button class="welcome" id="welcomeUser" onclick="openAccount()">Sign in 🙏</button></div>
-  <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button aria-label="Choose language" onclick="showScreen('ask');document.getElementById('chatLanguage').focus()">🌐</button></nav>
+  <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button id="langButton" aria-label="Choose language" aria-expanded="false" aria-controls="langMenu" onclick="toggleLanguageMenu()">🌐</button></nav>
+  <div id="langMenu" class="lang-menu" hidden><label for="appLanguage">Language</label><select id="appLanguage"></select><small>Used for Krishna's replies, verse meanings and audio. Default: Krishna replies in the language you write in; meanings in English with Hindi audio. You can also change it on each screen.</small></div>
 </header>
 
 <main id="home" class="screen active home">
