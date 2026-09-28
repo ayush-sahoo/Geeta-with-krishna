@@ -41,13 +41,24 @@ function rpc(fn,args,opts={}){
   return fetch(SUPA+'/rest/v1/rpc/'+fn,{method:'POST',headers,body:JSON.stringify(args),keepalive:!!opts.keepalive}).catch(()=>{});
 }
 function logEvent(event,opts){rpc('log_event',{p_visitor_id:VISITOR_ID,p_event:event},opts)}
-function logVisit(){
+async function visitorGeo(){
+  // City/region from Vercel's edge (/api/geo). Best effort: never delays the visit log by more than 1.5s.
+  try{
+    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),1500);
+    const r=await fetch('/api/geo',{signal:ctl.signal});clearTimeout(t);
+    return r.ok?await r.json():{};
+  }catch(e){return {}}
+}
+async function logVisit(){
   const q=new URLSearchParams(location.search);
   const ua=navigator.userAgent||'';
   const inApp=/Instagram/i.test(ua)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
-  rpc('log_visit',{p_visitor_id:VISITOR_ID,p_path:location.pathname+(location.hash||''),p_referrer:document.referrer||null,
+  const path=location.pathname+(location.hash||''),referrer=document.referrer||null;
+  const geo=await visitorGeo();
+  rpc('log_visit',{p_visitor_id:VISITOR_ID,p_path:path,p_referrer:referrer,
     p_utm_source:q.get('utm_source'),p_utm_medium:q.get('utm_medium'),p_utm_campaign:q.get('utm_campaign'),p_utm_content:q.get('utm_content'),
-    p_has_fbclid:q.has('fbclid'),p_in_app:inApp,p_device:/Android/i.test(ua)?'android':/iPhone|iPad|iPod/i.test(ua)?'ios':'desktop'});
+    p_has_fbclid:q.has('fbclid'),p_in_app:inApp,p_device:/Android/i.test(ua)?'android':/iPhone|iPad|iPod/i.test(ua)?'ios':'desktop',
+    p_region:geo.region||null,p_city:geo.city||null});
 }
 function attributeSignup(){if(authSession?.access_token)rpc('set_my_attribution',{p_visitor_id:VISITOR_ID})}
 let authSession=null,accountProfile=null,authPageMode='login',selectedVerse=null,currentTab='meaning';
