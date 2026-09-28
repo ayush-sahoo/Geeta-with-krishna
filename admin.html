@@ -263,7 +263,7 @@ footer{color:var(--muted);font-size:12px}
     renderBars('browsers', data.browsers, (r) => r.browser, (r) => fmt(r.visitors));
     const cname = (c) => c === 'IN' ? 'India' : (c || '??');
     const cities = data.cities || [];
-    if (cities.length) renderBars('countries', cities, (r) => r.city + (r.region && r.region !== r.city ? ', ' + r.region : '') + (r.country !== 'IN' ? ' (' + cname(r.country) + ')' : ''), (r) => fmt(r.visitors));
+    if (cities.length) renderBars('countries', cities, (r) => cityLabel(r.city, r.region, r.country) + (r.country !== 'IN' ? ' (' + cname(r.country) + ')' : ''), (r) => fmt(r.visitors));
     else renderBars('countries', data.countries, (r) => cname(r.country), (r) => fmt(r.visitors));
     $('countryline').textContent = cities.length && (data.countries || []).length ? 'By country: ' + data.countries.map((r) => cname(r.country) + ' ' + fmt(r.visitors)).join(' · ') : '';
 
@@ -303,9 +303,14 @@ footer{color:var(--muted);font-size:12px}
     return esc(first) + (src.in_app && parts.length ? ' · ' + esc(src.in_app) : '');
   }
 
+  // Vercel reports Indian states as ISO 3166-2 codes (DL, MH, ...).
+  const IN_STATES = { AN: 'Andaman & Nicobar', AP: 'Andhra Pradesh', AR: 'Arunachal Pradesh', AS: 'Assam', BR: 'Bihar', CH: 'Chandigarh', CT: 'Chhattisgarh', CG: 'Chhattisgarh', DH: 'Dadra & Nagar Haveli and Daman & Diu', DN: 'Dadra & Nagar Haveli', DD: 'Daman & Diu', DL: 'Delhi', GA: 'Goa', GJ: 'Gujarat', HR: 'Haryana', HP: 'Himachal Pradesh', JK: 'Jammu & Kashmir', JH: 'Jharkhand', KA: 'Karnataka', KL: 'Kerala', LA: 'Ladakh', LD: 'Lakshadweep', MP: 'Madhya Pradesh', MH: 'Maharashtra', MN: 'Manipur', ML: 'Meghalaya', MZ: 'Mizoram', NL: 'Nagaland', OR: 'Odisha', OD: 'Odisha', PY: 'Puducherry', PB: 'Punjab', RJ: 'Rajasthan', SK: 'Sikkim', TN: 'Tamil Nadu', TG: 'Telangana', TS: 'Telangana', TR: 'Tripura', UP: 'Uttar Pradesh', UT: 'Uttarakhand', UK: 'Uttarakhand', WB: 'West Bengal' };
+  const regionName = (r, c) => (c === 'IN' && IN_STATES[r]) || r;
+  const cityLabel = (city, r, c) => city + (r && regionName(r, c) !== city ? ', ' + regionName(r, c) : '');
+
   function placeText(src) {
     if (!src || !(src.city || src.country)) return '<span class="empty">–</span>';
-    const place = src.city ? src.city + (src.region && src.region !== src.city ? ', ' + src.region : '') + (src.country && src.country !== 'IN' ? ', ' + src.country : '') : (src.country === 'IN' ? 'India' : src.country);
+    const place = src.city ? cityLabel(src.city, src.region, src.country) + (src.country && src.country !== 'IN' ? ', ' + src.country : '') : (src.country === 'IN' ? 'India' : src.country);
     const dev = { android: 'Android', ios: 'iPhone', desktop: 'Desktop' }[src.device];
     return esc(place) + (dev ? `<span>${dev}${src.backfilled ? ' · from server logs' : ''}</span>` : '');
   }
