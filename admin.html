@@ -67,6 +67,7 @@ tr:last-child td{border-bottom:0}
 .gate{max-width:440px;margin:60px auto;text-align:center}
 .gate h1{margin-bottom:8px}
 .gate p{color:var(--ink2)}
+.login{display:grid;gap:6px;text-align:left}.login label{font-size:12px;font-weight:600;color:var(--ink2)}.login input{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;margin-bottom:6px}.login .btn{padding:10px;font-size:14px;margin-top:4px}.login-msg{min-height:1.2em;margin:6px 0 0;font-size:13px;color:var(--bad)}
 .empty{color:var(--muted);font-size:13px}
 footer{color:var(--muted);font-size:12px}
 </style>
@@ -76,8 +77,15 @@ footer{color:var(--muted);font-size:12px}
   <div id="gate" class="gate card" hidden>
     <div class="om" style="margin:0 auto 10px">ॐ</div>
     <h1>Gita Verse Admin</h1>
-    <p id="gateMsg">Sign in on gitaverse.co.in with an admin account, then come back to this page.</p>
-    <p><a class="btn primary" href="/">Go to sign in</a> <button class="btn" id="gateRetry" type="button">I've signed in, reload</button></p>
+    <p class="sub" style="margin:0 0 14px">Admin sign-in. Separate from your account on the main site.</p>
+    <form id="loginForm" class="login" novalidate>
+      <label for="loginEmail">Admin email</label>
+      <input id="loginEmail" type="email" autocomplete="username" required>
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" required>
+      <button id="loginBtn" class="btn primary" type="submit">Sign in</button>
+      <p id="gateMsg" class="login-msg" role="alert"></p>
+    </form>
   </div>
 
   <div id="app" hidden>
@@ -91,6 +99,7 @@ footer{color:var(--muted);font-size:12px}
           <button id="r-all" data-r="all" aria-pressed="false">All time</button>
         </div>
         <button class="btn" id="refresh" type="button">Refresh</button>
+        <button class="btn" id="signout" type="button">Sign out</button>
         <span class="sub" id="updated"></span>
       </div>
     </header>
@@ -164,13 +173,16 @@ footer{color:var(--muted);font-size:12px}
   try { range = localStorage.getItem('gvAdminRange') || '7d'; } catch (e) { range = '7d'; }
 
   // ---- session (shared with the main site on the same domain) ----
-  function readSession() { try { return JSON.parse(localStorage.getItem('gitaAuthSession') || 'null'); } catch (e) { return null; } }
+  // The admin page keeps its own session, separate from the main site's login.
+  const SESSION_KEY = 'gitaAdminSession';
+  function readSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
+  function saveSession(s) { try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch (e) {} }
   async function refreshSession(s) {
     if (!s?.refresh_token) return null;
     const r = await fetch(SUPA + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
     if (!r.ok) return null;
     const n = await r.json();
-    try { localStorage.setItem('gitaAuthSession', JSON.stringify(n)); } catch (e) {}
+    saveSession(n);
     return n;
   }
 
@@ -183,22 +195,43 @@ footer{color:var(--muted);font-size:12px}
 
   async function fetchStats(retry = true) {
     let s = readSession();
-    if (!s?.access_token) return { gate: 'Sign in on gitaverse.co.in with an admin account, then come back to this page.' };
+    if (!s?.access_token) return { gate: '' };
     let r = await fetch(SUPA + '/functions/v1/admin-stats', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' }, body: JSON.stringify({ since: sinceFor(range) }) });
-    if (r.status === 401 && retry) { s = await refreshSession(s); if (s) return fetchStats(false); return { gate: 'Your session expired. Sign in again on gitaverse.co.in, then come back.' }; }
+    if (r.status === 401 && retry) { s = await refreshSession(s); if (s) return fetchStats(false); saveSession(null); return { gate: 'Your session expired. Please sign in again.' }; }
     const d = await r.json().catch(() => ({}));
-    if (r.status === 403) return { gate: 'This account (' + esc(s.user?.email || '') + ') is not an admin. Sign out on the main site and sign in with an admin email.' };
+    if (r.status === 403) { saveSession(null); return { gate: "This account doesn't have admin access." }; }
     if (!r.ok) throw new Error(d.error || ('Request failed (' + r.status + ')'));
     return { data: d };
   }
 
-  function showGate(msg) { $('app').hidden = true; $('gate').hidden = false; $('gateMsg').innerHTML = msg; }
+  function showGate(msg) { $('app').hidden = true; $('gate').hidden = false; $('gateMsg').textContent = msg || ''; setTimeout(() => $('loginEmail').focus(), 0); }
+
+  async function signIn(e) {
+    e.preventDefault();
+    const email = $('loginEmail').value.trim(), password = $('loginPassword').value;
+    if (!email || !password) { $('gateMsg').textContent = 'Enter your admin email and password.'; return; }
+    $('loginBtn').disabled = true; $('loginBtn').textContent = 'Signing in…'; $('gateMsg').textContent = '';
+    try {
+      const r = await fetch(SUPA + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { $('gateMsg').textContent = r.status === 429 ? 'Too many attempts. Wait a minute and try again.' : 'Wrong email or password.'; return; }
+      saveSession(d); $('loginPassword').value = '';
+      await load();
+    } catch (err) { $('gateMsg').textContent = 'Could not reach the server. Check your connection and try again.'; }
+    finally { $('loginBtn').disabled = false; $('loginBtn').textContent = 'Sign in'; }
+  }
+
+  async function signOut() {
+    const s = readSession(); saveSession(null); data = null;
+    if (s?.access_token) fetch(SUPA + '/auth/v1/logout', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + s.access_token } }).catch(() => {});
+    showGate('Signed out.');
+  }
 
   async function load() {
     if (busy) return; busy = true; $('refresh').disabled = true; $('updated').textContent = 'Loading…';
     try {
       const res = await fetchStats();
-      if (res.gate) { showGate(res.gate); return; }
+      if (res.gate !== undefined) { showGate(res.gate); return; }
       data = res.data; $('gate').hidden = true; $('app').hidden = false; $('banner').hidden = true;
       render();
       $('updated').textContent = 'Updated ' + ist(data.generated_at, { day: undefined, month: undefined, second: '2-digit' });
@@ -306,7 +339,8 @@ footer{color:var(--muted);font-size:12px}
     });
   });
   $('refresh').addEventListener('click', load);
-  $('gateRetry').addEventListener('click', load);
+  $('loginForm').addEventListener('submit', signIn);
+  $('signout').addEventListener('click', signOut);
   $('q').addEventListener('input', () => data && renderUsers());
   $('f').addEventListener('change', () => data && renderUsers());
   $('csv').addEventListener('click', () => data && exportCsv());
