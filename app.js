@@ -339,7 +339,42 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(authSession?.access_token) showScreen('accountScreen');
       else showScreen('authScreen');
     }
+    // Instagram/Facebook in-app browsers: Google blocks OAuth inside embedded
+    // webviews, so these visitors get email sign-up first and a way out to a
+    // real browser for Google.
+    const UA=navigator.userAgent||'';
+    const IN_APP_NAME=/Instagram/i.test(UA)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(UA)?'Facebook':(/Android/i.test(UA)&&/; wv\)/.test(UA)?'this app':'');
+    const IS_ANDROID=/Android/i.test(UA);
+    function chromeIntentUrl(){
+      const path=(location.pathname||'/').replace(/^\//,'');
+      return 'intent://'+location.host+'/'+path+'?from=inapp#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.origin+'/'+path+'?from=inapp')+';end';
+    }
+    function openInChrome(){
+      trackMeta('OpenInBrowser',{app:IN_APP_NAME||'unknown'},true);
+      location.href=chromeIntentUrl();
+    }
+    function setupInAppAuth(){
+      if(!IN_APP_NAME)return;
+      const card=document.querySelector('.auth-page-card');
+      card.classList.add('in-app');
+      $('inAppNote').hidden=false;
+      $('inAppTitle').textContent=IN_APP_NAME==='this app'?"You're in an in-app browser":"You're in "+IN_APP_NAME+"'s browser";
+      if(IS_ANDROID)$('openInChrome').hidden=false; else $('iosTip').hidden=false;
+      // Email first: move Google and the divider below the email forms.
+      const anchor=$('authPageError');
+      card.insertBefore(document.querySelector('.auth-or'),anchor);
+      card.insertBefore($('googleLogin'),anchor);
+      $('openInChrome').onclick=openInChrome;
+    }
     async function startGoogleLogin(){
+      if(IN_APP_NAME){
+        trackMeta('GoogleBlockedInApp',{app:IN_APP_NAME},true);
+        if(IS_ANDROID){openInChrome();return}
+        $('authPageError').style.color='#7a3b18';
+        $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Sign up with email above, or tap ••• → Open in external browser.';
+        $('iosTip').hidden=false;
+        return;
+      }
       const redirectTo=location.origin+location.pathname;
       const url=SUPA+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
       location.href=url;
@@ -355,7 +390,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       $('authModeLead').textContent=signup
         ? 'Create a new Gita Verse account.'
         : 'Welcome back. Sign in to your existing account.';
-      $('authDividerText').textContent=signup?'or create an account with email':'or login with email';
+      $('authDividerText').textContent=IN_APP_NAME?'or use Google':(signup?'or create an account with email':'or login with email');
 
       $('passwordLoginStep').classList.toggle('hidden',signup);
       $('passwordSignupStep').classList.toggle('hidden',!signup);
@@ -788,5 +823,8 @@ document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>render
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
-setAuthPageMode('login');updateAccountUI();showScreen('home');loadDailyVerse();
+setupInAppAuth();
+let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
+setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();
+if(new URLSearchParams(location.search).get('from')==='inapp'){trackMeta('OpenedFromInApp',{},true);history.replaceState({},document.title,location.pathname+location.hash)}
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
