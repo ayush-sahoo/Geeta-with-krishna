@@ -258,6 +258,22 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         try{localStorage.setItem(key,'1')}catch(e){}
       }
     }
+    // A visitor who types a question before signing up gets it answered right
+    // after sign-up (their one free question). Kept for an hour so a Google
+    // round-trip, which reloads the page, doesn't lose it.
+    const PENDING_QUESTION_KEY='gitaPendingQuestion';
+    function savePendingQuestion(q){try{localStorage.setItem(PENDING_QUESTION_KEY,JSON.stringify({q,at:Date.now()}))}catch(e){}}
+    function takePendingQuestion(){
+      let p=null;try{p=JSON.parse(localStorage.getItem(PENDING_QUESTION_KEY)||'null');localStorage.removeItem(PENDING_QUESTION_KEY)}catch(e){}
+      return p&&typeof p.q==='string'&&Date.now()-p.at<3600000?p.q:'';
+    }
+    function afterSignIn(){
+      const q=takePendingQuestion();
+      if(q&&(hasLifetimeAccess()||accountProfile?.free_question_available)){
+        showScreen('ask');$('askInput').value=q;sendAsk();return true;
+      }
+      showScreen('accountScreen');return false;
+    }
     async function consumeOAuthHash(){
       const hash=new URLSearchParams(location.hash.replace(/^#/,''));
       const access=hash.get('access_token');
@@ -278,9 +294,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
       history.replaceState({},document.title,location.pathname+location.search);
       await loadAccountProfile();
-      showScreen('accountScreen');
       trackMeta('Login',{method:'google'},true);logEvent('login');
       trackGoogleRegistration(user);
+      afterSignIn();
       toast('Signed in with Google');
       return true;
     }
@@ -470,10 +486,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         if(data.access_token){
           saveSession(data);
           await loadAccountProfile();
-          showScreen('accountScreen');
           trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'email'});
           logEvent('signup');
           toast('Account created');
+          afterSignIn();
         }else{
           trackMeta('RegistrationSubmitted',{registration_method:'email'},true);
           $('authPageError').style.color='#2f7d32';
@@ -517,9 +533,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         saveSession(data);
         await loadAccountProfile();
-        showScreen('accountScreen');
         trackMeta('Login',{method:'email'},true);logEvent('login');
         toast('Signed in');
+        afterSignIn();
       }catch(e){
         $('authPageError').textContent=e.message||'Could not sign in';
       }finally{
@@ -697,12 +713,18 @@ function showScreen(id){
   $('offer').style.display=id==='home'&&!hasLifetimeAccess()?'flex':'none';
   window.scrollTo({top:0,behavior:'instant'});
 }
+function openFreeQuestionSignup(){
+  showScreen('authScreen');setAuthPageMode('signup');
+  $('authModeLead').textContent='Create a free account to get Krishna\'s answer to your question.';
+}
 function showPaywall(message='Sign in and get Annual Access to continue.'){
   logEvent('paywall_view');
   openAccount();toast(authSession?.access_token?'Get Annual Access to unlock all verses and guidance.':message);
 }
 function renderAccessState(){
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
+  const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
+  $('chatHint').textContent=freeLeft?'Your first question is free · Grounded in the Gita':'Grounded in the Gita · practical for life today';
 }
 function updateAccountUI(){
   const logged=!!authSession?.access_token,paid=hasLifetimeAccess();
@@ -1014,8 +1036,13 @@ function replyText(d){
   return [d.title,...(d.paragraphs||[d.opening,d.explanation]),...(d.actions||[]),d.follow_up].filter(Boolean).join('\n');
 }
 async function sendAsk(){
-  if(!hasLifetimeAccess()){showPaywall();return}if(chatBusy)return;
+  if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
+  // Without Annual Access: sign up free for one question, then the paywall.
+  if(!hasLifetimeAccess()){
+    if(!authSession?.access_token){savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
+    if(!accountProfile?.free_question_available){showPaywall();return}
+  }
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
   const generation=chatGeneration,language=chatLanguage==='auto'?undefined:chatLanguage;
   const controller=new AbortController();chatRequest=controller;
@@ -1025,6 +1052,7 @@ async function sendAsk(){
   try{
     const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
+    if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall();return}
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';answer.dir='auto';if(language)answer.lang=language;
     if(d.style==='krishna_inspired'){
@@ -1042,6 +1070,14 @@ async function sendAsk(){
     const spoken=d.style==='krishna_inspired'?replyText(d):d.answer;
     if(spoken){const listen=appendText(answer,'button','▶ Listen','listen-reply');listen.type='button';listen.onclick=()=>listenReply(spoken,language||detectLanguage(spoken),listen);}
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
+    if(d.free_question){
+      if(accountProfile)accountProfile.free_question_available=false;renderAccessState();
+      const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
+      appendText(card,'strong','That was your free question 🙏');
+      appendText(card,'p','Keep talking with Krishna whenever you need guidance, plus all 701 verses with meaning, audio and 13 Indian languages.');
+      appendText(card,'p','₹1,000 for a full year · about ₹83 a month','upgrade-price');
+      const buy=appendText(card,'button','Get Annual Access →','upgrade-btn');buy.type='button';buy.onclick=startLifetimePurchase;
+    }
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
   finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
 }
