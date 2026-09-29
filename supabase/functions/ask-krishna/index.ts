@@ -300,6 +300,17 @@ async function retrieveVerses(supabase:any, question:string, history:Turn[]):Pro
   return [...merged.values()].slice(0,MAX_CONTEXT_VERSES);
 }
 
+// Server-key client for the free-question counter (user_accounts is not
+// writable by users).
+function adminClient(){
+  const raw=Deno.env.get("SUPABASE_SECRET_KEYS");
+  let key="";
+  if(raw){ try{ key=JSON.parse(raw)["default"]||""; }catch{} }
+  key=key||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+  const url=Deno.env.get("SUPABASE_URL")??"";
+  return url&&key ? createClient(url,key) : null;
+}
+
 function json(body:unknown, status=200){
   return new Response(JSON.stringify(body),{
     status, headers:{...corsHeaders,"Content-Type":"application/json"},
@@ -344,11 +355,32 @@ Deno.serve(async (req:Request)=>{
       && account?.access_expires_at
       && new Date(account.access_expires_at).getTime()>Date.now();
 
-    if(!annualActive) return json({error:"Annual Access required"},403);
+    // Without Annual Access, each account gets one free question. It is
+    // claimed before the AI call and refunded if no answer comes back.
+    const userId=userData.user.id;
+    let freeQuestion=false;
+    if(!annualActive){
+      const admin=adminClient();
+      const {data:claimed,error:claimError}=admin
+        ? await admin.rpc("claim_free_question",{p_user_id:userId})
+        : {data:false,error:null};
+      if(claimError) console.error("claim_free_question failed",claimError.message);
+      if(claimed!==true) return json({error:"Annual Access required",paywall:true},403);
+      freeQuestion=true;
+    }
 
-    const verses=await retrieveVerses(supabase,question,history);
-    const ai=await callGemini(question,history,verses,language);
-    return ai ? json(ai) : json({error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
+    let ai=null;
+    try{
+      const verses=await retrieveVerses(supabase,question,history);
+      ai=await callGemini(question,history,verses,language);
+    }finally{
+      if(!ai&&freeQuestion){
+        const {error}=await adminClient()!.rpc("refund_free_question",{p_user_id:userId});
+        if(error) console.error("refund_free_question failed",error.message);
+      }
+    }
+    if(!ai) return json({error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
+    return json(freeQuestion ? {...ai,free_question:true} : ai);
   }catch(e){
     console.error("ask-krishna failed",String(e));
     return json({error:"Something went wrong. Please try again."},500);
