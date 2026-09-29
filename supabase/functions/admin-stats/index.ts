@@ -14,6 +14,7 @@ const DEFAULT_TEST_USERS = [
   "97d6832f-5c25-4360-a712-a38858d6eb7b", // ayushpicbackup2.0@gmail.com
   "d4dd8e62-ccb3-49c1-82af-76f4b367f059", // ayush@edumoprh.in
   "67471da2-2513-4e93-b101-503e2a36f88b", // ayush@edumorph.in (admin)
+  "863890b1-9aca-4072-ac02-19837807278b", // +91 63701 08331 (mobile sign-in test)
 ];
 
 const cors = {

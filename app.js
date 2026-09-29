@@ -49,10 +49,19 @@ async function visitorGeo(){
     return r.ok?await r.json():{};
   }catch(e){return {}}
 }
+// Which Meta app's built-in browser the page is open in, if any. Messenger and
+// Threads are checked first: their user agents also carry Facebook/Instagram
+// markers or none at all ("Barcelona" is Threads).
+function metaInAppName(ua){
+  return /Orca-Android|MessengerForiOS|MessengerLite|FBAN\/Messenger/i.test(ua)?'Messenger'
+    :/Barcelona/.test(ua)?'Threads'
+    :/Instagram/i.test(ua)?'Instagram'
+    :/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
+}
 async function logVisit(){
   const q=new URLSearchParams(location.search);
   const ua=navigator.userAgent||'';
-  const inApp=/Instagram/i.test(ua)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
+  const inApp=metaInAppName(ua);
   const path=location.pathname+(location.hash||''),referrer=document.referrer||null;
   const geo=await visitorGeo();
   rpc('log_visit',{p_visitor_id:VISITOR_ID,p_path:path,p_referrer:referrer,
@@ -407,7 +416,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // webviews, so these visitors get email sign-up first and a way out to a
     // real browser for Google.
     const UA=navigator.userAgent||'';
-    const IN_APP_NAME=/Instagram/i.test(UA)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(UA)?'Facebook':(/Android/i.test(UA)&&/; wv\)/.test(UA)?'this app':'');
+    const IN_APP_NAME=metaInAppName(UA)||(/Android/i.test(UA)&&/; wv\)/.test(UA)?'this app':'');
     const IS_ANDROID=/Android/i.test(UA);
     function chromeIntentUrl(){
       const path=(location.pathname||'/').replace(/^\//,'');
@@ -437,7 +446,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         trackMeta('GoogleBlockedInApp',{app:IN_APP_NAME},true);logEvent('google_blocked_in_app');
         if(IS_ANDROID){openInChrome();return}
         $('authPageError').style.color='#7a3b18';
-        $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Sign up with email above, or tap ••• → Open in external browser.';
+        $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Use your mobile number above, or tap ••• → Open in external browser.';
         $('iosTip').hidden=false;
         return;
       }
