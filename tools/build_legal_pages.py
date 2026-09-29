@@ -39,7 +39,7 @@ PAGES = {
 <ul>
 <li><strong>Supabase</strong> (database and sign-in; data stored in Mumbai, India).</li>
 <li><strong>Vercel</strong> (website hosting).</li>
-<li><strong>Razorpay</strong> (payment processing; your email or mobile number is passed on so checkout is pre-filled).</li>
+<li><strong>Razorpay</strong> (payment processing).</li>
 <li><strong>MSG91</strong> (sends the one-time sign-in code to your mobile number by SMS).</li>
 <li><strong>Google</strong> (Google sign-in, and Gemini to generate Ask Krishna replies).</li>
 <li><strong>ElevenLabs</strong> (text-to-speech for verse narration).</li>
