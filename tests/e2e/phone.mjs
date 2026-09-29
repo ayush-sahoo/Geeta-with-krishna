@@ -21,7 +21,9 @@ async function run(label, ua, inApp = '') {
     if (p.endsWith('ask-krishna')) { S.asks++; S.freeUsed = true; return j({ free_question: true, style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear you.'], actions: [], follow_up: '', verses: [] }); }
     return j([]);
   });
-  const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  const pg = await ctx.newPage(); const errs = [];
+  // Wait for the page to react to a (simulated) server reply rather than a fixed time.
+  const until = (fn) => pg.waitForFunction(fn, null, { timeout: 5000 }).catch(() => {}); pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(BASE + '/?fbclid=x&utm_source=ig'); await pg.waitForTimeout(600);
   await pg.evaluate(() => showScreen('ask')); await pg.fill('#askInput', 'Mujhe career ki chinta hai'); await pg.click('#sendAskButton'); await pg.waitForTimeout(300);
   ok(await pg.isVisible('#phoneAuth') && await pg.isVisible('#phoneNumber'), 'sign-up screen shows the mobile number option');
@@ -40,18 +42,19 @@ async function run(label, ua, inApp = '') {
   }
   await pg.fill('#phoneNumber', '12345'); await pg.click('#sendOtpBtn'); await pg.waitForTimeout(150);
   ok((await pg.textContent('#authPageError')).includes('valid 10-digit') && S.otp.length === 0, 'invalid number rejected without sending an SMS');
-  await pg.fill('#phoneNumber', '99999 99999'); await pg.click('#sendOtpBtn'); await pg.waitForTimeout(300);
+  await pg.fill('#phoneNumber', '99999 99999'); await pg.click('#sendOtpBtn'); await until(() => document.getElementById('authPageError').textContent.includes('Error sending SMS'));
   ok((await pg.textContent('#authPageError')).includes('Error sending SMS') && await pg.isHidden('#otpStep'), 'SMS failure shown, stays on number step');
-  await pg.fill('#phoneNumber', '+91 98765-43210'); await pg.click('#sendOtpBtn'); await pg.waitForTimeout(300);
+  await pg.fill('#phoneNumber', '+91 98765-43210'); await pg.click('#sendOtpBtn'); await until(() => !document.getElementById('otpStep').hidden);
   ok(S.otp.at(-1)?.phone === '+919876543210' && S.otp.at(-1)?.create_user === true, 'OTP requested for +91 number (spaces, +91 and dashes handled)', JSON.stringify(S.otp.at(-1)));
   ok(await pg.isVisible('#otpStep') && (await pg.textContent('#otpPhone')) === '+91 98765 43210', 'OTP step shows the number');
   ok(await pg.isDisabled('#resendOtp') && (await pg.textContent('#resendOtp')).includes('in '), 'resend waits 30s');
-  await pg.fill('#otpCode', '111111'); await pg.waitForTimeout(300);
+  await pg.fill('#otpCode', '111111'); await until(() => document.getElementById('authPageError').textContent.includes('wrong or has expired'));
   ok((await pg.textContent('#authPageError')).includes('wrong or has expired') && S.verify.length === 1, 'wrong OTP rejected (auto-submitted at 6 digits)');
-  await pg.fill('#otpCode', '123456'); await pg.waitForTimeout(800);
+  await pg.fill('#otpCode', '123456'); await until(() => document.getElementById('chat')?.textContent.includes('Dear one'));
   const scr = await pg.evaluate(() => [...document.querySelectorAll('.screen')].filter(s => getComputedStyle(s).display !== 'none').map(s => s.id).join());
   ok(scr === 'ask' && S.asks === 1 && (await pg.textContent('#chat')).includes('Dear one'), 'after OTP, the pending question is answered', scr);
   ok(await pg.evaluate(() => (window.__fb || []).some(a => a[1] === 'CompleteRegistration' && a[2]?.registration_method === 'phone')), 'Meta CompleteRegistration fires with method phone');
+  ok(await pg.evaluate(() => { const f = window.__fb || [], i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.ph === '919876543210' && a[2]?.external_id === 'p1' && !a[2]?.em), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the mobile number (hashed by the pixel) before the sign-up event');
   await pg.evaluate(() => showScreen('accountScreen')); await pg.waitForTimeout(100);
   ok((await pg.textContent('#accountEmail')) === '+919876543210' && (await pg.textContent('#accountProvider')) === 'Mobile', 'account screen shows the mobile number', await pg.textContent('#accountEmail'));
   ok(!errs.length, 'no JS errors', errs.join('|'));

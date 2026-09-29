@@ -127,6 +127,7 @@ check((await screen()) === 'accountScreen', 'second question -> paywall', await 
 check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 1, 'second question not sent to the server');
 check((await page.textContent('#accountPlan')).trim() === 'Free', 'new account shows Free plan', await page.textContent('#accountPlan'));
 check((await fb()).includes('track:CompleteRegistration'), 'Meta CompleteRegistration fires on email sign-up');
+check(await page.evaluate(() => { const f = window.__fb, i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.em === 'test@example.com' && a[2]?.external_id === 'u1' && !a[2]?.ph), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the email (hashed by the pixel) before the sign-up event');
 check(await page.evaluate(() => !!localStorage.getItem('gitaAuthSession')), 'session saved');
 await shot('02-account-free');
 

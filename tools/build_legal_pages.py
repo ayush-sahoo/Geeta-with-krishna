@@ -6,6 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 EMAIL = "ayush@edumorph.in"
 UPDATED = "28 September 2026"
+# Pages changed since then show their own date.
+UPDATED_ON = {"privacy.html": "29 September 2026"}
 MAIL = f'<a href="mailto:{EMAIL}">{EMAIL}</a>'
 NAV = [("privacy.html", "Privacy Policy"), ("terms.html", "Terms of Service"),
        ("refund.html", "Refund Policy"), ("contact.html", "Contact Us")]
@@ -16,7 +18,7 @@ PAGES = {
 
 <h2>Information we collect</h2>
 <ul>
-<li><strong>Account details:</strong> your email address and, if you sign in with Google, your name and email as shared by Google.</li>
+<li><strong>Account details:</strong> your mobile number or email address, depending on how you sign in, and, if you sign in with Google, your name and email as shared by Google.</li>
 <li><strong>Purchase details:</strong> the amount, date, payment ID and access expiry of your Annual Access purchase. Payments are processed by Razorpay; we never see or store your card, UPI or bank details.</li>
 <li><strong>Questions you ask Krishna:</strong> the text you type in Ask Krishna, and your recent messages in that conversation, are sent to generate a reply. We do not store your conversations on our servers.</li>
 <li><strong>Usage and device data:</strong> basic technical information such as browser type, pages visited and approximate location derived from your IP address.</li>
@@ -38,9 +40,10 @@ PAGES = {
 <li><strong>Supabase</strong> (database and sign-in; data stored in Mumbai, India).</li>
 <li><strong>Vercel</strong> (website hosting).</li>
 <li><strong>Razorpay</strong> (payment processing).</li>
+<li><strong>MSG91</strong> (sends the one-time sign-in code to your mobile number by SMS).</li>
 <li><strong>Google</strong> (Google sign-in, and Gemini to generate Ask Krishna replies).</li>
 <li><strong>ElevenLabs</strong> (text-to-speech for verse narration).</li>
-<li><strong>Meta</strong> (the Meta Pixel measures visits, sign-ups and purchases for our Facebook and Instagram ads).</li>
+<li><strong>Meta</strong> (the Meta Pixel measures visits, sign-ups and purchases for our Facebook and Instagram ads). When you are signed in, your email address or mobile number and account ID are converted to a one-way code (hashed) in your browser before being sent, so Meta can match ad results without receiving them in readable form.</li>
 </ul>
 <p>We do not sell your personal information.</p>
 
@@ -179,5 +182,5 @@ for name, (title, label, body) in PAGES.items():
         f'<li><a href="{href}"{current if href == name else ""}>{text}</a></li>'
         for href, text in NAV)
     (ROOT / name).write_text(TEMPLATE.format(
-        title=title, label=label, updated=UPDATED, body=body.strip(), links=links, email=EMAIL))
+        title=title, label=label, updated=UPDATED_ON.get(name, UPDATED), body=body.strip(), links=links, email=EMAIL))
     print("wrote", name)
