@@ -49,10 +49,19 @@ async function visitorGeo(){
     return r.ok?await r.json():{};
   }catch(e){return {}}
 }
+// Which Meta app's built-in browser the page is open in, if any. Messenger and
+// Threads are checked first: their user agents also carry Facebook/Instagram
+// markers or none at all ("Barcelona" is Threads).
+function metaInAppName(ua){
+  return /Orca-Android|MessengerForiOS|MessengerLite|FBAN\/Messenger/i.test(ua)?'Messenger'
+    :/Barcelona/.test(ua)?'Threads'
+    :/Instagram/i.test(ua)?'Instagram'
+    :/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
+}
 async function logVisit(){
   const q=new URLSearchParams(location.search);
   const ua=navigator.userAgent||'';
-  const inApp=/Instagram/i.test(ua)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)?'Facebook':null;
+  const inApp=metaInAppName(ua);
   const path=location.pathname+(location.hash||''),referrer=document.referrer||null;
   const geo=await visitorGeo();
   rpc('log_visit',{p_visitor_id:VISITOR_ID,p_path:path,p_referrer:referrer,
@@ -248,15 +257,19 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     }
     // A Google sign-in creates the account on first use, so count it as a
     // registration when the user was created in the last few minutes.
-    function trackGoogleRegistration(user){
+    function trackGoogleRegistration(user){return trackNewAccount(user,'google')}
+    // Counts a sign-in as a registration when the account was created in the
+    // last few minutes (Google and phone create the account on first use).
+    function trackNewAccount(user,method){
       const created=Date.parse(user?.created_at||'');
-      if(!user?.id||!created||Date.now()-created>10*60*1000)return;
+      if(!user?.id||!created||Date.now()-created>10*60*1000)return false;
       const key='gitaMetaRegistration:'+user.id;
-      try{if(localStorage.getItem(key))return}catch(e){}
+      try{if(localStorage.getItem(key))return false}catch(e){}
       logEvent('signup');
-      if(trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'google'},false,'gita_reg_'+user.id)){
+      if(trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:method},false,'gita_reg_'+user.id)){
         try{localStorage.setItem(key,'1')}catch(e){}
       }
+      return true;
     }
     // A visitor who types a question before signing up gets it answered right
     // after sign-up (their one free question). Kept for an hour so a Google
@@ -403,7 +416,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // webviews, so these visitors get email sign-up first and a way out to a
     // real browser for Google.
     const UA=navigator.userAgent||'';
-    const IN_APP_NAME=/Instagram/i.test(UA)?'Instagram':/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(UA)?'Facebook':(/Android/i.test(UA)&&/; wv\)/.test(UA)?'this app':'');
+    const IN_APP_NAME=metaInAppName(UA)||(/Android/i.test(UA)&&/; wv\)/.test(UA)?'this app':'');
     const IS_ANDROID=/Android/i.test(UA);
     function chromeIntentUrl(){
       const path=(location.pathname||'/').replace(/^\//,'');
@@ -423,7 +436,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(IS_ANDROID)$('openInChrome').hidden=false; else $('iosTip').hidden=false;
       // Email first: move Google and the divider below the email forms.
       const anchor=$('authPageError');
-      card.insertBefore(document.querySelector('.auth-or'),anchor);
+      card.insertBefore($('authDividerText').parentElement,anchor);
       card.insertBefore($('googleLogin'),anchor);
       $('openInChrome').onclick=openInChrome;
     }
@@ -433,7 +446,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         trackMeta('GoogleBlockedInApp',{app:IN_APP_NAME},true);logEvent('google_blocked_in_app');
         if(IS_ANDROID){openInChrome();return}
         $('authPageError').style.color='#7a3b18';
-        $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Sign up with email above, or tap ••• → Open in external browser.';
+        $('authPageError').textContent='Google sign-in doesn\'t work inside '+IN_APP_NAME+'. Use your mobile number above, or tap ••• → Open in external browser.';
         $('iosTip').hidden=false;
         return;
       }
@@ -541,6 +554,60 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }finally{
         btn.disabled=false;btn.textContent='Login';
       }
+    }
+    // Mobile number + OTP sign-in (Indian numbers). Supabase creates the account
+    // on first use; the SMS is sent through MSG91 by the send-sms auth hook.
+    let otpPhone='',resendTimer=null;
+    function indianMobile(v){
+      const d=String(v||'').replace(/\D/g,'').replace(/^(?:91|0)(?=\d{10}$)/,'');
+      return /^[6-9]\d{9}$/.test(d)?d:'';
+    }
+    function authError(msg,ok){$('authPageError').style.color=ok?'#2f7d32':'#b53a20';$('authPageError').textContent=msg||'';}
+    function startResendTimer(seconds=30){
+      clearInterval(resendTimer);let left=seconds;const b=$('resendOtp');b.disabled=true;
+      const tick=()=>{if(left<=0){clearInterval(resendTimer);b.disabled=false;b.textContent='Resend OTP';return}b.textContent='Resend OTP in '+left--+'s';};
+      tick();resendTimer=setInterval(tick,1000);
+    }
+    async function sendOtp(){
+      authError('');
+      const d=indianMobile($('phoneNumber').value);
+      if(!d){authError('Enter a valid 10-digit mobile number');$('phoneNumber').focus();return}
+      logEvent('signin_start');
+      const btn=$('sendOtpBtn');btn.disabled=true;btn.textContent='Sending OTP…';
+      try{
+        const r=await fetch(SUPA+'/auth/v1/otp',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({phone:'+91'+d,create_user:true})});
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok)throw new Error(r.status===429?'Too many OTP requests. Please wait a minute and try again.':(data.msg||data.error_description||data.message||'Could not send OTP. Please try again.'));
+        otpPhone='+91'+d;$('otpPhone').textContent='+91 '+d.slice(0,5)+' '+d.slice(5);
+        $('otpStep').hidden=false;btn.hidden=true;$('phoneNumber').disabled=true;
+        $('otpCode').value='';$('otpCode').focus();startResendTimer();
+        authError('OTP sent. It may take a few seconds to arrive.',true);
+      }catch(e){authError(e.message)}
+      finally{btn.disabled=false;btn.textContent='Get OTP';}
+    }
+    function changePhone(){
+      clearInterval(resendTimer);otpPhone='';$('otpStep').hidden=true;$('sendOtpBtn').hidden=false;
+      $('phoneNumber').disabled=false;$('phoneNumber').focus();authError('');
+    }
+    async function verifyOtp(){
+      authError('');
+      const code=$('otpCode').value.replace(/\D/g,'');
+      if(code.length!==6){authError('Enter the 6-digit OTP');$('otpCode').focus();return}
+      const btn=$('verifyOtpBtn');btn.disabled=true;btn.textContent='Verifying…';
+      try{
+        const r=await fetch(SUPA+'/auth/v1/verify',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({type:'sms',phone:otpPhone,token:code})});
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok||!data.access_token)throw new Error(r.status===429?'Too many attempts. Please wait a minute.':'That OTP is wrong or has expired. Check it or tap Resend OTP.');
+        clearInterval(resendTimer);
+        saveSession(data);
+        await loadAccountProfile();
+        const isNew=trackNewAccount(data.user,'phone');
+        trackMeta('Login',{method:'phone'},true);logEvent('login');
+        toast(isNew?'Account created':'Signed in');
+        changePhone();$('phoneNumber').value='';
+        afterSignIn();
+      }catch(e){authError(e.message)}
+      finally{btn.disabled=false;btn.textContent='Verify & continue';}
     }
     async function signOut(){
       const token=authSession?.access_token;
@@ -739,8 +806,9 @@ function offerAction(){$('offer').dataset.mode==='free'?openAskKrishna():startLi
 function updateAccountUI(){
   const logged=!!authSession?.access_token,paid=hasLifetimeAccess();
   $('welcomeUser').textContent=logged?'Welcome, '+(userDisplayName()||'friend')+' 🙏':'Sign in 🙏';
-  $('accountEmail').textContent=authSession?.user?.email||'—';
-  $('accountProvider').textContent=authSession?.user?.app_metadata?.provider||'Email';
+  const phone=authSession?.user?.phone;
+  $('accountEmail').textContent=authSession?.user?.email||(phone?'+'+String(phone).replace(/^\+/,''):'—');
+  $('accountProvider').textContent={phone:'Mobile',google:'Google',email:'Email'}[authSession?.user?.app_metadata?.provider]||'Email';
   $('accountPlan').textContent=paid?'Annual':'Free';
   $('accountPayment').textContent=accountProfile?.payment_status||'Unpaid';
   for(const [id,key] of [['accountPurchased','purchased_at'],['accountExpires','access_expires_at']]){
@@ -1102,6 +1170,10 @@ function openTopic(key,title){
 $('authBack').onclick=()=>showScreen('home');$('accountBack').onclick=()=>showScreen('home');
 $('googleLogin').onclick=startGoogleLogin;$('loginTab').onclick=()=>setAuthPageMode('login');$('signupTab').onclick=()=>setAuthPageMode('signup');
 $('passwordLoginStep').onsubmit=signInWithPassword;$('passwordSignupBtn').onclick=signUpWithPassword;
+$('sendOtpBtn').onclick=sendOtp;$('verifyOtpBtn').onclick=verifyOtp;$('resendOtp').onclick=sendOtpAgain;$('changePhone').onclick=changePhone;
+$('phoneNumber').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendOtp()}};
+$('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)verifyOtp()};
+function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=false;sendOtp();}
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=startLifetimePurchase;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};

@@ -23,7 +23,7 @@ The Bhagavad Gita website at [gitaverse.co.in](https://gitaverse.co.in): all 18 
 | `razorpay-webhook` | Verifies Razorpay's signature and unlocks a year of access. |
 | `admin-stats` | Dashboard data, for the pinned admin account only. |
 | `translation-worker` | Pre-translates verse text into every language. Started by hand with a token kept in Vault. |
-| `send-sms` | Supabase "Send SMS" hook for phone sign-in through MSG91. Not switched on yet. |
+| `send-sms` | Supabase "Send SMS" hook: delivers sign-in OTPs through MSG91. |
 | `raga-music`, `gemini-health`, `razorpay-health` | Retired stubs that return 404/410. |
 
 Shared settings live in `supabase/functions/_shared/`: the price and the Gemini model in `server.ts`, the language list in `languages.ts` (keep it in sync with `languages.js`; a test checks this).
@@ -37,7 +37,7 @@ Serve the repo root with any static server, for example `python3 -m http.server 
 ## Tests
 
 - `node --test tests/*.cjs` runs the unit tests for the chat, languages and narration logic (Node 22.13+).
-- `cd tests/e2e && npm install && npx playwright install chromium && node run.mjs` runs the browser suites. They cover the visitor and buyer journeys, in-app browsers (Instagram, Facebook), the admin dashboard and admin login, against a simulated backend. Nothing touches production. Set `CHROMIUM_PATH` to use a Chromium you already have.
+- `cd tests/e2e && npm install && npx playwright install chromium && node run.mjs` runs the browser suites. They cover the visitor and buyer journeys, mobile-number sign-in, in-app browsers (Instagram, Facebook), the admin dashboard and admin login, against a simulated backend. Nothing touches production. Set `CHROMIUM_PATH` to use a Chromium you already have.
 
 GitHub Actions runs both on every pull request.
 

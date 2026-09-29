@@ -340,7 +340,8 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 .devotee-footer strong{font-weight:700}
 @media(max-width:360px){.devotee-footer{gap:5px;margin-left:12px;margin-right:12px}.devotee-footer p{font-size:11px}}
 .lang-menu{margin-top:10px;padding:12px;background:#fff8eb;border:1px solid #eadcc8;border-radius:14px;color:#674633;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lang-menu[hidden]{display:none}.lang-menu label{font-weight:600;font-size:13px}.lang-menu select{flex:1;min-width:0;max-width:100%;padding:10px;border:1px solid #d9bd95;border-radius:10px;background:#fffdf8;font-size:16px;color:#51351f}.lang-menu small{flex-basis:100%;font-size:11px}
-.language-control{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px;padding:14px;background:#fff8eb;border:1px solid #eadcc8;border-radius:16px;color:#674633}.language-control label{font-weight:600;font-size:13px}.language-control select{max-width:100%;min-width:0;flex:1;padding:10px;border:1px solid #d9bd95;border-radius:10px;background:#fffdf8;font-size:16px;color:#51351f}.language-control small{flex-basis:100%;font-size:11px}.btn .free-note{display:block;font-size:10px;font-weight:600;opacity:.8;margin-top:1px}.upgrade-card{border:1px solid #e3b75e;background:#fff6e2}.upgrade-card strong{display:block;font-size:16px;margin-bottom:6px}.upgrade-card p{margin:6px 0}.upgrade-price{font-weight:700;color:#7a3d0c}.upgrade-btn{margin-top:8px;width:100%;border:0;border-radius:14px;padding:12px 14px;font-weight:700;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c}
+.language-control{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px;padding:14px;background:#fff8eb;border:1px solid #eadcc8;border-radius:16px;color:#674633}.language-control label{font-weight:600;font-size:13px}.language-control select{max-width:100%;min-width:0;flex:1;padding:10px;border:1px solid #d9bd95;border-radius:10px;background:#fffdf8;font-size:16px;color:#51351f}.language-control small{flex-basis:100%;font-size:11px}.btn .free-note{display:block;font-size:10px;font-weight:600;opacity:.8;margin-top:1px}.phone-row{display:flex;gap:8px;align-items:stretch}.phone-row .email-input{flex:1;min-width:0;margin:0}.phone-prefix{display:flex;align-items:center;padding:0 12px;border:1px solid #d9bd95;border-radius:12px;background:#fff8eb;font-weight:700;color:#633811}.otp-input{letter-spacing:.5em;text-align:center;font-size:20px;font-weight:700}.otp-actions{display:flex;justify-content:space-between;margin-top:8px}.link-btn{background:none;border:0;padding:4px 0;color:#8a4a17;font-weight:600;text-decoration:underline;cursor:pointer}.link-btn:disabled{color:#b9a58f;text-decoration:none;cursor:default}.phone-auth #otpStep{margin-top:12px}
+.upgrade-card{border:1px solid #e3b75e;background:#fff6e2}.upgrade-card strong{display:block;font-size:16px;margin-bottom:6px}.upgrade-card p{margin:6px 0}.upgrade-price{font-weight:700;color:#7a3d0c}.upgrade-btn{margin-top:8px;width:100%;border:0;border-radius:14px;padding:12px 14px;font-weight:700;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c}
 .listen-reply{margin-top:12px;border:1px solid #d9bd95;border-radius:16px;padding:9px 14px;background:#fff3d9;color:#633811}#translationStatus{font-size:12px;color:#805625}[dir="auto"]{unicode-bidi:plaintext}
 </style>
 <link rel="stylesheet" href="connected.css">
@@ -403,12 +404,25 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 
           <div id="inAppNote" class="inapp-note" hidden>
             <b id="inAppTitle">You're in Instagram's browser</b>
-            <p>Sign up with email below. It takes 10 seconds. Google sign-in only works in Chrome or Safari.</p>
+            <p>Sign up with your mobile number or email below. It takes 10 seconds. Google sign-in only works in Chrome or Safari.</p>
             <button id="openInChrome" type="button" class="inapp-chrome" hidden>Open in Chrome to use Google</button>
             <p id="iosTip" class="inapp-tip" hidden>To use Google: tap <b>•••</b> at the top right, then <b>Open in external browser</b>.</p>
           </div>
 
-          <button id="googleLogin" class="google-btn">
+          <div id="phoneAuth" class="password-login-block phone-auth">
+        <label class="phone-label" for="phoneNumber">Mobile number</label>
+        <div class="phone-row"><span class="phone-prefix">+91</span><input id="phoneNumber" class="email-input" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="18" placeholder="10-digit mobile number"></div>
+        <button id="sendOtpBtn" type="button" class="auth-main-btn">Get OTP</button>
+        <div id="otpStep" hidden>
+          <label class="phone-label" for="otpCode">Enter the 6-digit OTP sent to <b id="otpPhone"></b></label>
+          <input id="otpCode" class="email-input otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+          <button id="verifyOtpBtn" type="button" class="auth-main-btn">Verify &amp; continue</button>
+          <div class="otp-actions"><button id="resendOtp" type="button" class="link-btn" disabled>Resend OTP</button><button id="changePhone" type="button" class="link-btn">Change number</button></div>
+        </div>
+        <div class="email-help">No password needed. We'll text you a one-time code.</div>
+      </div>
+      <div id="phoneOr" class="auth-or"><span>or</span></div>
+      <button id="googleLogin" class="google-btn">
             <span class="google-g">G</span>
             <span id="googleButtonText">Continue with Google</span>
           </button>
@@ -450,7 +464,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
       <div class="account-page-card">
         <div class="daily-label">Account</div>
         <h2>Namaste 🙏</h2>
-        <div class="account-row"><span>Email</span><strong id="accountEmail">—</strong></div>
+        <div class="account-row"><span>Email / mobile</span><strong id="accountEmail">—</strong></div>
         <div class="account-row"><span>Sign-in method</span><strong id="accountProvider">—</strong></div>
         <div class="account-row"><span>Plan</span><strong id="accountPlan" class="plan-pill">Free</strong></div>
         <div class="account-row"><span>Payment</span><strong id="accountPayment">Unpaid</strong></div>
