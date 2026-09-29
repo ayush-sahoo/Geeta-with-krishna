@@ -1,0 +1,12 @@
+# Only the website (HTML, JS, CSS, assets, api/) is published. Backend source,
+# migrations, tests, tools and the parked Expo app stay out of the public site.
+/supabase
+/tests
+/tools
+/loadtest
+/.github
+/src
+/App.tsx
+/app.json
+/eas.json
+/README.md

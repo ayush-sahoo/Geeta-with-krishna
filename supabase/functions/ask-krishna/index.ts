@@ -1,4 +1,5 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
+import { adminClient, GEMINI_URL } from "../_shared/server.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -7,7 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const GEMINI_MODEL = "gemini-3.5-flash";
 const MAX_QUESTION = 2000;
 const MAX_HISTORY_TURNS = 8;
 const MAX_HISTORY_CHARS = 1200;
@@ -202,7 +202,7 @@ async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:
   };
   // Keep internal reasoning short so it cannot eat the reply's token budget.
   if(withThinking) generationConfig.thinkingConfig={thinkingLevel:"low"};
-  return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,{
+  return await fetch(GEMINI_URL,{
     method:"POST",
     signal:AbortSignal.timeout(25000),
     headers:{ "x-goog-api-key":apiKey, "Content-Type":"application/json" },
@@ -298,17 +298,6 @@ async function retrieveVerses(supabase:any, question:string, history:Turn[]):Pro
   }
 
   return [...merged.values()].slice(0,MAX_CONTEXT_VERSES);
-}
-
-// Server-key client for the free-question counter (user_accounts is not
-// writable by users).
-function adminClient(){
-  const raw=Deno.env.get("SUPABASE_SECRET_KEYS");
-  let key="";
-  if(raw){ try{ key=JSON.parse(raw)["default"]||""; }catch{} }
-  key=key||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-  const url=Deno.env.get("SUPABASE_URL")??"";
-  return url&&key ? createClient(url,key) : null;
 }
 
 function json(body:unknown, status=200){

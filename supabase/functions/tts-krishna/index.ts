@@ -1,4 +1,5 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
+import { adminClient, GEMINI_URL } from "../_shared/server.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -19,7 +20,7 @@ async function translateMeaning(text:string, language:string){
   // setting, if the model rejects a level.
   let r:Response|null=null;
   for(const thinkingLevel of ["minimal","low",""]){
-    r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",{
+    r=await fetch(GEMINI_URL,{
       method:"POST",signal:AbortSignal.timeout(25000),
       headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -41,14 +42,6 @@ async function translateMeaning(text:string, language:string){
 // Verse-text pieces are translated once and stored (text_translations, filled
 // ahead of time by translation-worker). Only known pieces are saved, so this
 // endpoint can't be used to fill the table with arbitrary text.
-function adminClient() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  let key = "";
-  if (raw) { try { key = JSON.parse(raw)["default"] || ""; } catch {} }
-  key = key || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  return url && key ? createClient(url, key) : null;
-}
 async function sha256Hex(text: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");

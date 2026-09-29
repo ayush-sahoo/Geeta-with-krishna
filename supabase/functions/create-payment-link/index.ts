@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { ANNUAL_PRICE_PAISE, serviceKey } from "../_shared/server.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -10,14 +11,6 @@ const cors = {
 // lives in that origin's localStorage, and the Meta Purchase event fires there.
 const SITE_URL = "https://gitaverse.co.in";
 
-function getSecretKey() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (raw) {
-    try { return JSON.parse(raw)["default"] || ""; } catch {}
-  }
-  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: cors });
@@ -25,7 +18,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const publishable = Deno.env.get("SUPABASE_ANON_KEY") || "";
-    const adminKey = getSecretKey();
+    const adminKey = serviceKey();
     const keyId = Deno.env.get("RAZORPAY_KEY_ID") || "";
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
     const authHeader = req.headers.get("Authorization") || "";
@@ -90,7 +83,7 @@ Deno.serve(async (req) => {
 
     const referenceId = "gita_" + uid.replaceAll("-", "").slice(0, 16) + "_" + Date.now().toString(36);
     const payload = {
-      amount: 100000,
+      amount: ANNUAL_PRICE_PAISE,
       currency: "INR",
       accept_partial: false,
       description: "Gita Verse Annual Access",
@@ -119,14 +112,15 @@ Deno.serve(async (req) => {
 
     const body = await rz.json();
     if (!rz.ok) {
-      return Response.json({ error: "Razorpay link creation failed", details: body }, { status: 502, headers: cors });
+      console.error("Razorpay link creation failed", rz.status, JSON.stringify(body).slice(0, 300));
+      return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
     }
 
     await admin.from("payment_transactions").insert({
       user_id: uid,
       provider: "razorpay",
       payment_link_id: body.id,
-      amount_paise: 100000,
+      amount_paise: ANNUAL_PRICE_PAISE,
       currency: "INR",
       status: body.status || "created"
     });
@@ -142,6 +136,8 @@ Deno.serve(async (req) => {
       short_url: body.short_url
     }, { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+    // Details (e.g. missing secret names) go to the logs, not the browser.
+    console.error("create-payment-link failed", String(e));
+    return Response.json({ error: "Could not start payment. Please try again." }, { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });

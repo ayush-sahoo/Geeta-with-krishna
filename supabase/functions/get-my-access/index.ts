@@ -1,18 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { serviceKey } from "../_shared/server.ts";
 
 // Returns the signed-in user's plan, payment and access state, plus whether
 // their one free Ask Krishna question is still available.
 
 const FREE_QUESTIONS = 1;
-
-function getSecretKey() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (raw) {
-    try { return JSON.parse(raw)["default"] || ""; } catch {}
-  }
-  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-}
 
 Deno.serve(async (req) => {
   const cors = {
@@ -28,7 +21,7 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL") || "";
   const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
-  const adminKey = getSecretKey();
+  const adminKey = serviceKey();
   if (!url || !anon || !adminKey) {
     return Response.json({ error: "Server config missing" }, { status: 500, headers: cors });
   }

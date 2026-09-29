@@ -1,4 +1,5 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
+import { GEMINI_URL, serviceKey } from "../_shared/server.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -16,17 +17,9 @@ const LEASE_SECONDS = 150;   // matches the edge function's wall-clock limit
 const STOP_AFTER_MS = 90_000; // start no new batch after this
 const MAX_CHARS = 5000;      // English characters per model call
 
-function getSecretKey() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (raw) {
-    try { return JSON.parse(raw)["default"] || ""; } catch {}
-  }
-  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-}
-
 async function translateBatch(apiKey: string, language: string, texts: string[]): Promise<string[] | null> {
   for (const thinkingLevel of ["minimal", "low", ""]) {
-    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent", {
+    const r = await fetch(GEMINI_URL, {
       method: "POST",
       signal: AbortSignal.timeout(45000),
       headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
@@ -87,7 +80,7 @@ async function workOn(admin: any, apiKey: string, language: string, stopAt: numb
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const url = Deno.env.get("SUPABASE_URL") || "";
-  const adminKey = getSecretKey();
+  const adminKey = serviceKey();
   const apiKey = Deno.env.get("GEMINI_API_KEY") || "";
   if (!url || !adminKey || !apiKey) return Response.json({ error: "Server config missing" }, { status: 500 });
 
