@@ -1,15 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { ANNUAL_PRICE_PAISE, serviceKey } from "../_shared/server.ts";
 
-function getSecretKey() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (raw) {
-    try { return JSON.parse(raw)["default"] || ""; } catch {}
-  }
-  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-}
-
-async function hmacHex(secret, raw) {
+async function hmacHex(secret: string, raw: string) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -22,7 +15,7 @@ async function hmacHex(secret, raw) {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-function safeEqual(a, b) {
+function safeEqual(a: string, b: string) {
   if (!a || !b || a.length !== b.length) return false;
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -38,7 +31,7 @@ Deno.serve(async (req) => {
     const webhookSecret = Deno.env.get("RAZORPAY_WEBHOOK_SECRET") || "";
     const signature = req.headers.get("x-razorpay-signature") || "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const adminKey = getSecretKey();
+    const adminKey = serviceKey();
 
     if (!webhookSecret || !supabaseUrl || !adminKey) {
       throw new Error("Webhook configuration incomplete");
@@ -67,7 +60,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Missing payment identity" }, { status: 400 });
     }
 
-    if (amount !== 100000 || !["paid"].includes(linkStatus) || !["captured","authorized"].includes(paymentStatus)) {
+    if (amount !== ANNUAL_PRICE_PAISE || !["paid"].includes(linkStatus) || !["captured","authorized"].includes(paymentStatus)) {
       return Response.json({ error: "Payment validation failed" }, { status: 400 });
     }
 
@@ -145,6 +138,6 @@ Deno.serve(async (req) => {
     return Response.json({ ok: true, unlocked: userId, access_expires_at: accessExpiresAt });
   } catch (e) {
     console.error("razorpay-webhook failed", String(e));
-    return Response.json({ error: String(e) }, { status: 500 });
+    return Response.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 });

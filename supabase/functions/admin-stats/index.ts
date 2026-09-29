@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { serviceKey } from "../_shared/server.ts";
 
 // Admin dashboard data, for the business owner only. A caller must match BOTH
 // the admin email and a pinned account id: email sign-up doesn't verify inbox
@@ -21,14 +22,6 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function getSecretKey() {
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (raw) {
-    try { return JSON.parse(raw)["default"] || ""; } catch {}
-  }
-  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-}
-
 function list(env: string, fallback: string[]) {
   const v = Deno.env.get(env);
   return (v ? v.split(",") : fallback).map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -45,7 +38,7 @@ Deno.serve(async (req) => {
   try {
     const url = Deno.env.get("SUPABASE_URL") || "";
     const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
-    const adminKey = getSecretKey();
+    const adminKey = serviceKey();
     const auth = req.headers.get("Authorization") || "";
     if (!auth.startsWith("Bearer ")) return json({ error: "Sign in required" }, 401);
 
@@ -72,7 +65,7 @@ Deno.serve(async (req) => {
 
     return json({ ...data, generated_at: new Date().toISOString(), admin: email });
   } catch (e) {
-    console.error("admin-stats failed", String(e?.message || e));
+    console.error("admin-stats failed", String((e as Error)?.message || e));
     return json({ error: "Could not load stats" }, 500);
   }
 });

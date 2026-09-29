@@ -15,7 +15,7 @@
 //   BYPASS       Vercel protection-bypass secret for protected preview URLs
 //   TIMEOUT_MS   per-request timeout (default 15000)
 
-const BASE_URL = (process.env.BASE_URL || 'https://geeta-with-krishna.vercel.app').replace(/\/$/, '');
+const BASE_URL = (process.env.BASE_URL || 'https://gitaverse.co.in').replace(/\/$/, '');
 const USERS = Number(process.env.USERS || 10000);
 const CONCURRENCY = Number(process.env.CONCURRENCY || 500);
 const RAMP_SEC = Number(process.env.RAMP_SEC || 30);
