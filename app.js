@@ -6,6 +6,26 @@ function trackMeta(name,data={},custom=false,eventId){
     return true;
   }catch(e){return false}
 }
+// Advanced matching: once someone is signed in, the pixel attaches their email
+// or mobile number (and account id) to each event, hashed with SHA-256 in the
+// browser, so Meta can tie more sign-ups and purchases back to the ad that
+// brought them. Same pixel as in index.html.
+const META_PIXEL_ID='2178415463100322';
+let metaUserKey='';
+function setMetaUser(user){
+  try{
+    if(typeof fbq!=='function'||!user?.id)return;
+    const data={external_id:user.id};
+    const email=String(user.email||'').trim().toLowerCase();
+    const phone=String(user.phone||'').replace(/\D/g,'');
+    if(email)data.em=email;
+    if(phone)data.ph=phone;
+    const key=JSON.stringify(data);
+    if(key===metaUserKey)return;
+    metaUserKey=key;
+    fbq('init',META_PIXEL_ID,data);
+  }catch(e){}
+}
 const annualEvent={value:1000,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
 function trackConfirmedPurchase(){
   const id=accountProfile?.payment_id;
@@ -250,7 +270,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     function saveSession(session){
       if(!session || session.user?.id!==authSession?.user?.id)clearChatConversation();
       authSession=session||null;
-      if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));attributeSignup();}
+      if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));setMetaUser(session.user);attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
       restoreLanguagePreferences();
       updateAccountUI();

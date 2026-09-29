@@ -52,6 +52,7 @@ async function run(label, ua, inApp = '') {
   const scr = await pg.evaluate(() => [...document.querySelectorAll('.screen')].filter(s => getComputedStyle(s).display !== 'none').map(s => s.id).join());
   ok(scr === 'ask' && S.asks === 1 && (await pg.textContent('#chat')).includes('Dear one'), 'after OTP, the pending question is answered', scr);
   ok(await pg.evaluate(() => (window.__fb || []).some(a => a[1] === 'CompleteRegistration' && a[2]?.registration_method === 'phone')), 'Meta CompleteRegistration fires with method phone');
+  ok(await pg.evaluate(() => { const f = window.__fb || [], i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.ph === '919876543210' && a[2]?.external_id === 'p1' && !a[2]?.em), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the mobile number (hashed by the pixel) before the sign-up event');
   await pg.evaluate(() => showScreen('accountScreen')); await pg.waitForTimeout(100);
   ok((await pg.textContent('#accountEmail')) === '+919876543210' && (await pg.textContent('#accountProvider')) === 'Mobile', 'account screen shows the mobile number', await pg.textContent('#accountEmail'));
   ok(!errs.length, 'no JS errors', errs.join('|'));

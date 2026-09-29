@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, adminKey);
     const uid = userData.user.id;
     const email = userData.user.email || "";
+    // Mobile sign-ups have no email; their number pre-fills Razorpay checkout.
+    const phone = String(userData.user.phone || "").replace(/\D/g, "");
 
     const { data: account } = await admin
       .from("user_accounts")
@@ -88,7 +90,7 @@ Deno.serve(async (req) => {
       accept_partial: false,
       description: "Gita Verse Annual Access",
       reference_id: referenceId,
-      customer: email ? { email } : undefined,
+      customer: email || phone ? { ...(email ? { email } : {}), ...(phone ? { contact: "+" + phone } : {}) } : undefined,
       notify: { sms: false, email: false },
       reminder_enable: false,
       // Unpaid links expire so an old tab can't be paid long after a later purchase.
