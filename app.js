@@ -725,7 +725,17 @@ function renderAccessState(){
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
   $('chatHint').textContent=freeLeft?'Your first question is free · Grounded in the Gita':'Grounded in the Gita · practical for life today';
+  $('heroFreeNote').hidden=!freeLeft;
+  // Until the free question is used, the bottom bar invites people to try it;
+  // afterwards it offers Annual Access.
+  const offer=freeLeft
+    ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
+    :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','Full Gita Verse access · no monthly subscription','Get access →'];
+  ['offerIcon','offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i]});
+  $('offer').dataset.mode=freeLeft?'free':'buy';
 }
+function openAskKrishna(){showScreen('ask');setTimeout(()=>$('askInput').focus({preventScroll:true}),150);}
+function offerAction(){$('offer').dataset.mode==='free'?openAskKrishna():startLifetimePurchase();}
 function updateAccountUI(){
   const logged=!!authSession?.access_token,paid=hasLifetimeAccess();
   $('welcomeUser').textContent=logged?'Welcome, '+(userDisplayName()||'friend')+' 🙏':'Sign in 🙏';
