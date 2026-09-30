@@ -729,7 +729,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
       checkoutBusy=true;
       const buttons=[$('buyLifetime'),$('accountUpgrade'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
-      buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.textContent;b.textContent='Opening secure payment…'});
+      buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
       let leaving=false;
 
       try{
@@ -769,7 +769,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }finally{
         // While the browser opens Razorpay the buttons stay locked; if it never
         // leaves (or the visitor comes back), they unlock after a few seconds.
-        const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Annual Access →'});};
+        const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
         if(leaving)setTimeout(reset,8000);else reset();
       }
     }

@@ -97,6 +97,7 @@ console.log('\n# Payment link cannot be created');
   ok(await pg.evaluate(() => window.__fb.some(a => a[1] === 'CheckoutError') && !window.__fb.some(a => a[1] === 'InitiateCheckout')), 'CheckoutError recorded, no InitiateCheckout');
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(600);
   ok(S.links === 2, 'a second tap after the error tries again');
+  ok((await pg.innerHTML('#accountUpgrade')).includes('<small class="btn-sub">About ₹83/month · One-time payment, no autopay</small>'), 'paywall button keeps its per-month and no-autopay line after unlocking');
   await ctx.close(); }
 
 console.log('\n# Buy tapped by someone who already has access');
