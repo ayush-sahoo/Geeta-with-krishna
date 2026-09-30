@@ -904,7 +904,7 @@ function renderAccessState(){
   // afterwards it offers Annual Access.
   const offer=freeLeft
     ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
-    :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','Full Gita Verse access · no monthly subscription','Get access →'];
+    :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','About ₹83/month · One-time payment, no autopay','Get access →'];
   ['offerIcon','offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i]});
   $('offer').dataset.mode=freeLeft?'free':'buy';
 }
@@ -1269,7 +1269,7 @@ async function sendAsk(){
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
       appendText(card,'strong','That was your free question 🙏');
       appendText(card,'p','Keep talking with Krishna whenever you need guidance, plus all 701 verses with meaning, audio and 13 Indian languages.');
-      appendText(card,'p','₹1,000 for a full year · about ₹83 a month','upgrade-price');
+      appendText(card,'p','₹1,000 for a full year · about ₹83 a month · no autopay','upgrade-price');
       const buy=appendText(card,'button','Get Annual Access →','upgrade-btn');buy.type='button';buy.onclick=startLifetimePurchase;
     }
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
