@@ -60,3 +60,7 @@ There is no automatic schedule; runs are started by hand. The 13 Indian language
 | Grant or extend someone's access by hand | Update their `user_accounts` row (`plan_status='annual'`, `payment_status='paid'`, `access_expires_at`) in the SQL editor, and note why. |
 | Roll back the website | Vercel → Deployments → pick the previous production deployment → Promote. |
 | Roll back an edge function | Redeploy it from the previous commit (`git checkout <sha> -- supabase/functions/<name>` then deploy). |
+
+## Atomic payment processing
+
+`razorpay-webhook` calls the server-only `apply_annual_payment` RPC. It locks the account row, deduplicates payments, and records the transaction and annual entitlement together. Database failures return HTTP 500 so Razorpay can retry. Apply migration `20260930164133_atomic_annual_payment.sql` before deploying the webhook. `tests/annual-payment.sql` tests renewals and duplicate deliveries on the test account inside a rolled-back transaction.
