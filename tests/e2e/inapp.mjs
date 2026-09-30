@@ -39,6 +39,10 @@ for (const [name,ua] of Object.entries(UAS)){
       ok(await p.isVisible('#openInChrome'),'Android shows Open in Chrome button');
       const intent=await p.evaluate(()=>chromeIntentUrl());
       ok(new RegExp('^intent://'+new URL(BASE).host.replace(/\./g,'\\.')+'/\\?from=inapp&vid=v_[a-z0-9]+#Intent;scheme=https;package=com\\.android\\.chrome;S\\.browser_fallback_url=').test(intent),'Chrome intent URL well-formed',intent);
+      await p.evaluate(()=>history.replaceState({},'','/?fbclid=AbC_1&utm_source=ig&utm_campaign=launch&other=x'));
+      const tagged=await p.evaluate(()=>chromeIntentUrl());
+      ok(tagged.includes('?from=inapp&vid=')&&tagged.includes('&fbclid=AbC_1&utm_source=ig&utm_campaign=launch#Intent')&&!tagged.includes('other=x')&&decodeURIComponent(tagged.split('S.browser_fallback_url=')[1]).includes('fbclid=AbC_1'),'Chrome hand-off keeps the ad click id and UTM tags',tagged);
+      await p.evaluate(()=>history.replaceState({},'','/'));
       const r=p.waitForRequest(r=>r.url().startsWith('intent:'),{timeout:2000}).catch(()=>null);
       await p.click('#googleLogin').catch(()=>{}); await p.waitForTimeout(300);
       ok(fb.some(a=>a[1]==='GoogleBlockedInApp')&&fb.some(a=>a[1]==='OpenInBrowser'),'Google tap in Instagram → hands off to Chrome (tracked)');

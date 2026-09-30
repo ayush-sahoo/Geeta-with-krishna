@@ -126,7 +126,7 @@ await page.fill('#askInput', 'And what about my family?'); await page.click('#se
 check((await screen()) === 'accountScreen', 'second question -> paywall', await screen());
 check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 1, 'second question not sent to the server');
 check((await page.textContent('#accountPlan')).trim() === 'Free', 'new account shows Free plan', await page.textContent('#accountPlan'));
-check((await fb()).includes('track:CompleteRegistration'), 'Meta CompleteRegistration fires on email sign-up');
+check((await fbFull()).filter(a => a[1] === 'CompleteRegistration').length === 1 && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[3]?.eventID === 'gita_reg_u1' && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[2]?.registration_method === 'email', 'Meta CompleteRegistration fires once on email sign-up, with method email and a dedup eventID');
 check(await page.evaluate(() => { const f = window.__fb, i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.em === 'test@example.com' && a[2]?.external_id === 'u1' && !a[2]?.ph), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the email (hashed by the pixel) before the sign-up event');
 check(await page.evaluate(() => !!localStorage.getItem('gitaAuthSession')), 'session saved');
 await shot('02-account-free');
@@ -247,6 +247,9 @@ check((await screen()) !== 'detail', 'after sign-out, verses are locked again', 
 // ===== 7. Google sign-in (new user) =====
 console.log('\n# Google sign-in');
 S.paid = false; S.createdAt = new Date().toISOString();
+// The simulated backend reuses account u1, which the email sign-up above already
+// counted; forget that so this plays a brand-new Google account.
+await page.evaluate(() => localStorage.removeItem('gitaMetaRegistration:u1'));
 const p2 = await ctx.newPage();
 p2.on('pageerror', e => errors.push('pageerror(google): ' + e.message));
 await p2.goto(BASE + '/#access_token=tok_u1&refresh_token=ref_u1&expires_in=3600&token_type=bearer'); await p2.waitForTimeout(1200);

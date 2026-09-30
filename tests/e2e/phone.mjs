@@ -16,7 +16,7 @@ async function run(label, ua, inApp = '') {
     const body = JSON.parse(r.request().postData() || '{}');
     if (p === '/auth/v1/otp') { S.otp.push(body); return body.phone === '+919999999999' ? j({ msg: 'Error sending SMS' }, 500) : j({}); }
     if (p === '/auth/v1/verify') { S.verify.push(body); if (body.token !== '123456') return j({ msg: 'Token has expired or is invalid' }, 403);
-      return j({ access_token: 'tok_p', refresh_token: 'r', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: 'p1', phone: '919876543210', email: '', created_at: new Date().toISOString(), app_metadata: { provider: 'phone' } } }); }
+      return j({ access_token: 'tok_p', refresh_token: 'r', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: 'p1', phone: '919876543210', email: '', created_at: new Date(Date.now() - 30 * 60e3).toISOString(), phone_confirmed_at: new Date().toISOString(), app_metadata: { provider: 'phone' } } }); }
     if (p.endsWith('get-my-access')) return j({ plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: !S.freeUsed });
     if (p.endsWith('ask-krishna')) { S.asks++; S.freeUsed = true; return j({ free_question: true, style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear you.'], actions: [], follow_up: '', verses: [] }); }
     return j([]);
@@ -53,7 +53,7 @@ async function run(label, ua, inApp = '') {
   await pg.fill('#otpCode', '123456'); await until(() => document.getElementById('chat')?.textContent.includes('Dear one'));
   const scr = await pg.evaluate(() => [...document.querySelectorAll('.screen')].filter(s => getComputedStyle(s).display !== 'none').map(s => s.id).join());
   ok(scr === 'ask' && S.asks === 1 && (await pg.textContent('#chat')).includes('Dear one'), 'after OTP, the pending question is answered', scr);
-  ok(await pg.evaluate(() => (window.__fb || []).some(a => a[1] === 'CompleteRegistration' && a[2]?.registration_method === 'phone')), 'Meta CompleteRegistration fires with method phone');
+  ok(await pg.evaluate(() => (window.__fb || []).some(a => a[1] === 'CompleteRegistration' && a[2]?.registration_method === 'phone')), 'Meta CompleteRegistration fires with method phone, even when the code was first requested 30 min earlier');
   ok(await pg.evaluate(() => { const f = window.__fb || [], i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.ph === '919876543210' && a[2]?.external_id === 'p1' && !a[2]?.em), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the mobile number (hashed by the pixel) before the sign-up event');
   await pg.evaluate(() => showScreen('accountScreen')); await pg.waitForTimeout(100);
   ok((await pg.textContent('#accountEmail')) === '+919876543210' && (await pg.textContent('#accountProvider')) === 'Mobile', 'account screen shows the mobile number', await pg.textContent('#accountEmail'));
