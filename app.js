@@ -1064,8 +1064,31 @@ function playBlob(blob){return new Promise((resolve,reject)=>{
   a.onended=()=>{a.onended=a.onerror=null;clean();resolve()};a.onerror=()=>{a.onended=a.onerror=null;clean();reject(new Error('Audio playback failed'))};
   a.play().catch(e=>{clean();reject(e)});
 })}
-// Split long meanings into provider-sized clips without cutting a surrogate pair.
-function textClips(text){const chars=Array.from(text),out=[];for(let i=0;i<chars.length;i+=3000)out.push(chars.slice(i,i+3000).join(''));return out;}
+// Narration is split at sentence ends (a mark followed by a space, so "BG 2.47"
+// stays whole). The first clip is short so audio starts
+// in a couple of seconds; each later clip is generated while the one before it
+// plays, so clips can grow (about 220, 700, then 2500 characters). Lengths are
+// counted in code points so a surrogate pair is never cut.
+const CLIP_LIMITS=[220,700,2500];
+function textClips(text){
+  const len=s=>Array.from(s).length,out=[];let cur='';
+  const limit=()=>CLIP_LIMITS[Math.min(out.length,CLIP_LIMITS.length-1)];
+  const flush=()=>{if(cur.trim())out.push(cur.trim());cur='';};
+  const sentences=String(text||'').match(/(?:[^.!?।॥。？！\n]|[.!?।॥。？！](?!\s|$))*(?:[.!?।॥。？！]+(?=\s|$)|\n+|$)\s*/gu)?.filter(Boolean)||[];
+  for(let s of sentences){
+    if(cur&&len(cur+s)>limit())flush();
+    // A sentence longer than the limit is cut at a space, or anywhere if it has none.
+    while(len(cur+s)>limit()){
+      const room=limit()-len(cur),chars=Array.from(s);
+      let cut=chars.slice(0,room).join('').search(/\s\S*$/u);
+      if(cut<=0)cut=chars.slice(0,room).join('').length;
+      cur+=s.slice(0,cut);s=s.slice(cut);flush();
+    }
+    cur+=s;
+  }
+  flush();
+  return out.length?out:[String(text||'')];
+}
 async function playText(text,language,generation,firstClip){
   // Each clip is fetched while the previous one plays, so there is no silent gap.
   const clips=textClips(text);
