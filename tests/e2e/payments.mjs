@@ -7,23 +7,35 @@ const ok = (c, m, d = '') => console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' :
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'content-type': 'application/json' };
 const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const DAY = 864e5;
+// A JWT-shaped token that expires `inSec` seconds from now (the site reads exp).
+const jwt = (inSec, tag = 'x') => ['e30', Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + inSec, tag })).toString('base64url'), 'sig'].join('.');
 const session = { access_token: 'tok_b', refresh_token: 'ref_b', token_type: 'bearer', expires_in: 3600, user: { id: 'b1', email: 'buyer@example.com', created_at: new Date(Date.now() - 5 * DAY).toISOString(), app_metadata: { provider: 'email' } } };
 
-// opts: signedIn, paidAfterPolls (0 = never during this page), paidAt (ms ago), linkStatus, linkBody
+// opts: signedIn, session (stored session), refresh ('ok' | 'reject' | 'network'),
+// paidAfterPolls (0 = never during this page), paidAt (ms ago), linkStatus, linkBody
 async function open(opts, path = '/') {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   await ctx.addInitScript(([s, signedIn]) => {
     window.__fb = []; window.fbq = function () { window.__fb.push([...arguments]); };
     if (signedIn) localStorage.setItem('gitaAuthSession', JSON.stringify(s));
-  }, [session, !!opts.signedIn]);
-  const S = { polls: 0, links: 0 };
+  }, [opts.session || session, !!opts.signedIn]);
+  const S = { polls: 0, links: 0, refreshes: 0, linkAuth: [] };
   await ctx.route(/facebook|fonts\.g/, r => r.fulfill({ status: 204, body: '' }));
   await ctx.route(/rzp\.io/, r => r.fulfill({ status: 200, headers: { 'content-type': 'text/html' }, body: '<h1>razorpay</h1>' }));
   await ctx.route(/supabase\.co/, async r => {
     const u = new URL(r.request().url()), p = u.pathname;
     if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 200, headers: H });
     const j = (x, s = 200) => r.fulfill({ status: s, headers: H, body: JSON.stringify(x) });
-    if (p === '/auth/v1/token') return j(session);
+    if (p === '/auth/v1/token') {
+      if (u.searchParams.get('grant_type') === 'refresh_token') {
+        S.refreshes++;
+        if (opts.refreshAfterStart && S.refreshes === 1) return j(opts.session || session); // page load
+        if (opts.refresh === 'network') return r.abort();
+        if (opts.refresh === 'reject') return j({ error: 'invalid_grant', error_description: 'Invalid Refresh Token' }, 400);
+        return j({ ...session, access_token: opts.renewedToken || session.access_token });
+      }
+      return j(session); // password sign-in
+    }
     if (p === '/auth/v1/user') return j(session.user);
     if (p.endsWith('get-my-access')) {
       S.polls++;
@@ -32,7 +44,7 @@ async function open(opts, path = '/') {
         ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
         : { plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: false });
     }
-    if (p.endsWith('create-payment-link')) { S.links++; return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200); }
+    if (p.endsWith('create-payment-link')) { S.links++; S.linkAuth.push(r.request().headers()['authorization']); return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200); }
     return j([]);
   });
   const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));
@@ -92,6 +104,54 @@ console.log('\n# Buy tapped by someone who already has access');
   await pg.waitForTimeout(800);
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(400);
   ok(S.links === 0 && (await pg.textContent('#toast')).includes('already active'), 'no new payment link; told access is already active', await pg.textContent('#toast'));
+  await ctx.close(); }
+
+console.log('\n# Login expired while the tab was open (in-app browsers keep tabs for days)');
+{ const renewed = jwt(3600, 'new');
+  const { ctx, pg, S } = await open({ signedIn: true, renewedToken: renewed });
+  await pg.waitForTimeout(800); const before = S.refreshes;
+  await pg.evaluate(t => { authSession = { ...authSession, access_token: t }; }, jwt(-5, 'old'));
+  const nav = pg.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 5000 }).catch(() => null);
+  await pg.evaluate(() => startLifetimePurchase());
+  const went = await nav;
+  ok(S.refreshes === before + 1 && S.linkAuth[0] === 'Bearer ' + renewed, 'login renewed first; payment link made with the new login', JSON.stringify({ refreshes: S.refreshes - before, auth: S.linkAuth[0]?.slice(0, 20) }));
+  ok(!!went, 'buyer is taken to Razorpay');
+  await ctx.close(); }
+
+console.log('\n# Network drops while the page loads');
+{ const { ctx, pg, S } = await open({ signedIn: true, refresh: 'network' });
+  await pg.waitForTimeout(1000);
+  ok(await pg.evaluate(() => !!localStorage.getItem('gitaAuthSession') && !!authSession), 'visitor stays signed in (not logged out by a network error)');
+  const nav = pg.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 5000 }).catch(() => null);
+  await pg.evaluate(() => startLifetimePurchase());
+  ok(!!(await nav) && S.links === 1, 'and can still pay');
+  await ctx.close(); }
+
+console.log('\n# Supabase rejects the stored login');
+{ const { ctx, pg } = await open({ signedIn: true, refresh: 'reject' });
+  await pg.waitForTimeout(1000);
+  ok(await pg.evaluate(() => !localStorage.getItem('gitaAuthSession') && !authSession), 'signed out when the login is really invalid');
+  await ctx.close(); }
+
+console.log('\n# Login rejected at the moment of buying');
+{ const { ctx, pg, S } = await open({ signedIn: true, refresh: 'reject', refreshAfterStart: true });
+  await pg.waitForTimeout(800);
+  await pg.evaluate(t => { authSession = { ...authSession, access_token: t }; }, jwt(-5, 'old'));
+  await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(500);
+  ok(S.links === 0 && (await screen(pg)) === 'authScreen' && (await pg.textContent('#authPageError')).includes('Payment opens right after'), 'sent to sign-in with a clear message, no broken payment attempt', (await screen(pg)) + ' / ' + (await pg.textContent('#authPageError')));
+  ok(!(await pg.isDisabled('#accountUpgrade')), 'buy buttons unlocked');
+  await ctx.close(); }
+
+console.log('\n# Buy tapped while signed out: sign in, then payment opens by itself');
+{ const { ctx, pg, S } = await open({ signedIn: false });
+  await pg.waitForTimeout(600);
+  await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(300);
+  ok((await screen(pg)) === 'authScreen' && S.links === 0, 'asked to sign in first');
+  await pg.evaluate(() => setAuthPageMode('login'));
+  await pg.fill('#passwordEmail', 'buyer@example.com'); await pg.fill('#passwordPassword', 'secret123');
+  const nav = pg.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 6000 }).catch(() => null);
+  await pg.click('#passwordLoginBtn');
+  ok(!!(await nav) && S.links === 1, 'after signing in, Razorpay opens without another tap', 'links=' + S.links);
   await ctx.close(); }
 
 await b.close();

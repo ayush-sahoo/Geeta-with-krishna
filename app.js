@@ -263,6 +263,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     }
     async function api(path){
       if(!hasLifetimeAccess()) throw new Error('Annual Access required');
+      await freshSession();
       const r=await fetch(SUPA+'/rest/v1/'+path,{
         headers:{apikey:KEY,Authorization:'Bearer '+authSession.access_token}
       });
@@ -317,6 +318,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       const q=takePendingQuestion();
       if(q&&(hasLifetimeAccess()||accountProfile?.free_question_available)){
         showScreen('ask');$('askInput').value=q;sendAsk();return true;
+      }
+      if(takeBuyAfterSignIn()&&!hasLifetimeAccess()){
+        showScreen('accountScreen');startLifetimePurchase();return true;
       }
       showScreen('accountScreen');return false;
     }
@@ -388,17 +392,47 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           headers:{apikey:KEY,'Content-Type':'application/json'},
           body:JSON.stringify({refresh_token:stored.refresh_token})
         });
-        if(!r.ok) throw new Error('Session expired');
+        if(r.status===400||r.status===401){saveSession(null);return null}
+        if(!r.ok) throw new Error('Could not refresh the session');
         const session=await r.json();
         saveSession(session);
         await loadAccountProfile();
         return session;
       }catch(e){
-        saveSession(null);
-        return null;
+        // Offline or the server hiccuped: keep the visitor signed in with the
+        // stored session; freshSession() renews it before the next request.
+        saveSession(stored);
+        await loadAccountProfile();
+        return stored;
       }
     }
+    // Access tokens last an hour, but Instagram and Facebook keep their in-app
+    // browser tabs open for days. Before calling the server, renew a token that
+    // is about to expire. Only a rejected refresh token signs the user out.
+    let renewing=null;
+    function tokenExpiresAt(token){
+      try{return JSON.parse(atob(String(token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000}catch(e){return 0}
+    }
+    function sessionNeedsRenewal(){
+      const s=authSession;if(!s?.access_token||!s.refresh_token)return false;
+      const exp=tokenExpiresAt(s.access_token);
+      return !!exp&&exp-Date.now()<=60e3;
+    }
+    async function freshSession(){
+      const s=authSession;
+      if(!sessionNeedsRenewal())return s;
+      renewing||=(async()=>{
+        try{
+          const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})});
+          if(r.ok)saveSession(await r.json());
+          else if(r.status===400||r.status===401)saveSession(null);
+        }catch(e){}
+        return authSession;
+      })().finally(()=>{renewing=null});
+      return renewing;
+    }
     async function loadAccountProfile(){
+      if(sessionNeedsRenewal())await freshSession();
       const generation=++accountRequestGeneration,session=authSession;
       if(!authSession?.access_token){
         accountProfile=null;
@@ -670,14 +704,23 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // button (bottom bar, Account page, the card under the free answer) shows
     // progress and further taps are ignored, so one tap makes one link.
     let checkoutBusy=false;
+    // A buy tap while signed out: sign in first, then payment opens by itself
+    // (afterSignIn picks this up; it expires after 30 minutes).
+    const BUY_AFTER_SIGN_IN_KEY='gitaBuyAfterSignIn';
+    function askToSignInForPurchase(){
+      try{localStorage.setItem(BUY_AFTER_SIGN_IN_KEY,String(Date.now()))}catch(e){}
+      showScreen('authScreen');
+      $('authPageError').style.color='#2f7d32';
+      $('authPageError').textContent='Sign in or sign up first so Annual Access is linked to your account. Payment opens right after.';
+    }
+    function takeBuyAfterSignIn(){
+      let at=0;try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY)}catch(e){}
+      return at&&Date.now()-at<30*60e3;
+    }
     async function startLifetimePurchase(){
       if(checkoutBusy)return;
       trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
-      if(!authSession?.access_token){
-        showScreen('authScreen');
-        $('authPageError').textContent='Sign up or log in first so your annual purchase can be linked to your account.';
-        return;
-      }
+      if(!authSession?.access_token){askToSignInForPurchase();return;}
 
       if(hasLifetimeAccess()){
         toast('Annual Access is already active');
@@ -690,6 +733,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       let leaving=false;
 
       try{
+        await freshSession();
+        if(!authSession?.access_token){askToSignInForPurchase();return;}
         const r=await fetch(SUPA+'/functions/v1/create-payment-link',{
           method:'POST',
           headers:{
@@ -713,6 +758,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         if(!d.short_url) throw new Error('Payment link was not returned');
 
         trackMeta('InitiateCheckout',annualEvent);
+        // Give the pixel a moment to send InitiateCheckout before the page unloads.
+        await new Promise(r=>setTimeout(r,300));
 
         leaving=true;
         window.location.href=d.short_url;
@@ -802,6 +849,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     function applyToday(v){return APPLY_TODAY[themeOf(v)];}
     function reflectionFor(v){return REFLECTIONS[themeOf(v)];}
     async function fetchTTS(text,kind,verse,language=meaningLanguage){
+      await freshSession();
       const r=await fetch(SUPA+'/functions/v1/tts-krishna',{
         method:'POST',
         headers:authHeaders(authSession?.access_token||''),
@@ -1196,6 +1244,8 @@ async function sendAsk(){
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
   try{
+    await freshSession();
+    if(!authSession?.access_token)throw new Error('Please sign in again to ask Krishna.');
     const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
     if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall();return}
