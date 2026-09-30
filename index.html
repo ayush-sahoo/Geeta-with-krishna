@@ -355,7 +355,13 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
   t.src=v;s=b.getElementsByTagName(e)[0];
   s.parentNode.insertBefore(t,s)}(window, document,'script',
   'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '2178415463100322');
+  // Signed-in visitors: give the pixel their email or mobile number up front
+  // (it hashes them in the browser), so PageView and every later event carry
+  // them. app.js does the same when someone signs in during the visit.
+  var gitaMetaUser={};
+  try{var gs=JSON.parse(localStorage.getItem('gitaAuthSession')||'null'),gu=gs&&gs.user;
+    if(gu&&gu.id){gitaMetaUser.external_id=gu.id;var ge=String(gu.email||'').trim().toLowerCase(),gp=String(gu.phone||'').replace(/\D/g,'');if(ge)gitaMetaUser.em=ge;if(gp)gitaMetaUser.ph=gp;window.gitaMetaUserKey=JSON.stringify(gitaMetaUser);}}catch(e){}
+  fbq('init', '2178415463100322', gitaMetaUser);
   fbq('track', 'PageView');
   </script>
   <noscript><img height="1" width="1" style="display:none"

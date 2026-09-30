@@ -88,6 +88,7 @@ const shot = n => page.screenshot({ path: `${OUT}/${n}.png` });
 // ===== 1. Signed-out visitor =====
 console.log('\n# Signed-out visitor');
 await page.goto(BASE + '/');
+check(JSON.stringify((await fbFull())[0]) === JSON.stringify(['init', '2178415463100322', {}]), 'signed-out visitor: pixel starts with no personal data');
 await page.waitForFunction(() => document.getElementById('dailyTag').textContent.includes('12.19'), null, { timeout: 5000 }).catch(() => {});
 check((await page.textContent('#dailyTag')).includes('12.19'), 'daily verse card shows today\'s verse (12.19)');
 check((await fb()).includes('track:PageView'), 'Meta PageView fires on load');
@@ -163,6 +164,9 @@ check(purchases[0]?.[3]?.eventID === 'gita_purchase_pay_TEST1', 'Purchase has de
 await shot('03-account-paid');
 await page.goto(BASE + '/?payment=success'); await wait(1500);
 check(!(await fbFull()).some(a => a[1] === 'Purchase'), 'reloading the return URL does not fire Purchase again');
+{ const inits = (await fbFull()).filter(a => a[0] === 'init'), first = (await fbFull())[0];
+  check(first?.[0] === 'init' && first[1] === '2178415463100322' && first[2]?.em === 'test@example.com' && first[2]?.external_id === 'u1' && (await fbFull())[1]?.[1] === 'PageView', 'signed-in reload: PageView carries the email from the first init', JSON.stringify(inits));
+  check(inits.length === 1, 'signed-in reload: the pixel is not initialised twice', JSON.stringify(inits)); }
 
 // ===== 5. Paid features =====
 console.log('\n# Paid user');
