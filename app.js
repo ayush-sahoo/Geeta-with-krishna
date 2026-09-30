@@ -944,7 +944,6 @@ function setupLanguages(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('langMenu').hidden){toggleLanguageMenu(false);$('langButton').focus();}});
   restoreLanguagePreferences();
 }
-// Voice language for an 'auto' chat reply, from the script it was written in.
 // Stored translations (text_translations): each language's set is loaded once,
 // keyed by the SHA-256 of the English piece, so most text appears instantly.
 const storedTranslations=new Map();
