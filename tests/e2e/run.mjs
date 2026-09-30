@@ -14,7 +14,7 @@ import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const SUITES = ['journeys.mjs', 'phone.mjs', 'inapp.mjs', 'admin.mjs', 'login.mjs'];
+const SUITES = ['journeys.mjs', 'payments.mjs', 'phone.mjs', 'inapp.mjs', 'admin.mjs', 'login.mjs'];
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.mp3': 'audio/mpeg', '.json': 'application/json', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 
 const server = createServer(async (req, res) => {

@@ -28,9 +28,15 @@ function setMetaUser(user){
   }catch(e){}
 }
 const annualEvent={value:1000,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+// Fires Meta Purchase once per payment. Called on the return from Razorpay and
+// on any later account load, so a payment confirmed after the buyer stopped
+// waiting is still reported (only for purchases in the last 3 days, so an old
+// purchase seen on a new device isn't counted again).
 function trackConfirmedPurchase(){
   const id=accountProfile?.payment_id;
   if(!hasLifetimeAccess()||!id)return;
+  const paidAt=Date.parse(accountProfile?.purchased_at||'');
+  if(!paidAt||Date.now()-paidAt>3*864e5)return;
   const key='gitaMetaPurchase:'+id;
   try{if(localStorage.getItem(key)||localStorage.getItem('metaPurchaseTracked')===id)return}catch(e){}
   if(trackMeta('Purchase',annualEvent,false,'gita_purchase_'+id)){
@@ -342,11 +348,20 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     }
     async function handlePaymentReturn(){
       const params=new URLSearchParams(location.search);
-      if(params.get('payment')!=='success' || !authSession?.access_token) return false;
+      if(params.get('payment')!=='success')return false;
+      if(!authSession?.access_token){
+        // Came back in a browser that isn't signed in. The URL alone doesn't
+        // prove a payment, so don't claim one; access is on their account.
+        showScreen('authScreen');
+        $('authPageError').style.color='#2f7d32';
+        $('authPageError').textContent='If you have paid, sign in with the same mobile number or email you used to buy, and your Annual Access will be there.';
+        return false;
+      }
 
       toast('Confirming your payment…');
 
-      for(let i=0;i<8;i++){
+      // Razorpay usually confirms within seconds; wait up to about 30.
+      for(let i=0;i<20;i++){
         await loadAccountProfile();
         if(hasLifetimeAccess()){
           trackConfirmedPurchase();
@@ -357,10 +372,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           toast('Annual Access unlocked ✓');
           return true;
         }
-        await new Promise(r=>setTimeout(r,1200));
+        await new Promise(r=>setTimeout(r,1500));
       }
 
-      toast('Payment is not confirmed yet. If you paid, wait a moment and refresh to check your access.');
+      toast('Payment is not confirmed yet. If you paid, your access will appear here shortly; refresh in a minute.');
       return false;
     }
     async function refreshAuthSession(){
@@ -402,6 +417,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok) throw new Error(data.error||'Could not load account access');
         accountProfile=data;
+        trackConfirmedPurchase();
       }catch(e){
         if(generation!==accountRequestGeneration||authSession!==session)return null;
         accountProfile=null;
