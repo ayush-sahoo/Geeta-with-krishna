@@ -1219,6 +1219,39 @@ function openTopic(key,title){
 $('authBack').onclick=()=>showScreen('home');$('accountBack').onclick=()=>showScreen('home');
 $('googleLogin').onclick=startGoogleLogin;$('loginTab').onclick=()=>setAuthPageMode('login');$('signupTab').onclick=()=>setAuthPageMode('signup');
 $('passwordLoginStep').onsubmit=signInWithPassword;$('passwordSignupBtn').onclick=signUpWithPassword;
+// Engagement tracking, first-party only (never sent to Meta): the first time a
+// visitor does each of these in a page load, so the dashboard shows where ad
+// visitors stop. Captured before the button's own handler runs.
+const engaged=new Set();
+function logOnce(event){if(engaged.has(event))return;engaged.add(event);logEvent(event);}
+document.addEventListener('click',e=>{
+  const t=e.target.closest?.('button,a');if(!t)return;
+  const event=t.id==='heroAsk'?'tap_hero_ask'
+    :t.matches('.hero .btn.secondary')?'tap_hero_read'
+    :t.id==='buyLifetime'&&$('offer').dataset.mode==='free'?'tap_offer_free'
+    :t.id==='dailyRead'?'tap_daily_verse'
+    :t.matches('.topic')?'tap_topic'
+    :t.matches('.prompt')?'tap_prompt'
+    :t.id==='askNav'?'tap_nav_ask'
+    :t.id==='exploreNav'?'tap_nav_explore'
+    :t.id==='welcomeUser'?'tap_sign_in'
+    :null;
+  if(event)logOnce(event);
+},true);
+$('askInput').addEventListener('input',()=>logOnce('ask_typing'));
+addEventListener('scroll',()=>{
+  if(!$('home').classList.contains('active'))return;
+  const seen=(scrollY+innerHeight)/document.documentElement.scrollHeight;
+  if(seen>=.5)logOnce('scroll_half');
+  if(seen>=.9)logOnce('scroll_end');
+},{passive:true});
+// Time on page counts only while the page is visible.
+let visibleMs=0,lastTick=Date.now();
+setInterval(()=>{
+  const now=Date.now();if(document.visibilityState==='visible')visibleMs+=now-lastTick;lastTick=now;
+  if(visibleMs>=15e3)logOnce('stay_15s');
+  if(visibleMs>=45e3)logOnce('stay_45s');
+},1000);
 $('sendOtpBtn').onclick=sendOtp;$('verifyOtpBtn').onclick=verifyOtp;$('resendOtp').onclick=sendOtpAgain;$('changePhone').onclick=changePhone;
 $('phoneNumber').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendOtp()}};
 $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)verifyOtp()};
