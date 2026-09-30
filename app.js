@@ -572,7 +572,6 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           body:JSON.stringify({email,password})
         });
         const data=await r.json().catch(()=>({}));
-        if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok) throw new Error(
           data.msg||data.error_description||data.message||('Login failed ('+r.status+')')
         );
@@ -610,7 +609,6 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       try{
         const r=await fetch(SUPA+'/auth/v1/otp',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({phone:'+91'+d,create_user:true})});
         const data=await r.json().catch(()=>({}));
-        if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok)throw new Error(r.status===429?'Too many OTP requests. Please wait a minute and try again.':(data.msg||data.error_description||data.message||'Could not send OTP. Please try again.'));
         otpPhone='+91'+d;$('otpPhone').textContent='+91 '+d.slice(0,5)+' '+d.slice(5);
         $('otpStep').hidden=false;btn.hidden=true;$('phoneNumber').disabled=true;
