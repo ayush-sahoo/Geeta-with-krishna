@@ -80,6 +80,14 @@ await ctx.route(/facebook\.(com|net)|fonts\.g/,r=>r.fulfill({status:204,body:''}
 await ctx.route('**/api/geo',r=>r.fulfill({headers:H,body:JSON.stringify({country:'IN',region:'Uttar Pradesh',city:'Lucknow'})}));
 const s=await ctx.newPage(); const serr=[]; s.on('pageerror',e=>serr.push(e.message));
 await s.goto(BASE+'/?utm_source=facebook&utm_medium=paid&utm_campaign=launch&utm_content=reel1&fbclid=abc'); await s.waitForTimeout(500);
+// Engagement taps are logged once each, only to our own database.
+{ await s.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight)); await s.waitForTimeout(150);
+  await s.evaluate(()=>window.scrollTo(0,0));
+  await s.click('#heroAsk'); await s.waitForTimeout(200); await s.evaluate(()=>showScreen('home')); await s.click('#heroAsk'); await s.waitForTimeout(200);
+  await s.click('.prompt'); await s.fill('#askInput','Mujhe'); await s.type('#askInput',' chinta'); await s.waitForTimeout(200);
+  const ev=rpcs.filter(x=>x.fn==='log_event').map(x=>x.body.p_event);
+  const once=(n)=>ev.filter(e=>e===n).length===1;
+  ok(once('tap_hero_ask')&&once('tap_prompt')&&once('ask_typing')&&once('scroll_half')&&once('scroll_end'),'engagement taps, typing and scroll depth logged once each',ev.join(',')); }
 const v=rpcs.find(x=>x.fn==='log_visit');
 ok(v&&v.body.p_utm_campaign==='launch'&&v.body.p_utm_content==='reel1'&&v.body.p_has_fbclid===true&&v.body.p_in_app==='Instagram'&&v.body.p_device==='android'&&v.body.p_city==='Lucknow'&&v.body.p_region==='Uttar Pradesh','visit logged with city, with UTM, fbclid, in-app and device',JSON.stringify(v&&v.body));
 const vid=v&&v.body.p_visitor_id; ok(/^v_[a-z0-9]{8,}$/.test(vid||''),'anonymous visitor id created',vid);
