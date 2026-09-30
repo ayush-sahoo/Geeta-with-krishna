@@ -1,0 +1,39 @@
+# Supabase CLI settings for this repo. Only the edge-function settings matter
+# here: every function checks sign-in itself (or a signature/token), and some
+# are called without a user login (Razorpay's webhook, the Auth SMS hook, the
+# translation worker), so JWT verification at the gateway must stay OFF.
+# `supabase functions deploy <name> --project-ref bkwvuckznpaawmqrjjgk` reads this.
+project_id = "gita-verse"
+
+[functions.ask-krishna]
+verify_jwt = false
+
+[functions.tts-krishna]
+verify_jwt = false
+
+[functions.get-my-access]
+verify_jwt = false
+
+[functions.create-payment-link]
+verify_jwt = false
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.admin-stats]
+verify_jwt = false
+
+[functions.translation-worker]
+verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.raga-music]
+verify_jwt = false
+
+[functions.gemini-health]
+verify_jwt = false
+
+[functions.razorpay-health]
+verify_jwt = false
