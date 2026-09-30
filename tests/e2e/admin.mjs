@@ -11,7 +11,7 @@ const STATS={tracking_since:iso(3*36e5),funnel:{visitors:124,page_views:180,sign
  browsers:[{browser:'Instagram',visitors:80},{browser:'Facebook',visitors:20},{browser:'Android browser',visitors:24}],countries:[{country:'IN',visitors:120},{country:'US',visitors:4}],cities:[{city:'Lucknow',region:'UP',country:'IN',visitors:40},{city:'Austin',region:'Texas',country:'US',visitors:3}],
  timeline:[{t:iso(3*36e5),visitors:30},{t:iso(2*36e5),visitors:50},{t:iso(36e5),visitors:44}],
  users:[{id:'1',email:'priya@example.com',name:'Priya S',provider:'google',signed_up_at:iso(36e5),payment_status:'paid',access_expires_at:iso(-365*864e5),checkouts:1,signup_source:{utm_source:'facebook',utm_campaign:'Purchase campaign 28-09-26',utm_content:'reel-krishna-1',in_app:'Instagram',country:'IN',city:'Pune',region:'MH',device:'android'},is_test:false},
-  {id:'2',email:'ravi@example.com',name:null,provider:'email',signed_up_at:iso(2*36e5),payment_status:'unpaid',checkouts:1,signup_source:{has_fbclid:true,in_app:'Facebook',country:'IN'},is_test:false},
+  {id:'2',email:null,phone:'917076131555',name:null,provider:'phone',signed_up_at:iso(2*36e5),payment_status:'unpaid',checkouts:1,signup_source:{has_fbclid:true,in_app:'Facebook',country:'IN'},is_test:false},
   {id:'3',email:'me@test.in',name:'Owner',provider:'email',signed_up_at:iso(90*864e5),payment_status:'paid',access_expires_at:iso(-200*864e5),checkouts:2,signup_source:{device:'desktop',city:'New Delhi',region:'Delhi',country:'IN',backfilled:true},is_test:true},
   {id:'4',email:'<img src=x onerror=alert(1)>@x.in',name:'<b>xss</b>',provider:'email',signed_up_at:iso(5e6),payment_status:'unpaid',checkouts:0,signup_source:{utm_campaign:'<script>'},is_test:false}],
  generated_at:new Date().toISOString(),admin:'ayushsahoo2000@gmail.com'};
@@ -49,8 +49,13 @@ await p.selectOption('#f','checkout'); ok((await p.locator('#users tr').count())
 await p.selectOption('#f','real'); ok((await p.locator('#users tr').count())===3,'filter: hide test accounts');
 await p.selectOption('#f','all'); await p.fill('#q','priya'); ok((await p.locator('#users tr').count())===1,'search by email');
 await p.fill('#q','');
+ok((await p.locator('#users tr', { hasText: '+91 70761 31555' }).count())===1,'mobile sign-up shows its number (+91 70761 31555)');
+await p.fill('#q','70761'); ok((await p.locator('#users tr').count())===1,'search by mobile number');
+await p.fill('#q','+91 70761 31555'); ok((await p.locator('#users tr').count())===1,'search by formatted mobile number');
+await p.fill('#q','');
+await p.fill('#q','');
 const dl=p.waitForEvent('download',{timeout:3000}).catch(()=>null); await p.click('#csv'); const d=await dl;
-if(d){const fs=await import('node:fs');const path=await d.path();const csv=fs.readFileSync(path,'utf8');ok(csv.split('\n').length===5&&csv.includes('reel-krishna-1')&&csv.includes('Pune'),'CSV export has header + 4 users with city');}else ok(false,'CSV download');
+if(d){const fs=await import('node:fs');const path=await d.path();const csv=fs.readFileSync(path,'utf8');ok(csv.split('\n').length===5&&csv.includes('reel-krishna-1')&&csv.includes('Pune')&&csv.startsWith('email,phone,name')&&csv.includes(',+91 70761 31555,'),'CSV export has header + 4 users with city and a phone column');}else ok(false,'CSV download');
 ok((await p.locator('#campaigns tr').count())===2,'campaign table rows');
 const utext=await p.textContent('#users');
 ok(utext.includes('Pune, Maharashtra')&&utext.includes('Android'),'user location + device shown',utext);

@@ -49,7 +49,7 @@ th{text-align:left;font-size:11px;letter-spacing:.6px;text-transform:uppercase;c
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 td.r,th.r{text-align:right}
 tr:last-child td{border-bottom:0}
-.who b{display:block;font-weight:600}.who span{color:var(--muted);font-size:12px}
+.who b{display:block;font-weight:600}.who span{display:block;color:var(--muted);font-size:12px}
 .src{color:var(--ink2);font-size:12px;max-width:240px}
 .place span{display:block;color:var(--muted);font-size:11px}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
@@ -124,7 +124,7 @@ footer{color:var(--muted);font-size:12px}
     <section class="card">
       <h2>Signed-up users</h2>
       <div class="toolbar">
-        <input id="q" type="search" placeholder="Search email or name" aria-label="Search users">
+        <input id="q" type="search" placeholder="Search email, mobile or name" aria-label="Search users">
         <select id="f" aria-label="Filter users">
           <option value="all">All users</option>
           <option value="paid">Paid</option>
@@ -315,13 +315,17 @@ footer{color:var(--muted);font-size:12px}
     return esc(place) + (dev ? `<span>${dev}${src.backfilled ? ' · from server logs' : ''}</span>` : '');
   }
 
-  // Phone sign-ups have no email.
-  const contactOf = (u) => u.email || (u.phone ? '+' + String(u.phone).replace(/^\+/, '') : '–');
+  // Mobile numbers are stored as digits with the country code (919876543210).
+  const phoneOf = (u) => {
+    const d = String(u.phone || '').replace(/\D/g, '');
+    if (!d) return '';
+    return /^91\d{10}$/.test(d) ? '+91 ' + d.slice(2, 7) + ' ' + d.slice(7) : '+' + d;
+  };
 
   function userRows() {
     const q = $('q').value.trim().toLowerCase(), f = $('f').value;
     return (data.users || []).filter((u) => {
-      if (q && !((u.email || '') + ' ' + (u.phone || '') + ' ' + (u.name || '')).toLowerCase().includes(q)) return false;
+      if (q && !((u.email || '') + ' ' + (u.phone || '') + ' ' + phoneOf(u).replace(/\s/g, '') + ' ' + (u.name || '')).toLowerCase().includes(q.replace(/\s/g, ''))) return false;
       if (f === 'paid') return u.payment_status === 'paid';
       if (f === 'free') return u.payment_status !== 'paid';
       if (f === 'checkout') return u.payment_status !== 'paid' && u.checkouts > 0;
@@ -336,15 +340,17 @@ footer{color:var(--muted);font-size:12px}
     $('users').innerHTML = rows.length ? rows.map((u) => {
       const paid = u.payment_status === 'paid';
       const chips = (paid ? '<span class="chip paid">Paid</span>' : (u.checkouts ? '<span class="chip checkout">Checkout, unpaid</span>' : '<span class="chip free">Free</span>')) + (u.is_test ? ' <span class="chip test">Test</span>' : '');
-      return `<tr><td class="who"><b>${esc(u.name || contactOf(u))}</b>${u.name ? `<span>${esc(contactOf(u))}</span>` : ''}</td><td class="num">${ist(u.signed_up_at)}</td><td>${esc(u.provider || '–')}</td><td>${chips}</td><td class="src">${sourceText(u.signup_source)}</td><td class="src place">${placeText(u.signup_source)}</td><td class="r num">${fmt(u.checkouts)}</td><td class="num">${paid ? ist(u.access_expires_at, { hour: undefined, minute: undefined, year: 'numeric' }) : '–'}</td></tr>`;
+      // Name (or email, or mobile number) in bold; the other contact details underneath.
+      const lines = [u.name, u.email, phoneOf(u)].filter(Boolean);
+      return `<tr><td class="who"><b>${esc(lines[0] || '–')}</b>${lines.slice(1).map((l) => `<span>${esc(l)}</span>`).join('')}</td><td class="num">${ist(u.signed_up_at)}</td><td>${esc(u.provider || '–')}</td><td>${chips}</td><td class="src">${sourceText(u.signup_source)}</td><td class="src place">${placeText(u.signup_source)}</td><td class="r num">${fmt(u.checkouts)}</td><td class="num">${paid ? ist(u.access_expires_at, { hour: undefined, minute: undefined, year: 'numeric' }) : '–'}</td></tr>`;
     }).join('') : '<tr><td colspan="8" class="empty">No users match.</td></tr>';
   }
 
   function exportCsv() {
     const rows = userRows();
-    const cols = ['email', 'name', 'provider', 'signed_up_at', 'last_sign_in_at', 'payment_status', 'checkouts', 'purchased_at', 'access_expires_at', 'utm_source', 'utm_campaign', 'utm_content', 'in_app', 'city', 'region', 'country', 'is_test'];
+    const cols = ['email', 'phone', 'name', 'provider', 'signed_up_at', 'last_sign_in_at', 'payment_status', 'checkouts', 'purchased_at', 'access_expires_at', 'utm_source', 'utm_campaign', 'utm_content', 'in_app', 'city', 'region', 'country', 'is_test'];
     const cell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const lines = [cols.join(',')].concat(rows.map((u) => { const s = u.signup_source || {}; return [u.email || (u.phone ? '+' + u.phone : ''), u.name, u.provider, u.signed_up_at, u.last_sign_in_at, u.payment_status, u.checkouts, u.purchased_at, u.access_expires_at, s.utm_source, s.utm_campaign, s.utm_content, s.in_app, s.city, s.region, s.country, u.is_test].map(cell).join(','); }));
+    const lines = [cols.join(',')].concat(rows.map((u) => { const s = u.signup_source || {}; return [u.email, phoneOf(u), u.name, u.provider, u.signed_up_at, u.last_sign_in_at, u.payment_status, u.checkouts, u.purchased_at, u.access_expires_at, s.utm_source, s.utm_campaign, s.utm_content, s.in_app, s.city, s.region, s.country, u.is_test].map(cell).join(','); }));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
     a.download = 'gita-verse-users-' + new Date().toISOString().slice(0, 10) + '.csv';
