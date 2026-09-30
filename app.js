@@ -11,7 +11,8 @@ function trackMeta(name,data={},custom=false,eventId){
 // browser, so Meta can tie more sign-ups and purchases back to the ad that
 // brought them. Same pixel as in index.html.
 const META_PIXEL_ID='2178415463100322';
-let metaUserKey='';
+// index.html already passed a stored signed-in user to the first init.
+let metaUserKey=window.gitaMetaUserKey||'';
 function setMetaUser(user){
   try{
     if(typeof fbq!=='function'||!user?.id)return;
