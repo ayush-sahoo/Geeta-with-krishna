@@ -279,9 +279,12 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // registration when the user was created in the last few minutes.
     function trackGoogleRegistration(user){return trackNewAccount(user,'google')}
     // Counts a sign-in as a registration when the account was created in the
-    // last few minutes (Google and phone create the account on first use).
+    // last few minutes (Google and phone create the account on first use). A
+    // phone account is created when the OTP is requested, so its first
+    // confirmed code (phone_confirmed_at) marks the sign-up instead: someone who
+    // asks for a code, leaves and verifies a new one later still counts once.
     function trackNewAccount(user,method){
-      const created=Date.parse(user?.created_at||'');
+      const created=Date.parse((method==='phone'&&user?.phone_confirmed_at)||user?.created_at||'');
       if(!user?.id||!created||Date.now()-created>10*60*1000)return false;
       const key='gitaMetaRegistration:'+user.id;
       try{if(localStorage.getItem(key))return false}catch(e){}
@@ -440,7 +443,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     const IS_ANDROID=/Android/i.test(UA);
     function chromeIntentUrl(){
       const path=(location.pathname||'/').replace(/^\//,'');
-      const q='?from=inapp&vid='+encodeURIComponent(VISITOR_ID);
+      // Keep the ad click id and UTM tags so the pixel in Chrome still credits the ad.
+      const keep=new URLSearchParams();
+      for(const [k,v] of new URLSearchParams(location.search))if(k==='fbclid'||k.startsWith('utm_'))keep.set(k,v);
+      const q='?from=inapp&vid='+encodeURIComponent(VISITOR_ID)+(keep.size?'&'+keep:'');
       return 'intent://'+location.host+'/'+path+q+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.origin+'/'+path+q)+';end';
     }
     function openInChrome(){
@@ -519,8 +525,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         if(data.access_token){
           saveSession(data);
           await loadAccountProfile();
-          trackMeta('CompleteRegistration',{content_name:'Gita Verse account',status:true,registration_method:'email'});
-          logEvent('signup');
+          trackNewAccount(data.user,'email');
           toast('Account created');
           afterSignIn();
         }else{
