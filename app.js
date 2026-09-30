@@ -92,6 +92,7 @@ async function logVisit(){
 }
 function attributeSignup(){if(authSession?.access_token)rpc('set_my_attribution',{p_visitor_id:VISITOR_ID})}
 let authSession=null,accountProfile=null,authPageMode='login',selectedVerse=null,currentTab='meaning';
+let accountRequestGeneration=0;
 let speaking=false,currentAudio=null,ambientAudio=null,audioUrl=null,chatBusy=false,verseRequest=0;
 const verseCache=new Map();
 let saved;try{saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'))}catch(e){saved=new Set()}
@@ -269,7 +270,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       return {apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
     }
     function saveSession(session){
-      if(!session || session.user?.id!==authSession?.user?.id)clearChatConversation();
+      // Every session replacement invalidates outstanding access responses.
+      accountRequestGeneration++;
+      if(!session || session.user?.id!==authSession?.user?.id){accountProfile=null;clearChatConversation();}
       authSession=session||null;
       if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));setMetaUser(session.user);attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
@@ -381,6 +384,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
     }
     async function loadAccountProfile(){
+      const generation=++accountRequestGeneration,session=authSession;
       if(!authSession?.access_token){
         accountProfile=null;
         updateAccountUI();
@@ -391,13 +395,15 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           method:'GET',
           headers:{
             apikey:KEY,
-            Authorization:'Bearer '+authSession.access_token
+            Authorization:'Bearer '+session.access_token
           }
         });
         const data=await r.json().catch(()=>({}));
+        if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok) throw new Error(data.error||'Could not load account access');
         accountProfile=data;
       }catch(e){
+        if(generation!==accountRequestGeneration||authSession!==session)return null;
         accountProfile=null;
         console.error('loadAccountProfile failed',e);
       }
@@ -566,6 +572,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           body:JSON.stringify({email,password})
         });
         const data=await r.json().catch(()=>({}));
+        if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok) throw new Error(
           data.msg||data.error_description||data.message||('Login failed ('+r.status+')')
         );
@@ -603,6 +610,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       try{
         const r=await fetch(SUPA+'/auth/v1/otp',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({phone:'+91'+d,create_user:true})});
         const data=await r.json().catch(()=>({}));
+        if(generation!==accountRequestGeneration||authSession!==session)return null;
         if(!r.ok)throw new Error(r.status===429?'Too many OTP requests. Please wait a minute and try again.':(data.msg||data.error_description||data.message||'Could not send OTP. Please try again.'));
         otpPhone='+91'+d;$('otpPhone').textContent='+91 '+d.slice(0,5)+' '+d.slice(5);
         $('otpStep').hidden=false;btn.hidden=true;$('phoneNumber').disabled=true;

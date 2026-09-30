@@ -66,76 +66,19 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, adminKey);
 
-    // create-payment-link already inserted a "created" row for this link
-    // (payment_link_id is unique), so match on the link as well as the payment.
-    const { data: existing, error: lookupError } = await admin
-      .from("payment_transactions")
-      .select("id,status")
-      .or(`payment_id.eq.${paymentId},payment_link_id.eq.${paymentLinkId}`)
-      .limit(1)
-      .maybeSingle();
-    if (lookupError) console.error("payment_transactions lookup failed", lookupError.message);
+    // The database locks this account and records payment + entitlement in
+    // one transaction. A failure returns 500 so Razorpay can safely retry.
+    const { data: result, error } = await admin.rpc("apply_annual_payment", {
+      p_user_id: userId,
+      p_payment_id: paymentId,
+      p_payment_link_id: paymentLinkId,
+      p_amount_paise: amount,
+      p_currency: payment?.currency || link?.currency || "",
+      p_event: event
+    });
+    if (error) throw error;
+    return Response.json({ ok: true, ...result });
 
-    if (existing?.status === "paid") {
-      return Response.json({ ok: true, duplicate: true });
-    }
-
-    const paidDate = new Date();
-    const paidAt = paidDate.toISOString();
-
-    // A second payment while access is still active (e.g. two links opened in
-    // two tabs) adds a year on top of the current expiry instead of resetting it.
-    const { data: account } = await admin
-      .from("user_accounts")
-      .select("payment_status,access_expires_at")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const currentExpiry = account?.payment_status === "paid" && account?.access_expires_at
-      ? new Date(account.access_expires_at)
-      : null;
-    const expires = currentExpiry && currentExpiry > paidDate ? new Date(currentExpiry) : new Date(paidDate);
-    expires.setUTCFullYear(expires.getUTCFullYear() + 1);
-    const accessExpiresAt = expires.toISOString();
-
-    // Unlock access first: a bookkeeping failure must never block a paying user.
-    const { error: updateError } = await admin
-      .from("user_accounts")
-      .update({
-        plan_status: "annual",
-        payment_status: "paid",
-        payment_provider: "razorpay",
-        payment_id: paymentId,
-        payment_link_id: paymentLinkId,
-        amount_paid_paise: amount,
-        purchased_at: paidAt,
-        access_expires_at: accessExpiresAt,
-        updated_at: paidAt
-      })
-      .eq("user_id", userId)
-      // A redelivered event for a payment already applied must not push the expiry forward.
-      .or(`payment_id.is.null,payment_id.neq.${paymentId}`);
-
-    if (updateError) throw updateError;
-
-    const txn = {
-      status: "paid",
-      payment_id: paymentId,
-      payment_link_id: paymentLinkId,
-      amount_paise: amount,
-      raw_event: event,
-      paid_at: paidAt
-    };
-    const { error: txnError } = existing?.id
-      ? await admin.from("payment_transactions").update(txn).eq("id", existing.id)
-      : await admin.from("payment_transactions").insert({
-          ...txn,
-          user_id: userId,
-          provider: "razorpay",
-          currency: payment?.currency || "INR"
-        });
-    if (txnError) console.error("payment_transactions write failed", paymentId, txnError.message);
-
-    return Response.json({ ok: true, unlocked: userId, access_expires_at: accessExpiresAt });
   } catch (e) {
     console.error("razorpay-webhook failed", String(e));
     return Response.json({ error: "Webhook processing failed" }, { status: 500 });
