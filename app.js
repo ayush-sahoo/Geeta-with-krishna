@@ -650,7 +650,12 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         }
       }catch(e){}
     }
+    // Creating the Razorpay link takes a few seconds. While it does, every buy
+    // button (bottom bar, Account page, the card under the free answer) shows
+    // progress and further taps are ignored, so one tap makes one link.
+    let checkoutBusy=false;
     async function startLifetimePurchase(){
+      if(checkoutBusy)return;
       trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
       if(!authSession?.access_token){
         showScreen('authScreen');
@@ -663,8 +668,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         return;
       }
 
-      const buttons=[$('buyLifetime'),$('accountUpgrade')].filter(Boolean);
-      buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.textContent;b.textContent='Preparing secure payment…'});
+      checkoutBusy=true;
+      const buttons=[$('buyLifetime'),$('accountUpgrade'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
+      buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.textContent;b.textContent='Opening secure payment…'});
+      let leaving=false;
 
       try{
         const r=await fetch(SUPA+'/functions/v1/create-payment-link',{
@@ -691,12 +698,16 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         trackMeta('InitiateCheckout',annualEvent);
 
+        leaving=true;
         window.location.href=d.short_url;
       }catch(e){
         trackMeta('CheckoutError',{stage:'create_payment_link'},true);
         toast(e.message||'Could not start payment');
       }finally{
-        buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Annual Access →'});
+        // While the browser opens Razorpay the buttons stay locked; if it never
+        // leaves (or the visitor comes back), they unlock after a few seconds.
+        const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;b.textContent=b.dataset.label||'Get Annual Access →'});};
+        if(leaving)setTimeout(reset,8000);else reset();
       }
     }
     function themeOf(v){
