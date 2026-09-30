@@ -4,10 +4,10 @@ Edit the PAGES content below, then run: python3 tools/build_legal_pages.py"""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EMAIL = "ayush@edumorph.in"
-UPDATED = "28 September 2026"
+EMAIL = "support@edumorph.in"
+UPDATED = "30 September 2026"
 # Pages changed since then show their own date.
-UPDATED_ON = {"privacy.html": "29 September 2026"}
+UPDATED_ON = {}
 MAIL = f'<a href="mailto:{EMAIL}">{EMAIL}</a>'
 NAV = [("privacy.html", "Privacy Policy"), ("terms.html", "Terms of Service"),
        ("refund.html", "Refund Policy"), ("contact.html", "Contact Us")]
