@@ -35,7 +35,11 @@ async function backend(route) {
     S.polls++; if (S.paidAfterPolls && S.polls >= S.paidAfterPolls) S.paid = true;
     return json(account());
   }
-  if (p === '/functions/v1/create-payment-link') return authed ? json({ id: 'plink_T', short_url: 'https://rzp.io/l/test' }) : json({ error: 'Sign in required' }, 401);
+  if (p === '/functions/v1/create-payment-link') {
+    if (!authed) return json({ error: 'Sign in required' }, 401);
+    if (S.linkDelay) await new Promise(r => setTimeout(r, S.linkDelay)); // Razorpay can take seconds
+    return json({ id: 'plink_T', short_url: 'https://rzp.io/l/test' });
+  }
   if (p === '/rest/v1/gita_verses') {
     const ch = Number((url.searchParams.get('chapter_id') || '').replace('eq.', ''));
     return json(Array.from({ length: 20 }, (_, i) => V(ch, i + 1, `translation of ${ch}.${i + 1}`)));
@@ -139,12 +143,21 @@ check(!S.calls.some(c => c.p === '/rest/v1/gita_verses'), 'free user never fetch
 
 // ===== 3. Checkout =====
 console.log('\n# Checkout');
-const nav = page.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 5000 }).catch(() => null);
-await page.click('#accountUpgrade');
+// The buy button under the free answer, tapped repeatedly while the link is slow
+// to arrive (a real visitor tapped 5 times and got 5 payment links).
+S.linkDelay = 1500;
+await page.evaluate(() => showScreen('ask'));
+const nav = page.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 8000 }).catch(() => null);
+await page.click('.upgrade-btn');
+await wait(150);
+check((await page.textContent('.upgrade-btn')) === 'Opening secure payment…' && await page.isDisabled('.upgrade-btn') && await page.isDisabled('#buyLifetime'), 'buy tap shows progress at once and locks every buy button', await page.textContent('.upgrade-btn'));
+for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('.upgrade-btn').click()); await page.evaluate(() => startLifetimePurchase()); }
 const navReq = await nav;
 await page.waitForURL(/rzp\.io/, { timeout: 5000 }).catch(() => {});
 const pl = S.calls.find(c => c.p === '/functions/v1/create-payment-link');
 check(!!pl && pl.auth === 'Bearer tok_u1', 'Get Annual Access calls create-payment-link with the user\'s login');
+check(S.calls.filter(c => c.p === '/functions/v1/create-payment-link').length === 1, 'repeated buy taps create only one payment link', String(S.calls.filter(c => c.p === '/functions/v1/create-payment-link').length));
+check(ALLFB.filter(a => a[1] === 'InitiateCheckout').length === 1 && ALLFB.filter(a => a[1] === 'CheckoutClick').length === 1, 'repeated buy taps send Meta one CheckoutClick and one InitiateCheckout');
 check(!!navReq, 'browser is sent to the Razorpay payment page');
 const ic = ALLFB.find(a => a[1] === 'InitiateCheckout');
 check(ic?.[2]?.value === 1000 && ic?.[2]?.currency === 'INR', 'Meta InitiateCheckout fires with 1000 INR before redirect', JSON.stringify(ic));
