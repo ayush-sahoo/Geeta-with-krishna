@@ -895,7 +895,7 @@ async function openVerse(ch,v){
 // (translated only when Listen is pressed), as before languages were added.
 let chatLanguage='auto',meaningLanguage='en-hi',translationGeneration=0;
 const translationCache=new Map();
-let meaningReady=Promise.resolve(null),narrationGeneration=0,audioButton=null,cancelPlayback=null;
+let meaningReady=Promise.resolve(null),narrationGeneration=0,cancelPlayback=null;
 function languageKey(){return 'gitaLanguages:'+ (authSession?.user?.id||'guest');}
 function restoreLanguagePreferences(){
   let saved={};try{saved=JSON.parse(localStorage.getItem(languageKey())||'{}')}catch(e){}
@@ -945,10 +945,6 @@ function setupLanguages(){
   restoreLanguagePreferences();
 }
 // Voice language for an 'auto' chat reply, from the script it was written in.
-function detectLanguage(text){
-  const scripts=[[/[\u0900-\u097F]/,'hi'],[/[\u0980-\u09FF]/,'bn'],[/[\u0A00-\u0A7F]/,'pa'],[/[\u0A80-\u0AFF]/,'gu'],[/[\u0B80-\u0BFF]/,'ta'],[/[\u0C00-\u0C7F]/,'te'],[/[\u0C80-\u0CFF]/,'kn'],[/[\u0D00-\u0D7F]/,'ml'],[/[\u0600-\u06FF]/,'ur']];
-  return (scripts.find(([rx])=>rx.test(text))||[,'en'])[1];
-}
 // Stored translations (text_translations): each language's set is loaded once,
 // keyed by the SHA-256 of the English piece, so most text appears instantly.
 const storedTranslations=new Map();
@@ -1047,7 +1043,6 @@ function toggleSave(){
 }
 function stopSpeech(){
   narrationGeneration++;cancelPlayback?.();cancelPlayback=null;
-  if(audioButton){audioButton.textContent='▶ Listen';audioButton=null;}
   speaking=false;
   if(currentAudio){currentAudio.pause();currentAudio=null;}
   if(ambientAudio){ambientAudio.pause();ambientAudio=null;}
@@ -1106,14 +1101,6 @@ async function playText(text,language,generation,firstClip){
     await playBlob(blob);
     if(generation!==narrationGeneration)return;
   }
-}
-async function listenReply(text,language,button){
-  if(!hasLifetimeAccess()){showPaywall();return;}
-  if(audioButton===button){stopSpeech();return;}
-  stopSpeech();unlockVoice();const generation=narrationGeneration;audioButton=button;button.textContent='■ Stop';speaking=true;
-  try{await playText(text,language,generation);}
-  catch(e){if(generation===narrationGeneration)toast(e.message||'Audio unavailable. Please retry.');}
-  finally{if(generation===narrationGeneration)stopSpeech();}
 }
 async function speak(){
   if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
@@ -1194,8 +1181,6 @@ async function sendAsk(){
       answer.textContent=d.answer||'No response was returned. Please try again.';
       if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
     }
-    const spoken=d.style==='krishna_inspired'?replyText(d):d.answer;
-    if(spoken){const listen=appendText(answer,'button','▶ Listen','listen-reply');listen.type='button';listen.onclick=()=>listenReply(spoken,language||detectLanguage(spoken),listen);}
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
     if(d.free_question){
       if(accountProfile)accountProfile.free_question_available=false;renderAccessState();
