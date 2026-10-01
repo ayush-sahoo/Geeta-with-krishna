@@ -15,6 +15,30 @@ async function hmacHex(secret: string, raw: string) {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// A short, card/bank-free summary of any Razorpay event, so failed or abandoned
+// payment attempts (and their reasons) are visible, not only successful ones.
+function eventSummary(event: any) {
+  const link = event?.payload?.payment_link?.entity || {};
+  const payment = event?.payload?.payment?.entity || {};
+  const contact = String(payment?.contact || "").replace(/\D/g, "");
+  return {
+    event: String(event?.event || "unknown"),
+    user_id: link?.notes?.user_id || payment?.notes?.user_id || null,
+    payment_link_id: link?.id || null,
+    order_id: payment?.order_id || link?.order_id || null,
+    payment_id: payment?.id || null,
+    status: payment?.status || link?.status || null,
+    method: payment?.method || null,
+    amount_paise: Number.isFinite(Number(payment?.amount)) ? Number(payment.amount) : null,
+    contact_last4: contact ? contact.slice(-4) : null,
+    error_code: payment?.error_code || null,
+    error_description: payment?.error_description || null,
+    error_source: payment?.error_source || null,
+    error_step: payment?.error_step || null,
+    error_reason: payment?.error_reason || null
+  };
+}
+
 function safeEqual(a: string, b: string) {
   if (!a || !b || a.length !== b.length) return false;
   let out = 0;
@@ -43,6 +67,16 @@ Deno.serve(async (req) => {
     }
 
     const event = JSON.parse(raw);
+    const admin = createClient(supabaseUrl, adminKey);
+
+    // Diagnostics only: never let a logging problem affect payment handling.
+    try {
+      const { error: logError } = await admin.from("payment_events").insert(eventSummary(event));
+      if (logError) console.error("payment event log failed", logError.message);
+    } catch (e) {
+      console.error("payment event log failed", String(e));
+    }
+
     if (event?.event !== "payment_link.paid") {
       return Response.json({ ok: true, ignored: true });
     }
@@ -63,8 +97,6 @@ Deno.serve(async (req) => {
     if (amount !== ANNUAL_PRICE_PAISE || !["paid"].includes(linkStatus) || !["captured","authorized"].includes(paymentStatus)) {
       return Response.json({ error: "Payment validation failed" }, { status: 400 });
     }
-
-    const admin = createClient(supabaseUrl, adminKey);
 
     // The database locks this account and records payment + entitlement in
     // one transaction. A failure returns 500 so Razorpay can safely retry.
