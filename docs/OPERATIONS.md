@@ -25,6 +25,12 @@ The owner's test accounts are listed with a "Test" label and excluded from funne
 - **Function errors:** Supabase dashboard → Edge Functions → the function → Logs. Provider problems are logged as `ElevenLabs error <status>`, `Gemini error <status>`, `MSG91 rejected the SMS: …`, `Razorpay link creation failed …`.
 - **Phone sign-in:** Auth logs show `/otp` (code requested) and `/verify` (code entered). An SMS that never arrives usually means an empty MSG91 wallet or a template problem; the `send-sms` logs say which.
 - **Payments:** `payment_transactions` has one row per payment link (`created`), updated to `paid` by the webhook. A paid Razorpay payment with no `paid` row means the webhook failed: check `razorpay-webhook` logs and the webhook secret.
+- **Failed or abandoned payments:** `payment_events` has one row per verified Razorpay webhook event (`payment.failed`, `payment_link.paid`, etc.) with the method, status and Razorpay's error reason; it holds no card, bank or UPI ID details, only the last 4 digits of the payer's phone. Which events arrive depends on what is ticked in Razorpay → Webhooks. For example:
+
+  ```sql
+  select received_at, event, status, method, contact_last4, error_reason, error_description
+  from payment_events order by received_at desc limit 50;
+  ```
 
 ## Translation worker
 
