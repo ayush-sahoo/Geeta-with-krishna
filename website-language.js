@@ -49,7 +49,12 @@ async function setWebsiteLanguage(language){
   $('appLanguage').disabled=true;$('websiteLanguageStatus').textContent='Loading website language…';
   try{
     let data;
-    for(let attempt=0;attempt<8;attempt++){
+    try{
+      const cached=await fetch('/locales/'+encodeURIComponent(language)+'.json',{cache:'force-cache',signal:AbortSignal.timeout(10000)});
+      if(cached.ok)data=await cached.json();
+    }catch(e){}
+    if(generation!==websiteLanguageGeneration)return;
+    for(let attempt=0;!data&&attempt<8;attempt++){
       const response=await fetch(SUPA+'/functions/v1/website-language?language='+encodeURIComponent(language),{headers:{apikey:KEY,Authorization:'Bearer '+KEY},signal:AbortSignal.timeout(90000)});
       if(generation!==websiteLanguageGeneration)return;
       if(response.status===202){await new Promise(resolve=>setTimeout(resolve,1500));continue;}
