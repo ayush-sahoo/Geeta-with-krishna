@@ -1,6 +1,6 @@
 # Gita Verse
 
-The Bhagavad Gita website at [gitaverse.co.in](https://gitaverse.co.in): all 18 chapters and 700 verses with meanings in 74 languages, verse narration, and "Ask Krishna", a guide that answers life questions from the Gita. New accounts get one free Ask Krishna question; Annual Access (₹1,000/year, paid through Razorpay) unlocks the rest.
+The Bhagavad Gita website at [gitaverse.co.in](https://gitaverse.co.in): all 18 chapters and 700 verses with meanings in 74 languages, verse narration, and "Ask Krishna", a guide that answers life questions from the Gita. Visitors can ask Krishna one question without an account and one more after a free sign-up; Annual Access (₹1,000/year, paid through Razorpay) unlocks the rest.
 
 ## Documentation
 

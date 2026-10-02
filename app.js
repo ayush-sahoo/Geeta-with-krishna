@@ -314,14 +314,22 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       let p=null;try{p=JSON.parse(localStorage.getItem(PENDING_QUESTION_KEY)||'null');localStorage.removeItem(PENDING_QUESTION_KEY)}catch(e){}
       return p&&typeof p.q==='string'&&Date.now()-p.at<3600000?p.q:'';
     }
+    // Visitors get one answer before signing up (enforced by ask-krishna); this
+    // only saves a wasted round trip once it is used on this browser.
+    function anonQuestionUsed(){try{return localStorage.getItem('gitaAnonAsked')==='1'}catch(e){return false}}
+    function markAnonQuestionUsed(){try{localStorage.setItem('gitaAnonAsked','1')}catch(e){}}
+    function askAfterSignIn(){try{localStorage.setItem('gitaAskAfterSignIn',String(Date.now()))}catch(e){}}
+    function takeAskAfterSignIn(){let v=null;try{v=localStorage.getItem('gitaAskAfterSignIn');localStorage.removeItem('gitaAskAfterSignIn')}catch(e){}return !!v&&Date.now()-Number(v)<3600000}
     function afterSignIn(){
       const q=takePendingQuestion();
+      const askNext=takeAskAfterSignIn();
       if(q&&(hasLifetimeAccess()||accountProfile?.free_question_available)){
         showScreen('ask');$('askInput').value=q;sendAsk();return true;
       }
       if(takeBuyAfterSignIn()&&!hasLifetimeAccess()){
         showScreen('accountScreen');startLifetimePurchase();return true;
       }
+      if(askNext&&(hasLifetimeAccess()||accountProfile?.free_question_available)){openAskKrishna();return true;}
       showScreen('accountScreen');return false;
     }
     async function consumeOAuthHash(){
@@ -898,11 +906,16 @@ function showPaywall(message='Sign in and get Annual Access to continue.'){
 function renderAccessState(){
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
-  $('chatHint').textContent=freeLeft?'Your first question is free · Grounded in the Gita':'Grounded in the Gita · practical for life today';
-  $('heroFreeNote').hidden=!freeLeft;
+  const signedOut=!authSession?.access_token,oneMore=freeLeft&&signedOut&&anonQuestionUsed();
+  $('chatHint').textContent=oneMore?'One more question free with a quick sign-up':freeLeft?'Your first question is free · Grounded in the Gita':'Grounded in the Gita · practical for life today';
+  $('heroFreeNote').hidden=!freeLeft;$('heroFreeNote').textContent=oneMore?'1 more free':'1st question free';
   // Until the free question is used, the bottom bar invites people to try it;
   // afterwards it offers Annual Access.
-  const offer=freeLeft
+  const offer=freeLeft&&signedOut&&!oneMore
+    ?['🙏','TRY IT FREE','Ask Krishna your first question','No sign-up needed · no payment','Ask free →']
+    :oneMore
+    ?['🙏','ONE MORE FREE','Ask Krishna one more question','Free with a quick sign-up · no payment','Ask free →']
+    :freeLeft
     ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
     :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','About ₹83/month · One-time payment, no autopay','Get access →'];
   ['offerIcon','offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i]});
@@ -1232,10 +1245,14 @@ function replyText(d){
 async function sendAsk(){
   if(chatBusy)return;
   const q=$('askInput').value.trim();if(!q){toast('Write a question first');return}
-  // Without Annual Access: sign up free for one question, then the paywall.
+  // Without Annual Access: one answer before signing up, one more free with an
+  // account, then the paywall.
+  let anonymous=false;
   if(!hasLifetimeAccess()){
-    if(!authSession?.access_token){savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
-    if(!accountProfile?.free_question_available){showPaywall();return}
+    if(!authSession?.access_token){
+      if(anonQuestionUsed()){savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
+      anonymous=true;
+    }else if(!accountProfile?.free_question_available){showPaywall();return}
   }
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
   const generation=chatGeneration,language=chatLanguage==='auto'?undefined:chatLanguage;
@@ -1244,10 +1261,15 @@ async function sendAsk(){
   appendText($('chat'),'div',q,'bubble user');const answer=appendText($('chat'),'div','Krishna is listening…','bubble assistant');
   answer.scrollIntoView({behavior:'smooth',block:'center'});
   try{
-    await freshSession();
-    if(!authSession?.access_token)throw new Error('Please sign in again to ask Krishna.');
-    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',headers:authHeaders(authSession.access_token),body:JSON.stringify({question:q,language,history:chatHistory.slice(-8)})});
+    if(!anonymous){
+      await freshSession();
+      if(!authSession?.access_token)throw new Error('Please sign in again to ask Krishna.');
+    }
+    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{signal:controller.signal,method:'POST',
+      headers:anonymous?{apikey:KEY,'Content-Type':'application/json'}:authHeaders(authSession.access_token),
+      body:JSON.stringify(anonymous?{question:q,language,visitor_id:VISITOR_ID}:{question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
+    if(r.status===403&&d.signup){markAnonQuestionUsed();renderAccessState();answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
     if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall();return}
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';answer.dir='auto';if(language)answer.lang=language;
@@ -1264,6 +1286,14 @@ async function sendAsk(){
       if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
     }
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
+    if(d.anon_free){
+      markAnonQuestionUsed();renderAccessState();
+      const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
+      appendText(card,'strong','Want to ask Krishna more? 🙏');
+      appendText(card,'p','Create a free account to ask one more question free and keep this conversation.');
+      const next=appendText(card,'button','Continue free →','continue-free-btn');next.type='button';
+      next.onclick=()=>{askAfterSignIn();logEvent('paywall_view');openFreeQuestionSignup();$('authModeLead').textContent='Create a free account to ask Krishna one more question free.';};
+    }
     if(d.free_question){
       if(accountProfile)accountProfile.free_question_available=false;renderAccessState();
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');

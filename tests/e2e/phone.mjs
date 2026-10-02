@@ -25,7 +25,9 @@ async function run(label, ua, inApp = '') {
   // Wait for the page to react to a (simulated) server reply rather than a fixed time.
   const until = (fn) => pg.waitForFunction(fn, null, { timeout: 5000 }).catch(() => {}); pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(BASE + '/?fbclid=x&utm_source=ig'); await pg.waitForTimeout(600);
-  await pg.evaluate(() => showScreen('ask')); await pg.fill('#askInput', 'Mujhe career ki chinta hai'); await pg.click('#sendAskButton'); await pg.waitForTimeout(300);
+  // This visitor already had the free answer before sign-up, so their next
+  // question leads to sign-up (the phone flow under test).
+  await pg.evaluate(() => { localStorage.setItem('gitaAnonAsked', '1'); renderAccessState(); showScreen('ask'); }); await pg.fill('#askInput', 'Mujhe career ki chinta hai'); await pg.click('#sendAskButton'); await pg.waitForTimeout(300);
   ok(await pg.isVisible('#phoneAuth') && await pg.isVisible('#phoneNumber'), 'sign-up screen shows the mobile number option');
   const order = await pg.evaluate(() => [...document.querySelector('.auth-page-card').children].map(e => e.id || e.className).join(' > '));
   ok(order.indexOf('phoneAuth') < order.indexOf('googleLogin') && (!inApp || order.indexOf('passwordSignupStep') < order.indexOf('googleLogin')), 'mobile first; inside an app, Google goes last', order);
