@@ -59,15 +59,6 @@ if(/^geeta-with-krishna(-ayushsahoo2000-5300)?\.vercel\.app$/.test(location.host
 .verse-link span{font-size:13px;margin-top:5px;display:block}
 
 
-/* Compact offer strip in every access state; respect mobile browser safe areas. */
-.floating-offer{padding:8px 10px;gap:8px;border-radius:16px;bottom:calc(8px + env(safe-area-inset-bottom,0px))}
-.offer-icon{width:30px;height:30px;border-radius:10px;font-size:18px}
-.offer-copy small{display:none}
-.offer-copy b{font-size:14px;line-height:1.2;margin:0;white-space:nowrap}
-.offer-copy span{font-size:10px;line-height:1.3;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.offer-btn{min-height:44px;padding:8px 10px;border-radius:11px;font-size:11px}
-.home{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
-@media(max-width:360px){.offer-icon{display:none}.offer-copy b{font-size:14px}.offer-copy span{font-size:10px}}
 
 </style>
 
@@ -356,18 +347,6 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 .upgrade-card{border:1px solid #e3b75e;background:#fff6e2}.upgrade-card strong{display:block;font-size:16px;margin-bottom:6px}.upgrade-card p{margin:6px 0}.upgrade-price{font-weight:700;color:#7a3d0c}.upgrade-btn,.continue-free-btn{margin-top:8px;width:100%;border:0;border-radius:14px;padding:12px 14px;font-weight:700;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c}
 #translationStatus{font-size:12px;color:#805625}[dir="auto"]{unicode-bidi:plaintext}
 </style>
-<style>
-/* Final offer styles: keep all signup/payment states compact and on palette. */
-.floating-offer{width:min(456px,calc(100% - 24px));padding:8px 10px;gap:9px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border:1px solid #dfba7d;border-radius:16px;background:linear-gradient(135deg,#fffdf7,#fff2d8);box-shadow:0 5px 18px rgba(99,51,12,.18)}
-.offer-icon{width:30px;height:30px;border-radius:50%;background:#fbe6bc;color:#864719;box-shadow:none;font-size:17px}
-.offer-copy{color:#512b18}
-.offer-copy small{display:none}
-.offer-copy b{font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#512b18;margin:0;white-space:nowrap}
-.offer-copy span{font-size:10px;line-height:1.35;color:#795b42;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.offer-btn{min-height:44px;padding:8px 12px;border-radius:11px;border:1px solid #e7ac37;background:linear-gradient(180deg,#ffdc78,#f4bf49);color:#512b18;font-size:11px;font-weight:700;box-shadow:0 2px 5px rgba(133,76,15,.12)}
-.home{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
-@media(max-width:360px){.offer-icon{display:none}.offer-copy b{font-size:13px}.offer-copy span{font-size:10px}.offer-btn{padding:8px 10px}}
-</style>
 <link rel="stylesheet" href="connected.css">
   <!-- Meta Pixel Code -->
   <script>
@@ -506,7 +485,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
         <nav class="app-legal-links account-legal-links" aria-label="Policies"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="refund.html">Refunds</a><a href="contact.html">Contact</a></nav>
       </div>
     </section><section id="topicScreen" class="screen explore"><button class="back" onclick="showScreen('home')">← Life topics</button><div class="explore-hero"><div class="eyebrow">GUIDANCE FOR YOUR JOURNEY</div><h1 id="topicTitle"></h1><p id="topicIntro"></p></div><div class="meaning-card"><h3>WHAT TO DO</h3><ul id="topicDos"></ul><h3>WHAT TO AVOID</h3><ul id="topicDonts"></ul><div id="topicPractice" class="reflection"></div><h3 class="topic-verses-title">VERSES TO REFLECT ON</h3><div id="topicVerses"></div></div></section>
-<div id="offer" class="floating-offer"><div class="offer-icon" id="offerIcon">♕</div><div class="offer-copy"><small id="offerKicker">SPECIAL 1-YEAR ACCESS</small><b id="offerTitle">₹1,000 for 1 year</b><span id="offerText">About ₹83/month · One-time payment, no autopay</span></div><button id="buyLifetime" class="offer-btn" onclick="offerAction()">Get access →</button></div>
+<div id="offer" class="floating-offer"><div class="offer-icon" id="offerIcon"><svg viewBox="0 0 32 32" width="25" height="25" fill="none" aria-hidden="true"><path d="M16 25C9 22 6 16 8 10c5 1 8 5 8 15Zm0 0c7-3 10-9 8-15-5 1-8 5-8 15Z" fill="#a65c20" opacity=".55"/><path d="M16 5c-5 5-6 12 0 20 6-8 5-15 0-20Z" fill="#7b3c16"/><path d="M16 25C8 25 4 21 3 16c6-1 11 2 13 9Zm0 0c8 0 12-4 13-9-6-1-11 2-13 9Z" fill="#a65c20"/><path d="M10 28h12" stroke="#7b3c16" stroke-width="2" stroke-linecap="round"/></svg></div><div class="offer-copy"><small id="offerKicker">SPECIAL 1-YEAR ACCESS</small><b id="offerTitle">₹1,000 for 1 year</b><span id="offerText">About ₹83/month · One-time payment, no autopay</span></div><button id="buyLifetime" class="offer-btn" onclick="offerAction()">Get access →</button></div>
 <div id="toast" class="toast"></div>
 </div>
 <script src="languages.js"></script>
