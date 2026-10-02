@@ -941,11 +941,11 @@ function renderAccessState(){
   // Until the free question is used, the bottom bar invites people to try it;
   // afterwards it offers Annual Access.
   const offer=freeLeft&&signedOut&&!oneMore
-    ?['🙏','TRY IT FREE','Ask Krishna your first question','No sign-up needed · no payment','Ask free →']
+    ?['🙏','TRY IT FREE','Ask Krishna free','No sign-up needed · no payment','Ask free →']
     :oneMore
-    ?['🙏','ONE MORE FREE','Ask Krishna one more question','Free with a quick sign-up · no payment','Ask free →']
+    ?['🙏','ONE MORE FREE','One more free question','Free with sign-up · no payment','Ask free →']
     :freeLeft
-    ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
+    ?['🙏','TRY IT FREE','Ask Krishna free','Free with sign-up · no payment','Ask free →']
     :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','About ₹83/month · One-time payment, no autopay','Get access →'];
   ['offerIcon','offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i]});
   $('offer').dataset.mode=freeLeft?'free':'buy';
