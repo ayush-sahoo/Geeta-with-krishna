@@ -1,7 +1,7 @@
 import {adminClient,GEMINI_URL} from '../_shared/server.ts';
 import {GITA_LANGUAGES} from '../_shared/languages.ts';
 import sources from '../_shared/ui-strings.json' with {type:'json'};
-const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'apikey,content-type','Cache-Control':'no-store'};
+const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'GET,OPTIONS','Cache-Control':'no-store'};
 const revision='ui-20261002-1';
 function json(data:unknown,status=200){return Response.json(data,{status,headers:cors});}
 Deno.serve(async req=>{
