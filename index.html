@@ -397,7 +397,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 <header class="topbar">
   <div class="toprow"><div class="brand"><div class="om">ॐ</div><div class="brandcopy"><b>Gita Verse</b><small>Read · Reflect · Ask</small></div></div><button class="welcome" id="welcomeUser" onclick="openAccount()">Sign in 🙏</button></div>
   <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button id="langButton" aria-label="Choose language" aria-expanded="false" aria-controls="langMenu" onclick="toggleLanguageMenu()">🌐</button></nav>
-  <div id="langMenu" class="lang-menu" hidden><label for="appLanguage">Language</label><select id="appLanguage"></select><small>Used for Krishna's replies, verse meanings and audio. Default: Krishna replies in the language you write in; meanings in English with Hindi audio. You can also change it on each screen.</small></div>
+  <div id="langMenu" class="lang-menu" hidden><label for="appLanguage">Website language</label><select id="appLanguage"></select><small id="websiteLanguageStatus" role="status"></small><small>Changes website menus, buttons and screen text. Choose chat replies and verse meanings separately on their screens.</small></div>
 </header>
 
 <main id="home" class="screen active home">
@@ -510,6 +510,8 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 </div>
 <script src="languages.js"></script>
 <script src="chat-history.js"></script>
+<script src="website-language.js"></script>
 <script src="app.js"></script>
 </body></html>
+
 

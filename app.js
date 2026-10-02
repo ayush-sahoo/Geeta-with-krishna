@@ -1036,9 +1036,7 @@ function saveLanguages(){
 }
 // The header 🌐 picker shows one app-wide language; 'custom' when the chat
 // and meaning screens were set to different languages.
-function syncAppLanguage(){
-  $('appLanguage').value=chatLanguage==='auto'&&meaningLanguage==='en-hi'?'default':chatLanguage===meaningLanguage?chatLanguage:'custom';
-}
+function syncAppLanguage(){ /* Website language is managed independently. */ }
 function toggleLanguageMenu(open=$('langMenu').hidden){
   $('langMenu').hidden=!open;$('langButton').setAttribute('aria-expanded',String(open));
   if(open)$('appLanguage').focus();
@@ -1046,8 +1044,7 @@ function toggleLanguageMenu(open=$('langMenu').hidden){
 function setupLanguages(){
   const extra=(id,value,label,hidden)=>{const o=document.createElement('option');o.value=value;o.textContent=label;if(hidden)o.hidden=true;$(id).appendChild(o);};
   extra('chatLanguage','auto','Auto · same as your message');extra('meaningLanguage','en-hi','English text · Hindi audio');
-  extra('appLanguage','default','Default');extra('appLanguage','custom','Custom (set on each screen)',true);
-  for(const id of ['chatLanguage','meaningLanguage','appLanguage']){
+  for(const id of ['chatLanguage','meaningLanguage']){
     for(const [code,name] of Object.entries(GITA_LANGUAGES)){
       const option=document.createElement('option');option.value=code;option.textContent=name;$(id).appendChild(option);
     }
@@ -1058,14 +1055,6 @@ function setupLanguages(){
       if(id==='meaningLanguage'&&selectedVerse)renderTab(currentTab);
     };
   }
-  $('appLanguage').onchange=()=>{
-    const v=$('appLanguage').value;if(v==='custom')return;
-    stopSpeech();
-    [chatLanguage,meaningLanguage]=v==='default'?['auto','en-hi']:[v,v];
-    $('chatLanguage').value=chatLanguage;$('meaningLanguage').value=meaningLanguage;saveLanguages();
-    if(selectedVerse)renderTab(currentTab);
-    toggleLanguageMenu(false);toast(v==='default'?'Language: default':'Language: '+GITA_LANGUAGES[v].split(' · ')[0]);
-  };
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('langMenu').hidden){toggleLanguageMenu(false);$('langButton').focus();}});
   restoreLanguagePreferences();
 }
@@ -1413,6 +1402,7 @@ document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>ope
 document.querySelectorAll('#home .see').forEach((b,i)=>{if(b.tagName==='SPAN'){b.tabIndex=0;b.setAttribute('role','button');b.onclick=()=>i===0?showScreen('explore'):document.querySelector('.topic-row').scrollBy({left:170,behavior:'smooth'});b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click()}}}});
 window.addEventListener('beforeunload',stopSpeech);
 setupLanguages();
+setupWebsiteLanguage();
 logVisit();
 setupInAppAuth();
 let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
@@ -1420,4 +1410,5 @@ if(typeof setupChatHistory==='function')setupChatHistory();
 setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();
 if(new URLSearchParams(location.search).get('from')==='inapp'){trackMeta('OpenedFromInApp',{},true);history.replaceState({},document.title,location.pathname+location.hash)}
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
+
 
