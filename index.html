@@ -58,6 +58,17 @@ if(/^geeta-with-krishna(-ayushsahoo2000-5300)?\.vercel\.app$/.test(location.host
 .verse-link strong{font-size:12px;letter-spacing:.06em}
 .verse-link span{font-size:13px;margin-top:5px;display:block}
 
+
+/* Compact offer strip in every access state; respect mobile browser safe areas. */
+.floating-offer{padding:8px 10px;gap:8px;border-radius:16px;bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+.offer-icon{width:30px;height:30px;border-radius:10px;font-size:18px}
+.offer-copy small{display:none}
+.offer-copy b{font-size:14px;line-height:1.2;margin:0;white-space:nowrap}
+.offer-copy span{font-size:10px;line-height:1.3;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.offer-btn{min-height:44px;padding:8px 10px;border-radius:11px;font-size:11px}
+.home{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+@media(max-width:360px){.offer-icon{display:none}.offer-copy b{font-size:14px}.offer-copy span{font-size:10px}}
+
 </style>
 
 <style>
