@@ -45,7 +45,15 @@ async function backend(route) {
     return json(Array.from({ length: 20 }, (_, i) => V(ch, i + 1, `translation of ${ch}.${i + 1}`)));
   }
   if (p === '/functions/v1/ask-krishna') {
-    if (!authed) return json({ error: 'Sign in required' }, 401);
+    if (!authed) {
+      // One answer before sign-up, per visitor id (the server enforces it).
+      const vid = JSON.parse(req.postData() || '{}').visitor_id;
+      if (!vid) return json({ error: 'Sign in required' }, 401);
+      S.anonAsked = S.anonAsked || new Set();
+      if (S.anonAsked.has(vid)) return json({ error: 'Sign up free to ask Krishna', signup: true, reason: 'used' }, 403);
+      S.anonAsked.add(vid);
+      return json({ anon_free: true, style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear your worry.'], actions: [], follow_up: '', verses: [] });
+    }
     let free = false;
     if (!S.paid) { if (S.freeUsed) return json({ error: 'Annual Access required', paywall: true }, 403); S.freeUsed = true; free = true; }
     return json({ ...(free ? { free_question: true } : {}), style: 'krishna_inspired', title: 'Steady your mind', paragraphs: ['Dear one, I hear you.', 'As I told Arjuna (BG 2.47), act without clinging.'], actions: ['Breathe slowly'], follow_up: 'What worries you most?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] });
@@ -108,11 +116,32 @@ check((await screen()) === 'authScreen', 'Read verse (signed out) -> sign-in scr
 await page.evaluate(() => showScreen('home'));
 await page.evaluate(() => showScreen('ask')); await wait(100);
 check((await page.textContent('#chatHint')).includes('first question is free'), 'Ask screen tells visitors the first question is free');
+// The first question is answered before sign-up.
+await page.fill('#askInput', 'I am worried about my exams'); await page.click('#sendAskButton');
+await page.waitForFunction(() => document.getElementById('chat').textContent.includes('I hear your worry'), null, { timeout: 5000 }).catch(() => {});
+check((await screen()) === 'ask', 'Ask Krishna (signed out): stays on Ask, no sign-up first', await screen());
+check((await page.textContent('#chat')).includes('I hear your worry'), 'signed-out visitor sees Krishna\'s answer to the first question');
+const anonAsk = S.calls.filter(c => c.p === '/functions/v1/ask-krishna');
+check(anonAsk.length === 1 && !anonAsk[0].auth && JSON.parse(anonAsk[0].body).visitor_id === await page.evaluate(() => VISITOR_ID) && !JSON.parse(anonAsk[0].body).history, 'first question sent without a login, with the visitor id and no history');
+check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('one more question free') && !(await page.textContent('.upgrade-card')).includes('₹'), 'after the first answer: invite to sign up free for one more question (no price yet)');
+check((await page.textContent('#offer')).includes('one more question') && (await page.textContent('#offer')).includes('quick sign-up'), 'bottom bar now offers one more free question with sign-up', await page.textContent('#offer'));
+check(!(await fbFull()).some(a => a[1] === 'CompleteRegistration'), 'no Meta CompleteRegistration without a sign-up');
+check(!S.calls.some(c => c.p.includes('gita_verses')), 'signed-out visitor never fetches verse data');
+await shot('01b-anon-answer');
+await page.click('.continue-free-btn'); await wait(200);
+check((await screen()) === 'authScreen' && (await page.textContent('#authModeLead')).includes('one more question free'), '"Continue free" opens sign-up for one more free question', await page.textContent('#authModeLead'));
+await page.evaluate(() => showScreen('ask'));
+// A second question needs an account; it is kept and answered after sign-up.
 await page.fill('#askInput', 'I am anxious about my career'); await page.click('#sendAskButton'); await wait(300);
-check((await screen()) === 'authScreen', 'Ask Krishna (signed out) -> sign-up screen', await screen());
+check((await screen()) === 'authScreen', 'second question (signed out) -> sign-up screen', await screen());
 check((await page.textContent('#authModeLead')).includes('free account to get Krishna'), 'sign-up screen explains the free answer', await page.textContent('#authModeLead'));
 check(await page.isVisible('#passwordSignupStep'), 'sign-up (not login) form shown');
-check(!S.calls.some(c => c.p.includes('ask-krishna') || c.p.includes('gita_verses')), 'no paid API calls made while signed out');
+check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 1, 'second signed-out question not sent to the server');
+// If this browser's record is cleared, the server still refuses a second free answer.
+await page.evaluate(() => { localStorage.removeItem('gitaAnonAsked'); localStorage.removeItem('gitaPendingQuestion'); showScreen('ask'); });
+await page.fill('#askInput', 'I am anxious about my career'); await page.click('#sendAskButton'); await wait(400);
+check((await screen()) === 'authScreen' && S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 2, 'server refusal of a second free answer -> sign-up screen', await screen());
+check(await page.evaluate(() => localStorage.getItem('gitaAnonAsked') === '1' && JSON.parse(localStorage.getItem('gitaPendingQuestion')).q === 'I am anxious about my career'), 'refused question is kept for after sign-up');
 
 // ===== 2. Email sign-up (free user) =====
 console.log('\n# Email sign-up');
@@ -120,7 +149,7 @@ await page.evaluate(() => { showScreen('authScreen'); setAuthPageMode('signup');
 await page.fill('#signupEmail', 'test@example.com'); await page.fill('#signupPassword', 'secret123');
 await page.click('#passwordSignupBtn'); await wait(800);
 check((await screen()) === 'ask', 'after sign-up, back on Ask Krishna', await screen());
-const firstAsk = S.calls.filter(c => c.p === '/functions/v1/ask-krishna');
+const firstAsk = S.calls.filter(c => c.p === '/functions/v1/ask-krishna' && c.auth);
 check(firstAsk.length === 1 && JSON.parse(firstAsk[0].body).question === 'I am anxious about my career', 'the question typed before sign-up is answered automatically');
 check((await page.textContent('#chat')).includes('Steady your mind'), 'free answer from Krishna shown');
 check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('₹83'), 'upgrade card shown under the free answer');
@@ -129,7 +158,7 @@ check((await page.textContent('#offer')).includes('₹1,000') && await page.isHi
 await shot('02a-free-answer');
 await page.fill('#askInput', 'And what about my family?'); await page.click('#sendAskButton'); await wait(300);
 check((await screen()) === 'accountScreen', 'second question -> paywall', await screen());
-check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 1, 'second question not sent to the server');
+check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna' && c.auth).length === 1, 'second question not sent to the server');
 check((await page.textContent('#accountPlan')).trim() === 'Free', 'new account shows Free plan', await page.textContent('#accountPlan'));
 check((await fbFull()).filter(a => a[1] === 'CompleteRegistration').length === 1 && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[3]?.eventID === 'gita_reg_u1' && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[2]?.registration_method === 'email', 'Meta CompleteRegistration fires once on email sign-up, with method email and a dedup eventID');
 check(await page.evaluate(() => { const f = window.__fb, i = f.findIndex(a => a[0] === 'init' && a[1] === '2178415463100322' && a[2]?.em === 'test@example.com' && a[2]?.external_id === 'u1' && !a[2]?.ph), r = f.findIndex(a => a[1] === 'CompleteRegistration'); return i >= 0 && i < r; }), 'Meta gets the email (hashed by the pixel) before the sign-up event');

@@ -65,7 +65,7 @@ JWT verification at the gateway is **off** for every function (see `supabase/con
 
 | Function | Caller and check | What it does |
 | --- | --- | --- |
-| `ask-krishna` | Signed-in user | Retrieves relevant verses (curated topics + `search_gita`), asks Gemini for a reply that cites only those verses, validates every citation. Without Annual Access it claims the one free question (`claim_free_question`) and refunds it if no answer comes back. |
+| `ask-krishna` | Signed-in user, or a signed-out visitor's one free question | Retrieves relevant verses (curated topics + `search_gita`), asks Gemini for a reply that cites only those verses, validates every citation. Without Annual Access it claims the account's one free question (`claim_free_question`), or for a signed-out visitor the one answer before sign-up (`claim_anon_question`: one per visitor id, at most 10 a day per network and 300 a day in total), and refunds it if no answer comes back. |
 | `tts-krishna` | Signed-in user with Annual Access | `operation: "translate"` returns a translated meaning (stored translation first, Gemini otherwise). Otherwise narrates text with ElevenLabs (Sanskrit chant voice for verses, v3 voice for meanings). |
 | `get-my-access` | Signed-in user | Plan, expiry, `access_active`, `free_question_available`. |
 | `create-payment-link` | Signed-in user | Creates a ₹1,000 Razorpay payment link (expires in 1 hour) that returns to `/?payment=success`. |
@@ -84,6 +84,8 @@ Shared code lives in `supabase/functions/_shared/`: `server.ts` (price `ANNUAL_P
 | `gita_chapters`, `gita_verses`, `verse_topics` | The Gita text, meanings, topic tags | Anyone (see note below) |
 | `user_accounts` | One row per user: plan, payment, access expiry, free question used, sign-up source | The user's own row; writes are server-only |
 | `payment_transactions` | Razorpay links and payments | The user's own rows; writes are server-only |
+| `anon_questions` | Signed-out visitors who used their free answer (visitor id, hashed network address, time) | Server only |
+| `payment_events` | Every verified Razorpay webhook event, summarised (see OPERATIONS.md) | Server only |
 | `translation_sources`, `text_translations` | Verse-text pieces (keyed by SHA-256 of the English) and their translations | Translations: signed-in users |
 | `translation_leases` | Which languages the worker is currently translating | Server only |
 | `site_visits`, `site_events` | First-party analytics (see TRACKING.md) | Server only (written through `log_visit` / `log_event`) |
@@ -91,13 +93,13 @@ Shared code lives in `supabase/functions/_shared/`: `server.ts` (price `ANNUAL_P
 
 **Access rule for verses:** the database lets anyone read verse text. The paywall on verse pages is enforced in the app (`hasLifetimeAccess()`), not by the database. This was a deliberate product decision; don't lock it down in the database without agreement.
 
-SQL functions called from the site or functions: `get_daily_verse`, `search_gita`, `log_visit`, `log_event`, `set_my_attribution`, `claim_free_question` / `refund_free_question` (server only), `admin_stats` (server only), `next_translation_batch`, `claim_translation_languages`, `translation_missing`, `translation_worker_token_ok`.
+SQL functions called from the site or functions: `get_daily_verse`, `search_gita`, `log_visit`, `log_event`, `set_my_attribution`, `claim_free_question` / `refund_free_question`, `claim_anon_question` / `refund_anon_question` (server only), `admin_stats` (server only), `next_translation_batch`, `claim_translation_languages`, `translation_missing`, `translation_worker_token_ok`.
 
 A new auth user gets a `user_accounts` row automatically (trigger `on_auth_user_created_account`).
 
 ## Key flows
 
-**Free question → sign-up.** A visitor types a question; if they aren't signed in it is saved (`savePendingQuestion`) and they go to sign-in. After sign-in (`afterSignIn`) the question is sent, `ask-krishna` claims the free question, and the answer appears.
+**Free questions → sign-up.** A signed-out visitor's first question is answered straight away, without an account (`ask-krishna` with their `visitor_id`; the hashed network address is kept in `anon_questions` only to cap abuse). Under the answer, "Continue free" offers one more free question with a free account. A further signed-out question is saved (`savePendingQuestion`) and the visitor goes to sign-up; after sign-in (`afterSignIn`) it is sent, `ask-krishna` claims the account's free question, and the answer appears. After that, the paywall.
 
 **Sign-in methods.** Mobile OTP (first on the screen), email/password, Google. Inside Instagram/Facebook/Messenger/Threads, Google is blocked by Google itself, so the app offers mobile/email first and, on Android, an "Open in Chrome" hand-off that carries the visitor id, `fbclid` and UTM tags.
 

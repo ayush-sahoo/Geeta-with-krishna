@@ -306,6 +306,38 @@ function json(body:unknown, status=200){
   });
 }
 
+async function sha256Hex(text:string){
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+// One free question before sign-up, so visitors see an answer before being
+// asked to create an account. Limited per browser (visitor id), per network and
+// per day; claimed before the AI call and given back if no answer comes.
+async function askAnonymously(req:Request, body:any, question:string, language:string){
+  const visitorId=String(body?.visitor_id ?? "");
+  if(!/^[A-Za-z0-9_-]{8,64}$/.test(visitorId)) return json({error:"Sign in required"},401);
+  const admin=adminClient();
+  if(!admin) throw new Error("Supabase server credentials are unavailable.");
+  const ip=(req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const {data:status,error}=await admin.rpc("claim_anon_question",{p_visitor_id:visitorId,p_ip_hash:await sha256Hex("gita-anon:"+ip)});
+  if(error) console.error("claim_anon_question failed",error.message);
+  if(status!=="ok") return json({error:"Sign up free to ask Krishna",signup:true,reason:status ?? "error"},403);
+
+  let ai=null;
+  try{
+    const verses=await retrieveVerses(admin,question,[]);
+    ai=await callGemini(question,[],verses,language);
+  }finally{
+    if(!ai){
+      const {error:refundError}=await admin.rpc("refund_anon_question",{p_visitor_id:visitorId});
+      if(refundError) console.error("refund_anon_question failed",refundError.message);
+    }
+  }
+  if(!ai) return json({error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
+  return json({...ai,anon_free:true});
+}
+
 Deno.serve(async (req:Request)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:corsHeaders});
 
@@ -323,7 +355,7 @@ Deno.serve(async (req:Request)=>{
     const authHeader=req.headers.get("Authorization") ?? "";
 
     if(!supabaseUrl||!supabaseAnonKey) throw new Error("Supabase runtime credentials are unavailable.");
-    if(!authHeader.startsWith("Bearer ")) return json({error:"Sign in required"},401);
+    if(!authHeader.startsWith("Bearer ")) return await askAnonymously(req,body,question,language);
 
     const supabase=createClient(supabaseUrl,supabaseAnonKey,{
       global:{headers:{Authorization:authHeader}},
