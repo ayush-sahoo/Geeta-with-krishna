@@ -356,6 +356,18 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 .upgrade-card{border:1px solid #e3b75e;background:#fff6e2}.upgrade-card strong{display:block;font-size:16px;margin-bottom:6px}.upgrade-card p{margin:6px 0}.upgrade-price{font-weight:700;color:#7a3d0c}.upgrade-btn,.continue-free-btn{margin-top:8px;width:100%;border:0;border-radius:14px;padding:12px 14px;font-weight:700;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c}
 #translationStatus{font-size:12px;color:#805625}[dir="auto"]{unicode-bidi:plaintext}
 </style>
+<style>
+/* Final offer styles: keep all signup/payment states compact and on palette. */
+.floating-offer{width:min(456px,calc(100% - 24px));padding:8px 10px;gap:9px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border:1px solid #dfba7d;border-radius:16px;background:linear-gradient(135deg,#fffdf7,#fff2d8);box-shadow:0 5px 18px rgba(99,51,12,.18)}
+.offer-icon{width:30px;height:30px;border-radius:50%;background:#fbe6bc;color:#864719;box-shadow:none;font-size:17px}
+.offer-copy{color:#512b18}
+.offer-copy small{display:none}
+.offer-copy b{font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#512b18;margin:0;white-space:nowrap}
+.offer-copy span{font-size:10px;line-height:1.35;color:#795b42;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.offer-btn{min-height:44px;padding:8px 12px;border-radius:11px;border:1px solid #e7ac37;background:linear-gradient(180deg,#ffdc78,#f4bf49);color:#512b18;font-size:11px;font-weight:700;box-shadow:0 2px 5px rgba(133,76,15,.12)}
+.home{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+@media(max-width:360px){.offer-icon{display:none}.offer-copy b{font-size:13px}.offer-copy span{font-size:10px}.offer-btn{padding:8px 10px}}
+</style>
 <link rel="stylesheet" href="connected.css">
   <!-- Meta Pixel Code -->
   <script>
