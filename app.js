@@ -286,7 +286,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       authSession=session||null;
       if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));setMetaUser(session.user);attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
-      if(anonymousConversation)restoreAnonymousConversation(anonymousConversation);
+      if(anonymousConversation){restoreAnonymousConversation(anonymousConversation);if(typeof persistChatTurns==='function')persistChatTurns(chatHistory);}
+      if(typeof updateChatHistoryUI==='function')updateChatHistoryUI();
       restoreLanguagePreferences();
       updateAccountUI();
     }
@@ -333,7 +334,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(takeBuyAfterSignIn()&&!hasLifetimeAccess()){
         showScreen('accountScreen');startLifetimePurchase();return true;
       }
-      if(askNext&&(hasLifetimeAccess()||accountProfile?.free_question_available)){openAskKrishna();return true;}
+      if(askNext){showScreen('ask');$('askInput').focus();return true;}
       showScreen('accountScreen');return false;
     }
     async function consumeOAuthHash(){
@@ -924,9 +925,9 @@ function showScreen(id){
   window.scrollTo({top:0,behavior:'instant'});
 }
 function openFreeQuestionSignup(){
-  if(!authSession?.user?.id)saveAnonymousConversation();
+  if(!authSession?.user?.id){saveAnonymousConversation();askAfterSignIn();}
   showScreen('authScreen');setAuthPageMode('signup');
-  $('authModeLead').textContent='Create a free account to get Krishna\'s answer to your question.';
+  $('authModeLead').textContent='Create a free account to continue this conversation with Krishna.';
 }
 function showPaywall(message='Sign in and get Annual Access to continue.'){
   logEvent('paywall_view');
@@ -1271,6 +1272,7 @@ function restoreAnonymousConversation(snapshot){
   }
 }
 function clearChatConversation(){
+  if(typeof resetSavedChatState==='function')resetSavedChatState();
   stopSpeech();translationGeneration++;translationCache.clear();
   chatGeneration++;chatRequest?.abort();chatRequest=null;chatHistory.length=0;
   $('chat').replaceChildren();$('askInput').value='';
@@ -1334,14 +1336,15 @@ async function sendAsk(){
       answer.textContent=d.answer||'No response was returned. Please try again.';
       if(d.answer)chatHistory.push({role:'user',text:q},{role:'assistant',text:d.answer});
     }
+    if(!anonymous&&typeof persistChatTurns==='function')persistChatTurns([{role:'user',text:q},{role:'assistant',text:d.style==='krishna_inspired'?replyText(d):d.answer,verses:d.verses||[]}]);
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
     if(d.anon_free){
       markAnonQuestionUsed();renderAccessState();
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
       appendText(card,'strong','Want to ask Krishna more? 🙏');
       appendText(card,'p','Create a free account to ask one more question free and keep this conversation.');
-      const next=appendText(card,'button','Continue free →','continue-free-btn');next.type='button';
-      next.onclick=()=>{askAfterSignIn();logEvent('paywall_view');openFreeQuestionSignup();$('authModeLead').textContent='Create a free account to ask Krishna one more question free.';};
+      const next=appendText(card,'button','Continue this conversation →','continue-free-btn');next.type='button';
+      next.onclick=()=>{askAfterSignIn();logEvent('paywall_view');openFreeQuestionSignup();$('authModeLead').textContent='Create a free account to continue this conversation. Your chat will be saved, with one more question free.';};
     }
     if(d.free_question){
       if(accountProfile)accountProfile.free_question_available=false;renderAccessState();
@@ -1413,6 +1416,8 @@ setupLanguages();
 logVisit();
 setupInAppAuth();
 let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
+if(typeof setupChatHistory==='function')setupChatHistory();
 setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();
 if(new URLSearchParams(location.search).get('from')==='inapp'){trackMeta('OpenedFromInApp',{},true);history.replaceState({},document.title,location.pathname+location.hash)}
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
+

@@ -347,6 +347,15 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 .upgrade-card{border:1px solid #e3b75e;background:#fff6e2}.upgrade-card strong{display:block;font-size:16px;margin-bottom:6px}.upgrade-card p{margin:6px 0}.upgrade-price{font-weight:700;color:#7a3d0c}.upgrade-btn,.continue-free-btn{margin-top:8px;width:100%;border:0;border-radius:14px;padding:12px 14px;font-weight:700;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c}
 #translationStatus{font-size:12px;color:#805625}[dir="auto"]{unicode-bidi:plaintext}
 </style>
+<style>
+.chat-history-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 12px 0}
+.history-button{border:1px solid #d6b381;background:#fff8e9;color:#653619;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:600;min-height:40px}
+.chat-save-status{flex-basis:100%;font-size:11px;color:#795b42}
+.chat-history-list{margin:10px 12px;padding:12px;max-height:320px;overflow:auto;background:#fffaf0;border:1px solid #dfc29a;border-radius:16px}
+.chat-history-list p{font-size:12px;color:#795b42}
+.saved-chat-item{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #ead9bd;padding:12px 4px;color:#653619;font-size:13px;overflow-wrap:anywhere}
+.saved-chat-item small{display:block;margin-top:4px;color:#947455;font-size:10px}
+</style>
 <link rel="stylesheet" href="connected.css">
   <!-- Meta Pixel Code -->
   <script>
@@ -489,5 +498,7 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
 <div id="toast" class="toast"></div>
 </div>
 <script src="languages.js"></script>
+<script src="chat-history.js"></script>
 <script src="app.js"></script>
 </body></html>
+
