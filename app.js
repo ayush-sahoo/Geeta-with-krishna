@@ -276,13 +276,17 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     function authHeaders(token){
       return {apikey:KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
     }
+    let authSessionGeneration=0;
     function saveSession(session){
+      authSessionGeneration++;
+      const anonymousConversation=!authSession?.user?.id&&session?.user?.id?takeAnonymousConversation():null;
       // Every session replacement invalidates outstanding access responses.
       accountRequestGeneration++;
       if(!session || session.user?.id!==authSession?.user?.id){accountProfile=null;clearChatConversation();}
       authSession=session||null;
       if(session){localStorage.setItem('gitaAuthSession',JSON.stringify(session));setMetaUser(session.user);attributeSignup();}
       else localStorage.removeItem('gitaAuthSession');
+      if(anonymousConversation)restoreAnonymousConversation(anonymousConversation);
       restoreLanguagePreferences();
       updateAccountUI();
     }
@@ -391,22 +395,26 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       return false;
     }
     async function refreshAuthSession(){
+      const generation=authSessionGeneration;
       let stored=null;
       try{stored=JSON.parse(localStorage.getItem('gitaAuthSession')||'null')}catch(e){}
       if(!stored?.refresh_token){saveSession(null);return null}
       try{
-        const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
+        const r=await timedFetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
           method:'POST',
           headers:{apikey:KEY,'Content-Type':'application/json'},
           body:JSON.stringify({refresh_token:stored.refresh_token})
         });
+        if(generation!==authSessionGeneration)return authSession;
         if(r.status===400||r.status===401){saveSession(null);return null}
         if(!r.ok) throw new Error('Could not refresh the session');
         const session=await r.json();
+        if(generation!==authSessionGeneration)return authSession;
         saveSession(session);
         await loadAccountProfile();
         return session;
       }catch(e){
+        if(generation!==authSessionGeneration)return authSession;
         // Offline or the server hiccuped: keep the visitor signed in with the
         // stored session; freshSession() renews it before the next request.
         saveSession(stored);
@@ -417,6 +425,19 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // Access tokens last an hour, but Instagram and Facebook keep their in-app
     // browser tabs open for days. Before calling the server, renew a token that
     // is about to expire. Only a rejected refresh token signs the user out.
+    // Abort slow requests, including response-body reads, so the UI can recover.
+    async function timedFetch(url,options={},timeout=15000){
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),timeout);
+      try{
+        const response=await fetch(url,{...options,signal:controller.signal});
+        const body=await response.text();
+        return new Response(body,{status:response.status,statusText:response.statusText,headers:response.headers});
+      }catch(e){
+        if(controller.signal.aborted)throw new Error('The connection took too long. Please try again.');
+        throw e;
+      }finally{clearTimeout(timer);}
+    }
     let renewing=null;
     function tokenExpiresAt(token){
       try{return JSON.parse(atob(String(token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000}catch(e){return 0}
@@ -427,17 +448,21 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       return !!exp&&exp-Date.now()<=60e3;
     }
     async function freshSession(){
-      const s=authSession;
-      if(!sessionNeedsRenewal())return s;
-      renewing||=(async()=>{
-        try{
-          const r=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})});
-          if(r.ok)saveSession(await r.json());
-          else if(r.status===400||r.status===401)saveSession(null);
-        }catch(e){}
+      const session=authSession,generation=authSessionGeneration;
+      if(!sessionNeedsRenewal())return session;
+      if(renewing?.generation===generation)return renewing.promise;
+      const operation={generation,promise:null};
+      operation.promise=(async()=>{
+        const r=await timedFetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
+        const data=r.ok?await r.json():null;
+        if(generation!==authSessionGeneration||authSession!==session)return authSession;
+        if(r.ok)saveSession(data);
+        else if(r.status===400||r.status===401)saveSession(null);
+        else throw new Error('Could not renew your session. Please try again.');
         return authSession;
-      })().finally(()=>{renewing=null});
-      return renewing;
+      })().finally(()=>{if(renewing===operation)renewing=null});
+      renewing=operation;
+      return operation.promise;
     }
     async function loadAccountProfile(){
       if(sessionNeedsRenewal())await freshSession();
@@ -448,7 +473,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         return null;
       }
       try{
-        const r=await fetch(SUPA+'/functions/v1/get-my-access',{
+        const r=await timedFetch(SUPA+'/functions/v1/get-my-access',{
           method:'GET',
           headers:{
             apikey:KEY,
@@ -743,7 +768,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       try{
         await freshSession();
         if(!authSession?.access_token){askToSignInForPurchase();return;}
-        const r=await fetch(SUPA+'/functions/v1/create-payment-link',{
+        const checkoutSession=authSession,checkoutGeneration=authSessionGeneration;
+        const r=await timedFetch(SUPA+'/functions/v1/create-payment-link',{
           method:'POST',
           headers:{
             apikey:KEY,
@@ -754,6 +780,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         });
 
         const d=await r.json();
+        if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
         if(!r.ok) throw new Error(d.error||d.details?.error?.description||'Could not create payment link');
 
         if(d.already_paid){
@@ -769,6 +796,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         // Give the pixel a moment to send InitiateCheckout before the page unloads.
         await new Promise(r=>setTimeout(r,300));
 
+        if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
         leaving=true;
         window.location.href=d.short_url;
       }catch(e){
@@ -896,6 +924,7 @@ function showScreen(id){
   window.scrollTo({top:0,behavior:'instant'});
 }
 function openFreeQuestionSignup(){
+  if(!authSession?.user?.id)saveAnonymousConversation();
   showScreen('authScreen');setAuthPageMode('signup');
   $('authModeLead').textContent='Create a free account to get Krishna\'s answer to your question.';
 }
@@ -1221,6 +1250,25 @@ function appendText(parent,tag,text,className){const el=document.createElement(t
 // Recent turns sent with each question so Krishna can follow the conversation.
 const chatHistory=[];
 let chatGeneration=0,chatRequest=null;
+const ANON_CONVERSATION_KEY='gitaAnonymousConversation';
+function saveAnonymousConversation(){
+  if(!chatHistory.length)return;
+  const snapshot={at:Date.now(),history:chatHistory.slice(-16),bubbles:[...$('chat').children].filter(el=>!el.classList.contains('upgrade-card')).map(el=>({text:el.textContent,user:el.classList.contains('user')}))};
+  try{sessionStorage.setItem(ANON_CONVERSATION_KEY,JSON.stringify(snapshot));}catch(e){}
+}
+function takeAnonymousConversation(){
+  try{
+    const value=JSON.parse(sessionStorage.getItem(ANON_CONVERSATION_KEY)||'null');
+    sessionStorage.removeItem(ANON_CONVERSATION_KEY);
+    return value&&Date.now()-value.at<3600000&&Array.isArray(value.history)&&Array.isArray(value.bubbles)?value:null;
+  }catch(e){return null;}
+}
+function restoreAnonymousConversation(snapshot){
+  chatHistory.push(...snapshot.history.filter(t=>['user','assistant'].includes(t.role)&&typeof t.text==='string').slice(-16));
+  for(const bubble of snapshot.bubbles.slice(-16)){
+    if(typeof bubble.text==='string')appendText($('chat'),'div',bubble.text,bubble.user?'bubble user':'bubble assistant');
+  }
+}
 function clearChatConversation(){
   stopSpeech();translationGeneration++;translationCache.clear();
   chatGeneration++;chatRequest?.abort();chatRequest=null;chatHistory.length=0;
