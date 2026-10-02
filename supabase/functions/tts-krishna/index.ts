@@ -82,6 +82,23 @@ function cleanVerseText(input: string) {
     .trim();
 }
 
+// Multilingual v2 accepts SSML pauses. Generate only our own break tags.
+function chantText(input:string){
+  const raw=input.replace(/<[^>]*>/g,'')
+    .replace(/(?:[|।॥]+)\s*[0-9०-९]+(?:\s*[-.:/]\s*[0-9०-९]+)*\s*(?:[|।॥]+)/g,'॥')
+    .replace(/[0-9०-९]+\s*[-.:/]\s*[0-9०-९]+/g,'')
+    .replace(/[0-9०-९]+\s*$/g,'');
+  const parts=raw.split(/([।॥|]+|\r?\n+)/);
+  const phrases:Array<{text:string;pause:string}>=[];
+  for(let i=0;i<parts.length;i+=2){
+    const text=cleanVerseText(parts[i]);if(!text)continue;
+    const boundary=parts[i+1]||'';
+    phrases.push({text,pause:/॥|\|\|/.test(boundary)?'1.2':'0.7'});
+  }
+  if(!phrases.length)return '';
+  return phrases.map((p,i)=>p.text+' <break time="'+(i===phrases.length-1?'1.2':p.pause)+'s" />').join(' ');
+}
+
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -130,7 +147,7 @@ Deno.serve(async (req: Request) => {
     const rawText = String(body?.text ?? "").trim();
     if(!rawText)return json({error:"Text is required"},400);
     if(rawText.length>12000)return json({error:"Text is too long"},400);
-    const text = kind === "verse" ? cleanVerseText(rawText)
+    const text = kind === "verse" ? chantText(rawText)
       : body?.translated === true ? rawText : await storedOrTranslate(rawText,language);
     if(body?.operation==="translate")return json({text,language},200);
     if(text.length>4500)return json({error:"Text is too long for one audio clip"},400);
@@ -139,7 +156,7 @@ Deno.serve(async (req: Request) => {
 
     const voiceId = kind === "verse" ? CHANT_VOICE_ID : FALLBACK_EXPLAIN_VOICE_ID;
     const voiceSettings = kind === "verse"
-      ? { stability: 0.62, similarity_boost: 0.78, style: 0.20, use_speaker_boost: true, speed: 1.08 }
+      ? { stability: 0.62, similarity_boost: 0.78, style: 0.20, use_speaker_boost: true, speed: 0.94 }
       : { stability: 0.5, similarity_boost: 0.82, speed: 1.05 };
 
     const upstream = await fetch(
