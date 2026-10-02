@@ -72,6 +72,7 @@ function setupWebsiteLanguage(){
   for(const [code,name] of Object.entries(GITA_LANGUAGES)){const option=document.createElement('option');option.value=code;option.textContent=name;select.appendChild(option);}
   select.onchange=()=>setWebsiteLanguage(select.value);
   let saved='en';try{saved=localStorage.getItem('gitaWebsiteLanguage')||'en';}catch(e){}
+  if(!Object.hasOwn(GITA_LANGUAGES,saved)){saved='en';try{localStorage.setItem('gitaWebsiteLanguage',saved);}catch(e){}}
   select.value=saved;websiteObserver=new MutationObserver(()=>applyWebsiteLanguage());applyWebsiteLanguage();
   if(saved!=='en')setWebsiteLanguage(saved);
 }
