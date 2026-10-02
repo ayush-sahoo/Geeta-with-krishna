@@ -63,20 +63,47 @@ function queueChatSave(batch){
   return savedChatQueue;
 }
 function retryChatSaving(){for(const batch of [...unsavedChatBatches])queueChatSave(batch);}
-async function loadSavedChatList(){
+function savedChatDateLabel(value){
+  const date=new Date(value),today=new Date(),yesterday=new Date();
+  yesterday.setDate(today.getDate()-1);
+  if(date.toDateString()===today.toDateString())return 'Today';
+  if(date.toDateString()===yesterday.toDateString())return 'Yesterday';
+  return date.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+async function loadSavedChatList(offset=0){
   const owner=authSession?.user?.id,epoch=savedChatEpoch,request=++historyLoadGeneration;
   if(!owner)return;
-  const list=$('chatHistoryList');list.replaceChildren();appendText(list,'p','Loading conversations…');
+  const list=$('chatHistoryList');
+  if(!offset){list.dataset.dateLabel='';list.replaceChildren();appendText(list,'p','Loading conversations…');}
   const current=()=>owner===authSession?.user?.id&&epoch===savedChatEpoch&&request===historyLoadGeneration;
   try{
-    const response=await chatStoreRequest('chat_threads?select=id,title,updated_at&user_id=eq.'+encodeURIComponent(owner)+'&order=updated_at.desc&limit=100',{method:'GET'},owner);
+    const response=await chatStoreRequest('chat_threads?select=id,title,updated_at&user_id=eq.'+encodeURIComponent(owner)+'&order=updated_at.desc,id.desc&limit=50&offset='+offset,{method:'GET'},owner);
     const threads=await response.json();if(!current())return;
-    list.replaceChildren();if(!threads.length)appendText(list,'p','Your saved conversations will appear here.');
-    for(const thread of threads){
-      const button=appendText(list,'button',thread.title||'Conversation with Krishna','saved-chat-item');button.type='button';button.onclick=()=>openSavedChat(thread);
-      appendText(button,'small',new Date(thread.updated_at).toLocaleDateString());
+    if(!offset){
+      list.replaceChildren();
+      appendText(list,'h3','Your conversations','history-list-title');
+      appendText(list,'p','Pick a conversation to continue where you left off.','history-list-intro');
+      if(!threads.length)appendText(list,'p','Your saved conversations will appear here.');
     }
-  }catch(e){if(current()){list.replaceChildren();appendText(list,'p','Could not load history. Please try again.');const retry=appendText(list,'button','Retry','history-button');retry.onclick=loadSavedChatList;}}
+    for(const thread of threads){
+      const label=savedChatDateLabel(thread.updated_at);
+      if(list.dataset.dateLabel!==label){appendText(list,'h4',label,'history-date-label');list.dataset.dateLabel=label;}
+      const button=appendText(list,'button','','saved-chat-item');button.type='button';button.onclick=()=>openSavedChat(thread);
+      appendText(button,'span',thread.title||'Conversation with Krishna','history-chat-title');
+      appendText(button,'small',new Date(thread.updated_at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}),'history-chat-time');
+      appendText(button,'span','Continue →','history-chat-continue');
+    }
+    if(threads.length===50){
+      const more=appendText(list,'button','Show older conversations','history-button history-load-more');more.type='button';
+      more.onclick=async()=>{more.disabled=true;more.remove();await loadSavedChatList(offset+50);};
+    }
+  }catch(e){
+    if(current()){
+      if(!offset)list.replaceChildren();
+      appendText(list,'p','Could not load history. Please try again.');
+      const retry=appendText(list,'button','Retry','history-button');retry.onclick=()=>loadSavedChatList(offset);
+    }
+  }
 }
 async function openSavedChat(thread){
   if(chatBusy)return toast('Please wait for Krishna’s reply.');
