@@ -63,7 +63,7 @@ async function backend(route) {
     if (!authed) return json({ message: 'JWT required' }, 401);
     if (m === 'GET') return json([]);
     (S.chatWrites = S.chatWrites || []).push({ p, m, body: req.postData() });
-    return route.fulfill({ status: m === 'PATCH' ? 204 : 201, headers: cors, body: '' });
+    return route.fulfill({ status: m === 'POST' ? 201 : 204, headers: cors, body: '' });
   }
   if (p === '/rest/v1/text_translations') {
     (S.storedLog = S.storedLog || []).push((url.searchParams.get('language')||'') + ':' + (authed ? 'ok' : 'unauth') + ':' + (req.headers()['range']||''));
@@ -222,6 +222,15 @@ check(!(await fbFull()).some(a => a[1] === 'Purchase'), 'reloading the return UR
   check(inits.length === 1, 'signed-in reload: the pixel is not initialised twice', JSON.stringify(inits)); }
 
 // ===== 5. Paid features =====
+// Saved chats can be deleted from the account screen, after a confirmation.
+await page.evaluate(() => showScreen('accountScreen'));
+check(await page.isVisible('#accountChats') && (await page.textContent('#accountChats')).includes('Only you can see them'), 'account screen explains saved chats and offers deletion');
+page.once('dialog', d => d.dismiss()); await page.click('#deleteChatsBtn'); await wait(300);
+check(!(S.chatWrites || []).some(w => w.m === 'DELETE'), 'cancelling the confirmation deletes nothing');
+page.once('dialog', d => d.accept()); await page.click('#deleteChatsBtn'); await wait(600);
+const deletes = (S.chatWrites || []).filter(w => w.m === 'DELETE').map(w => w.p);
+check(JSON.stringify(deletes) === JSON.stringify(['/rest/v1/chat_messages', '/rest/v1/chat_threads']) && S.calls.filter(c => c.m === 'DELETE').every(c => c.auth === 'Bearer tok_u1' && c.q === '?user_id=eq.u1'), 'confirmed delete removes the user\'s own messages and conversations', JSON.stringify(deletes));
+check((await page.textContent('#toast')).includes('chat history has been deleted') && (await page.locator('#chat .bubble').count()) === 0, 'user is told the history was deleted and the open chat is cleared', await page.textContent('#toast'));
 console.log('\n# Paid user');
 await page.goto(BASE + '/'); await wait(600);
 check(!(await page.isVisible('#offer')), 'offer bar hidden for paid user');

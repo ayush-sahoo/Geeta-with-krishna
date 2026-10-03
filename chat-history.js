@@ -9,6 +9,22 @@ function resetSavedChatState(){
 function updateChatHistoryUI(){
   const controls=document.getElementById('chatHistoryControls');
   if(controls)controls.hidden=!authSession?.user?.id;
+  const account=document.getElementById('accountChats');
+  if(account)account.hidden=!authSession?.user?.id;
+}
+// Deletes every saved conversation of the signed-in user (rows are the user's
+// own under RLS). Waits for in-flight saves so none lands after the delete.
+async function deleteSavedChats(){
+  const owner=authSession?.user?.id;if(!owner)return;
+  if(!confirm('Delete all your saved conversations with Krishna? This cannot be undone.'))return;
+  const button=$('deleteChatsBtn');button.disabled=true;
+  try{
+    await savedChatQueue.catch(()=>{});
+    await chatStoreRequest('chat_messages?user_id=eq.'+encodeURIComponent(owner),{method:'DELETE'},owner);
+    await chatStoreRequest('chat_threads?user_id=eq.'+encodeURIComponent(owner),{method:'DELETE'},owner);
+    clearChatConversation();toast('Your chat history has been deleted.');
+  }catch(e){toast('Could not delete your chat history. Please try again.');}
+  finally{button.disabled=false;}
 }
 function setupChatHistory(){
   const controls=document.createElement('div');controls.id='chatHistoryControls';controls.className='chat-history-controls';
@@ -20,7 +36,9 @@ function setupChatHistory(){
   const status=appendText(controls,'span','','chat-save-status');status.id='chatSaveStatus';status.setAttribute('role','status');
   const retry=appendText(controls,'button','Retry saving','history-button');retry.id='chatSaveRetry';retry.type='button';retry.hidden=true;retry.onclick=()=>retryChatSaving();
   const list=document.createElement('div');list.id='chatHistoryList';list.className='chat-history-list';list.hidden=true;
-  $('chat').before(controls,list);updateChatHistoryUI();
+  $('chat').before(controls,list);
+  const remove=document.getElementById('deleteChatsBtn');if(remove)remove.onclick=deleteSavedChats;
+  updateChatHistoryUI();
 }
 function setChatSaveStatus(text,failed=false){
   if(!document.getElementById('chatSaveStatus'))return;
