@@ -58,6 +58,13 @@ async function backend(route) {
     if (!S.paid) { if (S.freeUsed) return json({ error: 'Annual Access required', paywall: true }, 403); S.freeUsed = true; free = true; }
     return json({ ...(free ? { free_question: true } : {}), style: 'krishna_inspired', title: 'Steady your mind', paragraphs: ['Dear one, I hear you.', 'As I told Arjuna (BG 2.47), act without clinging.'], actions: ['Breathe slowly'], follow_up: 'What worries you most?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] });
   }
+  if (p === '/rest/v1/chat_threads' || p === '/rest/v1/chat_messages') {
+    // Saved conversations: PostgREST answers inserts with 201 and updates with an empty 204.
+    if (!authed) return json({ message: 'JWT required' }, 401);
+    if (m === 'GET') return json([]);
+    (S.chatWrites = S.chatWrites || []).push({ p, m, body: req.postData() });
+    return route.fulfill({ status: m === 'PATCH' ? 204 : 201, headers: cors, body: '' });
+  }
   if (p === '/rest/v1/text_translations') {
     (S.storedLog = S.storedLog || []).push((url.searchParams.get('language')||'') + ':' + (authed ? 'ok' : 'unauth') + ':' + (req.headers()['range']||''));
     if (!authed) return json({ message: 'JWT required' }, 401);
@@ -134,7 +141,7 @@ await page.evaluate(() => showScreen('ask'));
 // A second question needs an account; it is kept and answered after sign-up.
 await page.fill('#askInput', 'I am anxious about my career'); await page.click('#sendAskButton'); await wait(300);
 check((await screen()) === 'authScreen', 'second question (signed out) -> sign-up screen', await screen());
-check((await page.textContent('#authModeLead')).includes('free account to get Krishna'), 'sign-up screen explains the free answer', await page.textContent('#authModeLead'));
+check((await page.textContent('#authModeLead')).includes('continue this conversation'), 'sign-up screen explains the chat continues after sign-up', await page.textContent('#authModeLead'));
 check(await page.isVisible('#passwordSignupStep'), 'sign-up (not login) form shown');
 check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna').length === 1, 'second signed-out question not sent to the server');
 // If this browser's record is cleared, the server still refuses a second free answer.
@@ -152,6 +159,10 @@ check((await screen()) === 'ask', 'after sign-up, back on Ask Krishna', await sc
 const firstAsk = S.calls.filter(c => c.p === '/functions/v1/ask-krishna' && c.auth);
 check(firstAsk.length === 1 && JSON.parse(firstAsk[0].body).question === 'I am anxious about my career', 'the question typed before sign-up is answered automatically');
 check((await page.textContent('#chat')).includes('Steady your mind'), 'free answer from Krishna shown');
+await page.waitForFunction(() => /saved|Not saved/.test(document.getElementById('chatSaveStatus')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
+const savedRows = (S.chatWrites || []).filter(w => w.p === '/rest/v1/chat_messages').flatMap(w => JSON.parse(w.body));
+check(savedRows.some(r => r.role === 'user' && r.content === 'I am worried about my exams') && savedRows.some(r => r.role === 'user' && r.content === 'I am anxious about my career') && savedRows.every(r => r.user_id === 'u1'), 'after sign-up, the free chat and the new answer are saved to the account', JSON.stringify(savedRows.map(r => r.content)));
+check((await page.textContent('#chatSaveStatus')) === 'Conversation saved' && await page.isHidden('#chatSaveRetry'), 'chat shows "Conversation saved" (no false "Not saved" warning)', await page.textContent('#chatSaveStatus'));
 check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('₹83'), 'upgrade card shown under the free answer');
 check(!(await page.textContent('#chatHint')).includes('free'), 'free hint removed once used');
 check((await page.textContent('#offer')).includes('₹1,000') && await page.isHidden('#heroFreeNote'), 'after the free question, the bar goes back to Annual Access');
@@ -234,14 +245,18 @@ await wait(1500); check((await page.textContent('#detailMeaning')).startsWith('[
 S.translateDelay = 0;
 const scrBefore = await screen(); await page.click('#langButton'); await wait(150);
 check(await page.isVisible('#langMenu') && (await screen()) === scrBefore, '🌐 opens the language picker without leaving the page', await screen());
-check(await page.inputValue('#appLanguage') === 'custom' || await page.inputValue('#appLanguage') === 'hi', 'picker reflects the current choice', await page.inputValue('#appLanguage'));
-await page.selectOption('#appLanguage', 'bn'); await wait(400);
-check(!(await page.isVisible('#langMenu')) && await page.inputValue('#chatLanguage') === 'bn' && await page.inputValue('#meaningLanguage') === 'bn', 'choosing a language sets chat and meaning together');
-check((await page.textContent('#detailMeaning')).startsWith('[bn] '), 'open verse re-renders in the new language');
-check(!(await page.textContent('#translationStatus')).includes('AI'), 'no AI label on translated meaning');
-await page.click('#langButton'); await page.selectOption('#appLanguage', 'default'); await wait(300);
-check(await page.inputValue('#chatLanguage') === 'auto' && await page.inputValue('#meaningLanguage') === 'en-hi', 'Default restores auto chat + English text/Hindi audio');
-await page.click('#langButton'); await page.keyboard.press('Escape'); check(!(await page.isVisible('#langMenu')), 'Escape closes the picker');
+// The 🌐 picker sets the website's own language; chat replies and verse
+// meanings keep their separate choices and are never rewritten by it.
+check(await page.inputValue('#appLanguage') === 'en' && (await page.textContent('#langMenu')).includes('Website language'), 'picker shows the website language (English by default)', await page.inputValue('#appLanguage'));
+const chatLangBefore = await page.inputValue('#chatLanguage'), meaningLangBefore = await page.inputValue('#meaningLanguage'), meaningTextBefore = await page.textContent('#detailMeaning');
+await page.selectOption('#appLanguage', 'hi');
+await page.waitForFunction(() => document.getElementById('homeNav').textContent === 'होम', null, { timeout: 5000 }).catch(() => {});
+check(await page.textContent('#homeNav') === 'होम' && await page.textContent('#askNav') === 'कृष्ण से पूछें', 'choosing Hindi translates the website menus', await page.textContent('#homeNav'));
+check(await page.inputValue('#chatLanguage') === chatLangBefore && await page.inputValue('#meaningLanguage') === meaningLangBefore && await page.textContent('#detailMeaning') === meaningTextBefore, 'website language leaves chat and verse-meaning choices and text unchanged');
+check(await page.evaluate(() => localStorage.getItem('gitaWebsiteLanguage')) === 'hi' && !S.calls.some(c => c.p === '/functions/v1/website-language'), 'Hindi website text loads from the shipped file and is remembered');
+await page.selectOption('#appLanguage', 'en'); await wait(200);
+check(await page.textContent('#homeNav') === 'Home', 'switching back to English restores the menus', await page.textContent('#homeNav'));
+await page.keyboard.press('Escape'); check(!(await page.isVisible('#langMenu')), 'Escape closes the picker');
 await page.screenshot({ path: OUT + '/langmenu-closed.png', clip: { x: 0, y: 0, width: 390, height: 200 } });
 await page.selectOption('#meaningLanguage', 'ta'); await wait(400);
 check((await page.textContent('#detailMeaning')).startsWith('[ta] ') && (await page.textContent('#reflection')).startsWith('[ta] '), 'Tamil selected: meaning and reflection translated', await page.textContent('#reflection'));

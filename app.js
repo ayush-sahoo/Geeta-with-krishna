@@ -433,7 +433,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       try{
         const response=await fetch(url,{...options,signal:controller.signal});
         const body=await response.text();
-        return new Response(body,{status:response.status,statusText:response.statusText,headers:response.headers});
+        // 204/205/304 replies (e.g. a PostgREST update) must be rebuilt without a body.
+        return new Response([204,205,304].includes(response.status)?null:body,{status:response.status,statusText:response.statusText,headers:response.headers});
       }catch(e){
         if(controller.signal.aborted)throw new Error('The connection took too long. Please try again.');
         throw e;
