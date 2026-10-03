@@ -11,6 +11,53 @@ const cors = {
 // lives in that origin's localStorage, and the Meta Purchase event fires there.
 const SITE_URL = "https://gitaverse.co.in";
 
+// Razorpay calls are cut off well before the browser gives up (15 s), so a
+// slow call fails here instead of being retried while it is still running.
+const RAZORPAY_TIMEOUT_MS = 8000;
+// An unpaid checkout is handed out again for this long instead of creating
+// another payable one (payment links expire after 60 minutes).
+const REUSE_ORDER_MS = 30 * 60 * 1000;
+const REUSE_LINK_MS = 50 * 60 * 1000;
+
+function razorpay(path: string, auth: string, init: RequestInit = {}) {
+  return fetch("https://api.razorpay.com/v1/" + path, {
+    ...init,
+    headers: { "Authorization": auth, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(RAZORPAY_TIMEOUT_MS),
+  });
+}
+
+// One checkout is prepared at a time per account. A parallel or retried request
+// waits briefly for the lease; by then the first request's checkout is usually
+// there to reuse.
+async function claimLease(admin: any, uid: string) {
+  for (let i = 0; i < 6; i++) {
+    const { data } = await admin.rpc("claim_checkout_lease", { p_user_id: uid, p_seconds: 20 });
+    if (data === true) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
+}
+
+// The newest unpaid checkout of this kind, if it is recent and still payable.
+async function reusableCheckout(admin: any, uid: string, popup: boolean, auth: string) {
+  const { data } = await admin.from("payment_transactions")
+    .select("payment_link_id,created_at")
+    .eq("user_id", uid).eq("status", "created").eq("amount_paise", ANNUAL_PRICE_PAISE)
+    .like("payment_link_id", popup ? "order_%" : "plink_%")
+    .order("created_at", { ascending: false }).limit(1);
+  const row = data?.[0];
+  if (!row || Date.now() - new Date(row.created_at).getTime() > (popup ? REUSE_ORDER_MS : REUSE_LINK_MS)) return null;
+  if (popup) return { order_id: row.payment_link_id };
+  try {
+    const r = await razorpay("payment_links/" + encodeURIComponent(row.payment_link_id), auth);
+    const link = await r.json();
+    return r.ok && link?.status === "created" && link?.short_url ? { id: link.id, short_url: link.short_url } : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: cors });
@@ -89,101 +136,112 @@ Deno.serve(async (req) => {
 
     const referenceId = "gita_" + uid.replaceAll("-", "").slice(0, 16) + "_" + Date.now().toString(36);
     const razorpayAuth = "Basic " + btoa(keyId + ":" + keySecret);
+    const popup = mode === "popup";
+    const json = { ...cors, "Content-Type": "application/json" };
+    const popupResponse = (orderId: string) => Response.json({
+      order_id: orderId,
+      key_id: keyId,
+      amount: ANNUAL_PRICE_PAISE,
+      currency: "INR",
+      prefill: { ...(phone ? { contact: "+" + phone } : {}), ...(email ? { email } : {}) }
+    }, { headers: json });
 
-    if (mode === "popup") {
-      const rzOrder = await fetch("https://api.razorpay.com/v1/orders", {
-        method: "POST",
-        headers: { "Authorization": razorpayAuth, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: ANNUAL_PRICE_PAISE,
+    const leased = await claimLease(admin, uid);
+    try {
+      const reuse = await reusableCheckout(admin, uid, popup, razorpayAuth);
+      if (reuse) {
+        return "order_id" in reuse ? popupResponse(reuse.order_id) : Response.json(reuse, { headers: json });
+      }
+      if (!leased) {
+        return Response.json({ error: "Your payment is being prepared. Please try again in a moment." }, { status: 409, headers: json });
+      }
+
+      if (popup) {
+        const rzOrder = await razorpay("orders", razorpayAuth, {
+          method: "POST",
+          body: JSON.stringify({
+            amount: ANNUAL_PRICE_PAISE,
+            currency: "INR",
+            receipt: referenceId,
+            // razorpay-webhook unlocks only orders carrying this marker, so other
+            // products on the same Razorpay account can never grant access.
+            notes: { user_id: uid, product: "gita_verse_annual", checkout: "popup" }
+          })
+        });
+        const order = await rzOrder.json();
+        if (!rzOrder.ok || !order?.id) {
+          console.error("Razorpay order creation failed", rzOrder.status, JSON.stringify(order).slice(0, 300));
+          return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
+        }
+        // The order id is kept in payment_link_id, the column that holds the
+        // Razorpay reference a payment is matched against.
+        await admin.from("payment_transactions").insert({
+          user_id: uid,
+          provider: "razorpay",
+          payment_link_id: order.id,
+          amount_paise: ANNUAL_PRICE_PAISE,
           currency: "INR",
-          receipt: referenceId,
-          // razorpay-webhook unlocks only orders carrying this marker, so other
-          // products on the same Razorpay account can never grant access.
-          notes: { user_id: uid, product: "gita_verse_annual", checkout: "popup" }
-        })
+          status: "created"
+        });
+        await admin.from("user_accounts").update({
+          payment_provider: "razorpay",
+          payment_link_id: order.id,
+          updated_at: new Date().toISOString()
+        }).eq("user_id", uid);
+        return popupResponse(order.id);
+      }
+      const payload = {
+        amount: ANNUAL_PRICE_PAISE,
+        currency: "INR",
+        accept_partial: false,
+        description: "Gita Verse Annual Access",
+        reference_id: referenceId,
+        customer: email ? { email } : undefined,
+        notify: { sms: false, email: false },
+        reminder_enable: false,
+        // Unpaid links expire so an old tab can't be paid long after a later purchase.
+        expire_by: Math.floor(Date.now() / 1000) + 60 * 60,
+        callback_url: SITE_URL + "/?payment=success",
+        callback_method: "get",
+        notes: {
+          user_id: uid,
+          product: "gita_verse_annual"
+        }
+      };
+
+      const rz = await razorpay("payment_links", razorpayAuth, {
+        method: "POST",
+        body: JSON.stringify(payload)
       });
-      const order = await rzOrder.json();
-      if (!rzOrder.ok || !order?.id) {
-        console.error("Razorpay order creation failed", rzOrder.status, JSON.stringify(order).slice(0, 300));
+
+      const body = await rz.json();
+      if (!rz.ok) {
+        console.error("Razorpay link creation failed", rz.status, JSON.stringify(body).slice(0, 300));
         return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
       }
-      // The order id is kept in payment_link_id, the column that holds the
-      // Razorpay reference a payment is matched against.
+
       await admin.from("payment_transactions").insert({
         user_id: uid,
         provider: "razorpay",
-        payment_link_id: order.id,
+        payment_link_id: body.id,
         amount_paise: ANNUAL_PRICE_PAISE,
         currency: "INR",
-        status: "created"
+        status: body.status || "created"
       });
+
       await admin.from("user_accounts").update({
         payment_provider: "razorpay",
-        payment_link_id: order.id,
+        payment_link_id: body.id,
         updated_at: new Date().toISOString()
       }).eq("user_id", uid);
+
       return Response.json({
-        order_id: order.id,
-        key_id: keyId,
-        amount: ANNUAL_PRICE_PAISE,
-        currency: "INR",
-        prefill: { ...(phone ? { contact: "+" + phone } : {}), ...(email ? { email } : {}) }
-      }, { headers: { ...cors, "Content-Type": "application/json" } });
+        id: body.id,
+        short_url: body.short_url
+      }, { headers: json });
+    } finally {
+      if (leased) await admin.rpc("release_checkout_lease", { p_user_id: uid });
     }
-    const payload = {
-      amount: ANNUAL_PRICE_PAISE,
-      currency: "INR",
-      accept_partial: false,
-      description: "Gita Verse Annual Access",
-      reference_id: referenceId,
-      customer: email ? { email } : undefined,
-      notify: { sms: false, email: false },
-      reminder_enable: false,
-      // Unpaid links expire so an old tab can't be paid long after a later purchase.
-      expire_by: Math.floor(Date.now() / 1000) + 60 * 60,
-      callback_url: SITE_URL + "/?payment=success",
-      callback_method: "get",
-      notes: {
-        user_id: uid,
-        product: "gita_verse_annual"
-      }
-    };
-
-    const rz = await fetch("https://api.razorpay.com/v1/payment_links", {
-      method: "POST",
-      headers: {
-        "Authorization": razorpayAuth,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const body = await rz.json();
-    if (!rz.ok) {
-      console.error("Razorpay link creation failed", rz.status, JSON.stringify(body).slice(0, 300));
-      return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
-    }
-
-    await admin.from("payment_transactions").insert({
-      user_id: uid,
-      provider: "razorpay",
-      payment_link_id: body.id,
-      amount_paise: ANNUAL_PRICE_PAISE,
-      currency: "INR",
-      status: body.status || "created"
-    });
-
-    await admin.from("user_accounts").update({
-      payment_provider: "razorpay",
-      payment_link_id: body.id,
-      updated_at: new Date().toISOString()
-    }).eq("user_id", uid);
-
-    return Response.json({
-      id: body.id,
-      short_url: body.short_url
-    }, { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     // Details (e.g. missing secret names) go to the logs, not the browser.
     console.error("create-payment-link failed", String(e));
