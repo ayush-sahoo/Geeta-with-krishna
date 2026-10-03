@@ -19,13 +19,14 @@ async function hmacHex(secret: string, raw: string) {
 // payment attempts (and their reasons) are visible, not only successful ones.
 function eventSummary(event: any) {
   const link = event?.payload?.payment_link?.entity || {};
+  const order = event?.payload?.order?.entity || {};
   const payment = event?.payload?.payment?.entity || {};
   const contact = String(payment?.contact || "").replace(/\D/g, "");
   return {
     event: String(event?.event || "unknown"),
-    user_id: link?.notes?.user_id || payment?.notes?.user_id || null,
+    user_id: link?.notes?.user_id || order?.notes?.user_id || payment?.notes?.user_id || null,
     payment_link_id: link?.id || null,
-    order_id: payment?.order_id || link?.order_id || null,
+    order_id: payment?.order_id || order?.id || link?.order_id || null,
     payment_id: payment?.id || null,
     status: payment?.status || link?.status || null,
     method: payment?.method || null,
@@ -77,24 +78,35 @@ Deno.serve(async (req) => {
       console.error("payment event log failed", String(e));
     }
 
-    if (event?.event !== "payment_link.paid") {
+    // Two ways to pay: a hosted payment link (payment_link.paid) or the on-site
+    // checkout, whose orders carry notes.checkout = "popup" (order.paid). Other
+    // events, and orders from other products on the same Razorpay account, are
+    // only logged above.
+    const link = event?.payload?.payment_link?.entity || {};
+    const order = event?.payload?.order?.entity || {};
+    const payment = event?.payload?.payment?.entity || {};
+    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean;
+    if (event?.event === "payment_link.paid") {
+      userId = link?.notes?.user_id || payment?.notes?.user_id || null;
+      reference = link?.id || null;
+      amount = Number(payment?.amount ?? link?.amount_paid ?? 0);
+      referencePaid = String(link?.status || "") === "paid";
+    } else if (event?.event === "order.paid" && order?.notes?.checkout === "popup" && order?.notes?.product === "gita_verse_annual") {
+      userId = order?.notes?.user_id || null;
+      reference = order?.id || null;
+      amount = Number(payment?.amount ?? order?.amount_paid ?? 0);
+      referencePaid = String(order?.status || "") === "paid" && (!payment?.order_id || payment.order_id === order.id);
+    } else {
       return Response.json({ ok: true, ignored: true });
     }
-
-    const link = event?.payload?.payment_link?.entity || {};
-    const payment = event?.payload?.payment?.entity || {};
-    const userId = link?.notes?.user_id || payment?.notes?.user_id || null;
-    const paymentLinkId = link?.id || null;
     const paymentId = payment?.id || null;
-    const amount = Number(payment?.amount ?? link?.amount_paid ?? 0);
-    const linkStatus = String(link?.status || "");
     const paymentStatus = String(payment?.status || "");
 
-    if (!userId || !paymentId || !paymentLinkId) {
+    if (!userId || !paymentId || !reference) {
       return Response.json({ error: "Missing payment identity" }, { status: 400 });
     }
 
-    if (amount !== ANNUAL_PRICE_PAISE || !["paid"].includes(linkStatus) || !["captured","authorized"].includes(paymentStatus)) {
+    if (amount !== ANNUAL_PRICE_PAISE || !referencePaid || !["captured","authorized"].includes(paymentStatus)) {
       return Response.json({ error: "Payment validation failed" }, { status: 400 });
     }
 
@@ -103,9 +115,9 @@ Deno.serve(async (req) => {
     const { data: result, error } = await admin.rpc("apply_annual_payment", {
       p_user_id: userId,
       p_payment_id: paymentId,
-      p_payment_link_id: paymentLinkId,
+      p_payment_link_id: reference,
       p_amount_paise: amount,
-      p_currency: payment?.currency || link?.currency || "",
+      p_currency: payment?.currency || link?.currency || order?.currency || "",
       p_event: event
     });
     if (error) throw error;
