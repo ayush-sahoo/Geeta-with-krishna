@@ -23,8 +23,8 @@ async function open(opts, path = '/') {
   await ctx.route(/facebook|fonts\.g/, r => r.fulfill({ status: 204, body: '' }));
   // Razorpay's on-site checkout script: blocked unless a test opts in, which
   // also exercises the fallback to the hosted payment link.
-  await ctx.route(/checkout\.razorpay\.com/, r => opts.checkout === 'popup'
-    ? r.fulfill({ status: 200, headers: { 'content-type': 'text/javascript' }, body: 'window.Razorpay=function(o){window.__rzp={opts:o,opened:0,handlers:{}};this.open=function(){window.__rzp.opened++};this.on=function(e,f){window.__rzp.handlers[e]=f}};' })
+  await ctx.route(/checkout\.razorpay\.com/, r => opts.checkout === 'popup' || opts.checkout === 'popup-broken'
+    ? r.fulfill({ status: 200, headers: { 'content-type': 'text/javascript' }, body: 'window.Razorpay=function(o){window.__rzp={opts:o,opened:0,handlers:{}};this.open=function(){' + (opts.checkout === 'popup-broken' ? 'throw new Error("blocked")' : 'window.__rzp.opened++') + '};this.on=function(e,f){window.__rzp.handlers[e]=f}};' })
     : r.abort());
   await ctx.route(/rzp\.io/, r => r.fulfill({ status: 200, headers: { 'content-type': 'text/html' }, body: '<h1>razorpay</h1>' }));
   await ctx.route(/supabase\.co/, async r => {
@@ -82,6 +82,16 @@ console.log('\n# On-site checkout (Razorpay pop-up)');
   await pg.evaluate(() => window.__rzp.opts.modal.ondismiss()); await pg.waitForTimeout(200);
   ok(!(await pg.isDisabled('#accountUpgrade')) && await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'closing the pop-up unlocks the buy buttons');
   ok((await purchases(pg)).length === 0 && !(await toastText(pg)).includes('not confirmed'), 'closing it without paying sends no Purchase and no payment message');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# On-site checkout fails to open');
+{ const { ctx, pg, errs } = await open({ signedIn: true, session: phoneSession, checkout: 'popup-broken', paidAfterPolls: 0 });
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => startLifetimePurchase());
+  await pg.waitForFunction(() => /payment window/.test(document.getElementById('toast').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok((await toastText(pg)).includes('Could not open the payment window'), 'buyer is told the payment window could not open', await toastText(pg));
+  ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('Get Annual Access'), 'buy buttons unlock so the buyer can try again', await pg.textContent('#accountUpgrade'));
+  ok(await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'no pending payment is left behind');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# On-site checkout: paid');

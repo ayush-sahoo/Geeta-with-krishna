@@ -836,8 +836,11 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
             handler:()=>{markCheckoutPending(false);reset();confirmPaidAccess();}
           });
           checkout.on?.('payment.failed',()=>trackMeta('CheckoutError',{stage:'payment_failed'},true));
-          markCheckoutPending(true);popupOpen=true;
-          checkout.open();
+          // Counted as open only once it has opened; if opening throws, the
+          // error is shown and the buttons unlock below.
+          markCheckoutPending(true);
+          try{checkout.open();}catch(e){markCheckoutPending(false);throw new Error('Could not open the payment window. Please try again.');}
+          popupOpen=true;
           return;
         }
 
