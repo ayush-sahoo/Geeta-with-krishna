@@ -363,9 +363,38 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       toast('Signed in with Google');
       return true;
     }
+    // Set while the on-site Razorpay checkout is open. Some in-app browsers
+    // reload the page when the buyer comes back from the UPI app, which loses
+    // the checkout's own success callback; the next load then confirms instead.
+    const CHECKOUT_PENDING_KEY='gitaCheckoutPending';
+    function markCheckoutPending(on){try{on?sessionStorage.setItem(CHECKOUT_PENDING_KEY,String(Date.now())):sessionStorage.removeItem(CHECKOUT_PENDING_KEY)}catch(e){}}
+    function takeCheckoutPending(){let at=0;try{at=Number(sessionStorage.getItem(CHECKOUT_PENDING_KEY))||0;sessionStorage.removeItem(CHECKOUT_PENDING_KEY)}catch(e){}return !!at&&Date.now()-at<30*60e3}
+    // Waits for the webhook to unlock the account (usually seconds), then fires
+    // the Meta Purchase. Quiet mode gives up silently (nothing may have been paid).
+    async function confirmPaidAccess({quiet=false,tries=20}={}){
+      if(!quiet)toast('Confirming your payment…');
+      for(let i=0;i<tries;i++){
+        await loadAccountProfile();
+        if(hasLifetimeAccess()){
+          trackConfirmedPurchase();
+          if(location.search.includes('payment='))history.replaceState({},document.title,location.pathname);
+          renderAccessState();
+          showScreen('accountScreen',true);
+          toast('Annual Access unlocked ✓');
+          return true;
+        }
+        await new Promise(r=>setTimeout(r,1500));
+      }
+      if(!quiet)toast('Payment is not confirmed yet. If you paid, your access will appear here shortly; refresh in a minute.');
+      return false;
+    }
     async function handlePaymentReturn(){
       const params=new URLSearchParams(location.search);
-      if(params.get('payment')!=='success')return false;
+      const pending=takeCheckoutPending();
+      if(params.get('payment')!=='success'){
+        if(pending&&authSession?.access_token)return confirmPaidAccess({quiet:true,tries:8});
+        return false;
+      }
       if(!authSession?.access_token){
         // Came back in a browser that isn't signed in. The URL alone doesn't
         // prove a payment, so don't claim one; access is on their account.
@@ -375,25 +404,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         return false;
       }
 
-      toast('Confirming your payment…');
-
       // Razorpay usually confirms within seconds; wait up to about 30.
-      for(let i=0;i<20;i++){
-        await loadAccountProfile();
-        if(hasLifetimeAccess()){
-          trackConfirmedPurchase();
-
-          history.replaceState({},document.title,location.pathname);
-          renderAccessState();
-          showScreen('accountScreen',true);
-          toast('Annual Access unlocked ✓');
-          return true;
-        }
-        await new Promise(r=>setTimeout(r,1500));
-      }
-
-      toast('Payment is not confirmed yet. If you paid, your access will appear here shortly; refresh in a minute.');
-      return false;
+      return confirmPaidAccess();
     }
     async function refreshAuthSession(){
       const generation=authSessionGeneration;
@@ -752,6 +764,21 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       let at=0;try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY)}catch(e){}
       return at&&Date.now()-at<30*60e3;
     }
+    // Razorpay's on-site checkout keeps buyers on Gita Verse and fills in the
+    // phone or email they signed up with. If its script can't load in time, the
+    // hosted payment link is used instead.
+    let razorpayLoading=null;
+    function loadRazorpayCheckout(timeout=6000){
+      if(window.Razorpay)return Promise.resolve(true);
+      razorpayLoading||=new Promise(resolve=>{
+        const script=document.createElement('script');script.src='https://checkout.razorpay.com/v1/checkout.js';script.async=true;
+        const timer=setTimeout(()=>resolve(false),timeout);
+        script.onload=()=>{clearTimeout(timer);resolve(!!window.Razorpay)};
+        script.onerror=()=>{clearTimeout(timer);resolve(false)};
+        document.head.appendChild(script);
+      }).then(ok=>{if(!ok)razorpayLoading=null;return ok});
+      return razorpayLoading;
+    }
     async function startLifetimePurchase(){
       if(checkoutBusy)return;
       trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
@@ -765,12 +792,16 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       checkoutBusy=true;
       const buttons=[$('buyLifetime'),$('accountUpgrade'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
       buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
-      let leaving=false;
+      let leaving=false,popupOpen=false;
+      const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
+      const popupReady=loadRazorpayCheckout();
 
       try{
         await freshSession();
         if(!authSession?.access_token){askToSignInForPurchase();return;}
         const checkoutSession=authSession,checkoutGeneration=authSessionGeneration;
+        const usePopup=await popupReady;
+        if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
         const r=await timedFetch(SUPA+'/functions/v1/create-payment-link',{
           method:'POST',
           headers:{
@@ -778,7 +809,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
             Authorization:'Bearer '+authSession.access_token,
             'Content-Type':'application/json'
           },
-          body:JSON.stringify({})
+          body:JSON.stringify(usePopup?{mode:'popup'}:{})
         });
 
         const d=await r.json();
@@ -789,6 +820,24 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           await loadAccountProfile();
           toast('Annual Access is already active');
           showScreen('accountScreen');
+          return;
+        }
+
+        if(usePopup&&d.order_id&&window.Razorpay){
+          trackMeta('InitiateCheckout',annualEvent);
+          const checkout=new window.Razorpay({
+            key:d.key_id,order_id:d.order_id,amount:d.amount,currency:d.currency||'INR',
+            name:'Gita Verse',description:'Annual Access · 1 year',
+            prefill:d.prefill||{},theme:{color:'#f6bf42'},
+            retry:{enabled:true},
+            modal:{ondismiss:()=>{markCheckoutPending(false);reset();}},
+            // Access is unlocked by the server (razorpay-webhook); this only
+            // waits for it and then shows the result.
+            handler:()=>{markCheckoutPending(false);reset();confirmPaidAccess();}
+          });
+          checkout.on?.('payment.failed',()=>trackMeta('CheckoutError',{stage:'payment_failed'},true));
+          markCheckoutPending(true);popupOpen=true;
+          checkout.open();
           return;
         }
 
@@ -807,8 +856,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }finally{
         // While the browser opens Razorpay the buttons stay locked; if it never
         // leaves (or the visitor comes back), they unlock after a few seconds.
-        const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
-        if(leaving)setTimeout(reset,8000);else reset();
+        // The on-site checkout unlocks them itself when it closes.
+        if(leaving)setTimeout(reset,8000);else if(!popupOpen)reset();
       }
     }
     function themeOf(v){

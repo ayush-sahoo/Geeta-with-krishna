@@ -91,6 +91,9 @@ await ctx.exposeBinding('__rep', (_src, a) => ALLFB.push(a));
 await ctx.addInitScript(() => { window.__fb = []; window.fbq = function () { const a = [...arguments]; window.__fb.push(a); try { window.__rep(JSON.parse(JSON.stringify(a))); } catch (e) {} }; });
 await ctx.route(/supabase\.co/, backend);
 await ctx.route(/facebook\.(com|net)/, r => r.fulfill({ status: 204, body: '' }));
+// Razorpay's on-site checkout script is blocked here, so checkout uses the
+// hosted payment link (the pop-up is covered in payments.mjs).
+await ctx.route(/checkout\.razorpay\.com/, r => r.abort());
 await ctx.route(/rzp\.io|gitaverse\.co\.in|fonts\.g/, r => r.fulfill({ status: 200, headers: { 'content-type': 'text/html' }, body: '<h1>external</h1>' }));
 
 const page = await ctx.newPage();

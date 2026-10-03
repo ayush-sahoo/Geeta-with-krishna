@@ -19,8 +19,13 @@ async function open(opts, path = '/') {
     window.__fb = []; window.fbq = function () { window.__fb.push([...arguments]); };
     if (signedIn) localStorage.setItem('gitaAuthSession', JSON.stringify(s));
   }, [opts.session || session, !!opts.signedIn]);
-  const S = { polls: 0, links: 0, refreshes: 0, linkAuth: [] };
+  const S = { polls: 0, links: 0, refreshes: 0, linkAuth: [], linkBodies: [] };
   await ctx.route(/facebook|fonts\.g/, r => r.fulfill({ status: 204, body: '' }));
+  // Razorpay's on-site checkout script: blocked unless a test opts in, which
+  // also exercises the fallback to the hosted payment link.
+  await ctx.route(/checkout\.razorpay\.com/, r => opts.checkout === 'popup'
+    ? r.fulfill({ status: 200, headers: { 'content-type': 'text/javascript' }, body: 'window.Razorpay=function(o){window.__rzp={opts:o,opened:0,handlers:{}};this.open=function(){window.__rzp.opened++};this.on=function(e,f){window.__rzp.handlers[e]=f}};' })
+    : r.abort());
   await ctx.route(/rzp\.io/, r => r.fulfill({ status: 200, headers: { 'content-type': 'text/html' }, body: '<h1>razorpay</h1>' }));
   await ctx.route(/supabase\.co/, async r => {
     const u = new URL(r.request().url()), p = u.pathname;
@@ -44,7 +49,11 @@ async function open(opts, path = '/') {
         ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
         : { plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: false });
     }
-    if (p.endsWith('create-payment-link')) { S.links++; S.linkAuth.push(r.request().headers()['authorization']); return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200); }
+    if (p.endsWith('create-payment-link')) {
+      S.links++; S.linkAuth.push(r.request().headers()['authorization']); S.linkBodies.push(r.request().postData() || '');
+      if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: 100000, currency: 'INR', prefill: { contact: '+919876543210' } });
+      return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200);
+    }
     return j([]);
   });
   const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));
@@ -53,6 +62,63 @@ async function open(opts, path = '/') {
 }
 const purchases = pg => pg.evaluate(() => window.__fb.filter(a => a[1] === 'Purchase'));
 const screen = pg => pg.evaluate(() => [...document.querySelectorAll('.screen')].filter(s => getComputedStyle(s).display !== 'none').map(s => s.id).join());
+
+const phoneSession = { ...session, user: { ...session.user, email: '', phone: '919876543210', app_metadata: { provider: 'phone' } } };
+const toastText = pg => pg.textContent('#toast');
+
+console.log('\n# On-site checkout (Razorpay pop-up)');
+{ const { ctx, pg, S, errs } = await open({ signedIn: true, session: phoneSession, checkout: 'popup', paidAfterPolls: 0 });
+  await pg.waitForTimeout(800);
+  const urlBefore = pg.url();
+  await pg.evaluate(() => startLifetimePurchase());
+  await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
+  const o = await pg.evaluate(() => window.__rzp?.opts);
+  ok(S.links === 1 && S.linkBodies[0].includes('"popup"'), 'asks the server for an on-site checkout order', JSON.stringify(S.linkBodies));
+  ok(o?.order_id === 'order_B' && o?.key === 'rzp_live_key' && o?.amount === 100000 && o?.name === 'Gita Verse', 'Razorpay pop-up opens for the Gita Verse order', JSON.stringify(o));
+  ok(o?.prefill?.contact === '+919876543210', 'phone number from sign-up is filled in for the buyer', JSON.stringify(o?.prefill));
+  ok(pg.url() === urlBefore, 'buyer stays on Gita Verse (no redirect to a payment page)', pg.url());
+  ok((await pg.evaluate(() => window.__fb.filter(a => a[1] === 'InitiateCheckout').length)) === 1, 'Meta InitiateCheckout sent once when the pop-up opens');
+  ok(await pg.isDisabled('#accountUpgrade') && await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') !== null), 'buy buttons stay locked while the pop-up is open');
+  await pg.evaluate(() => window.__rzp.opts.modal.ondismiss()); await pg.waitForTimeout(200);
+  ok(!(await pg.isDisabled('#accountUpgrade')) && await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'closing the pop-up unlocks the buy buttons');
+  ok((await purchases(pg)).length === 0 && !(await toastText(pg)).includes('not confirmed'), 'closing it without paying sends no Purchase and no payment message');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# On-site checkout: paid');
+{ const o = { signedIn: true, session: phoneSession, checkout: 'popup', paidAfterPolls: 0 };
+  const { ctx, pg, S, errs } = await open(o);
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => startLifetimePurchase());
+  await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
+  o.paidAfterPolls = S.polls + 2; // the webhook lands a moment after the payment
+  await pg.evaluate(() => window.__rzp.opts.handler({ razorpay_payment_id: 'pay_B1', razorpay_order_id: 'order_B' }));
+  await pg.waitForFunction(() => window.__fb.some(a => a[1] === 'Purchase'), null, { timeout: 15000 }).catch(() => {});
+  const p = await purchases(pg);
+  ok(p.length === 1 && p[0][3]?.eventID === 'gita_purchase_pay_B1', 'after paying in the pop-up, access is confirmed and Meta Purchase sent once', JSON.stringify(p));
+  ok((await screen(pg)) === 'accountScreen' && (await toastText(pg)).includes('Annual Access unlocked'), 'buyer sees Annual Access unlocked on Gita Verse', await toastText(pg));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# On-site checkout: page reloaded on return from the UPI app');
+{ const o = { signedIn: true, session: phoneSession, checkout: 'popup', paidAfterPolls: 0 };
+  const { ctx, pg, errs } = await open(o);
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => startLifetimePurchase());
+  await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
+  o.paid = true; o.paidAfterPolls = 0; // paid in the UPI app; the in-app browser reloads the page
+  await pg.reload();
+  await pg.waitForFunction(() => /unlocked/.test(document.getElementById('toast').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok((await screen(pg)) === 'accountScreen' && (await toastText(pg)).includes('Annual Access unlocked'), 'after a reload the purchase is still confirmed on screen', await toastText(pg));
+  ok((await purchases(pg)).length === 1, 'Meta Purchase sent once after the reload');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# On-site checkout unavailable: falls back to the payment page');
+{ const { ctx, pg, S, errs } = await open({ signedIn: true, session: phoneSession, paidAfterPolls: 0 });
+  await pg.waitForTimeout(800);
+  const nav = pg.waitForURL(/rzp\.io/, { timeout: 12000 }).then(() => true).catch(() => false);
+  await pg.evaluate(() => startLifetimePurchase());
+  ok(await nav, 'with the checkout script blocked, the buyer is sent to the Razorpay payment page');
+  ok(S.links === 1 && !S.linkBodies[0].includes('"popup"'), 'fallback asks for a payment link, not a pop-up order', JSON.stringify(S.linkBodies));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# Razorpay confirms after ~20 s');
 { const { ctx, pg, errs } = await open({ signedIn: true, paidAfterPolls: 15 }, '/?payment=success');

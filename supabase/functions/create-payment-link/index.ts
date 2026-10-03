@@ -62,6 +62,12 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, adminKey);
     const uid = userData.user.id;
     const email = userData.user.email || "";
+    const phone = String(userData.user.phone || "").replace(/\D/g, "");
+    // "popup": a Razorpay order for the on-site checkout (which can prefill the
+    // buyer's phone or email). Otherwise a hosted payment link, the fallback when
+    // the checkout script cannot load.
+    let mode = "link";
+    try { mode = (await req.json())?.mode === "popup" ? "popup" : "link"; } catch { /* no body */ }
 
     const { data: account } = await admin
       .from("user_accounts")
@@ -82,6 +88,49 @@ Deno.serve(async (req) => {
     }
 
     const referenceId = "gita_" + uid.replaceAll("-", "").slice(0, 16) + "_" + Date.now().toString(36);
+    const razorpayAuth = "Basic " + btoa(keyId + ":" + keySecret);
+
+    if (mode === "popup") {
+      const rzOrder = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: { "Authorization": razorpayAuth, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: ANNUAL_PRICE_PAISE,
+          currency: "INR",
+          receipt: referenceId,
+          // razorpay-webhook unlocks only orders carrying this marker, so other
+          // products on the same Razorpay account can never grant access.
+          notes: { user_id: uid, product: "gita_verse_annual", checkout: "popup" }
+        })
+      });
+      const order = await rzOrder.json();
+      if (!rzOrder.ok || !order?.id) {
+        console.error("Razorpay order creation failed", rzOrder.status, JSON.stringify(order).slice(0, 300));
+        return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
+      }
+      // The order id is kept in payment_link_id, the column that holds the
+      // Razorpay reference a payment is matched against.
+      await admin.from("payment_transactions").insert({
+        user_id: uid,
+        provider: "razorpay",
+        payment_link_id: order.id,
+        amount_paise: ANNUAL_PRICE_PAISE,
+        currency: "INR",
+        status: "created"
+      });
+      await admin.from("user_accounts").update({
+        payment_provider: "razorpay",
+        payment_link_id: order.id,
+        updated_at: new Date().toISOString()
+      }).eq("user_id", uid);
+      return Response.json({
+        order_id: order.id,
+        key_id: keyId,
+        amount: ANNUAL_PRICE_PAISE,
+        currency: "INR",
+        prefill: { ...(phone ? { contact: "+" + phone } : {}), ...(email ? { email } : {}) }
+      }, { headers: { ...cors, "Content-Type": "application/json" } });
+    }
     const payload = {
       amount: ANNUAL_PRICE_PAISE,
       currency: "INR",
@@ -104,7 +153,7 @@ Deno.serve(async (req) => {
     const rz = await fetch("https://api.razorpay.com/v1/payment_links", {
       method: "POST",
       headers: {
-        "Authorization": "Basic " + btoa(keyId + ":" + keySecret),
+        "Authorization": razorpayAuth,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
