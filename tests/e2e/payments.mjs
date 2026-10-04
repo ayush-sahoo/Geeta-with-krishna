@@ -46,12 +46,12 @@ async function open(opts, path = '/') {
       S.polls++;
       const paid = opts.paidAfterPolls ? S.polls >= opts.paidAfterPolls : !!opts.paid;
       return j(paid
-        ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
+        ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', amount_paid_paise: opts.paidPaise || 100000, purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
         : { plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: false });
     }
     if (p.endsWith('create-payment-link')) {
       S.links++; S.linkAuth.push(r.request().headers()['authorization']); S.linkBodies.push(r.request().postData() || '');
-      if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: 100000, currency: 'INR', prefill: { contact: '+919876543210' } });
+      if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: (r.request().postData() || '').includes('"quarterly"') ? 39900 : 100000, currency: 'INR', prefill: { contact: '+919876543210' } });
       return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200);
     }
     return j([]);
@@ -106,6 +106,37 @@ console.log('\n# On-site checkout: paid');
   const p = await purchases(pg);
   ok(p.length === 1 && p[0][3]?.eventID === 'gita_purchase_pay_B1', 'after paying in the pop-up, access is confirmed and Meta Purchase sent once', JSON.stringify(p));
   ok((await screen(pg)) === 'accountScreen' && (await toastText(pg)).includes('Annual Access unlocked'), 'buyer sees Annual Access unlocked on Gita Verse', await toastText(pg));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# Offer screen: 3-month plan');
+{ const o = { signedIn: true, session: phoneSession, checkout: 'popup', paidAfterPolls: 0, paidPaise: 39900 };
+  const { ctx, pg, S, errs } = await open(o);
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => showPaywall());
+  await pg.click('.plan[data-plan="quarterly"]');
+  ok((await pg.textContent('#offerBuy')).includes('₹399 for 3 months') && await pg.getAttribute('.plan[data-plan="quarterly"]', 'aria-checked') === 'true', 'choosing 3 months selects it and names it on the button', await pg.textContent('#offerBuy'));
+  await pg.click('#offerBuy');
+  await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
+  const ro = await pg.evaluate(() => window.__rzp?.opts);
+  ok(S.links === 1 && JSON.parse(S.linkBodies[0]).plan === 'quarterly', 'asks the server for the 3-month plan', JSON.stringify(S.linkBodies));
+  ok(ro?.amount === 39900 && /3-Month/.test(ro?.description), 'pop-up shows ₹399 for 3-Month Access', JSON.stringify(ro));
+  const meta = await pg.evaluate(() => window.__fb.filter(a => a[1] === 'CheckoutClick' || a[1] === 'InitiateCheckout').map(a => [a[1], a[2].value, a[2].content_ids[0]]));
+  ok(meta.length === 2 && meta.every(m => m[1] === 399 && m[2] === 'gita_quarterly'), 'Meta checkout events carry ₹399 and the 3-month product', JSON.stringify(meta));
+  o.paidAfterPolls = S.polls + 1;
+  await pg.evaluate(() => window.__rzp.opts.handler({ razorpay_payment_id: 'pay_B1', razorpay_order_id: 'order_B' }));
+  await pg.waitForFunction(() => window.__fb.some(a => a[1] === 'Purchase'), null, { timeout: 15000 }).catch(() => {});
+  const p = await purchases(pg);
+  ok(p.length === 1 && p[0][2].value === 399 && p[0][2].content_ids[0] === 'gita_quarterly', 'Meta Purchase is sent once with value ₹399', JSON.stringify(p));
+  ok((await toastText(pg)).includes('3-Month Access unlocked') && (await pg.textContent('#accountPlan')) === '3 months', 'buyer sees 3-Month Access unlocked and the plan on Account', await toastText(pg) + ' / ' + await pg.textContent('#accountPlan'));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# Offer screen: 3-month plan chosen while signed out');
+{ const { ctx, pg, S, errs } = await open({ checkout: 'popup', paidAfterPolls: 0 });
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => showPaywall());
+  await pg.click('.plan[data-plan="quarterly"]'); await pg.click('#offerBuy');
+  ok((await screen(pg)) === 'authScreen' && await pg.evaluate(() => localStorage.getItem('gitaBuyPlan')) === 'quarterly', 'sign-in is asked first and the chosen plan is remembered', await screen(pg));
+  ok(await pg.evaluate(() => takeBuyAfterSignIn()) === 'quarterly' && await pg.evaluate(() => localStorage.getItem('gitaBuyPlan')) === null, 'after sign-in the 3-month plan is bought, then forgotten');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# On-site checkout: page reloaded on return from the UPI app');

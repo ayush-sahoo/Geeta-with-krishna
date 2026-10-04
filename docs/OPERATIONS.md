@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Vercel (project `geeta-with-krishna`) | Hosting gitaverse.co.in; deploys every push to `main` | vercel.com |
 | Supabase (`bkwvuckznpaawmqrjjgk`, Mumbai) | Database, Auth, edge functions, secrets | supabase.com dashboard |
-| Razorpay (live keys) | ₹1,000 Annual Access payments; webhook → `razorpay-webhook` | Razorpay dashboard |
+| Razorpay (live keys) | ₹1,000 Annual Access and ₹399 3-Month Access payments; webhook → `razorpay-webhook` | Razorpay dashboard |
 | Google Gemini | Ask Krishna replies, translations | Google AI Studio |
 | ElevenLabs | Verse narration | elevenlabs.io |
 | MSG91 | Sign-in OTP SMS (DLT template) | msg91.com (keep the wallet topped up) |
@@ -61,7 +61,7 @@ There is no automatic schedule; runs are started by hand. The 13 Indian language
 
 | Task | How |
 | --- | --- |
-| Change the price | `ANNUAL_PRICE_PAISE` in `supabase/functions/_shared/server.ts`, then redeploy `create-payment-link` and `razorpay-webhook`. Update the ₹1,000 text in `index.html`/`app.js`, the Meta `annualEvent` value in `app.js`, and the policy pages. |
+| Change a price | `PLANS` in `supabase/functions/_shared/server.ts`, then redeploy `create-payment-link` and `razorpay-webhook`, and change the amount → length mapping in `apply_annual_payment` (a migration). Update the price text in `index.html`/`app.js` (plan cards, `OFFER_PLANS`), the Meta `annualEvent`/`quarterlyEvent` values and `paidPlan()` in `app.js`, and the policy pages. |
 | Change the Gemini model | `GEMINI_MODEL` in `_shared/server.ts`, then redeploy `ask-krishna`, `tts-krishna` and `translation-worker`. |
 | Grant or extend someone's access by hand | Update their `user_accounts` row (`plan_status='annual'`, `payment_status='paid'`, `access_expires_at`) in the SQL editor, and note why. |
 | Roll back the website | Vercel → Deployments → pick the previous production deployment → Promote. |
