@@ -337,7 +337,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
       const buyPlan=takeBuyAfterSignIn();
       if(buyPlan&&!hasLifetimeAccess()){
-        showScreen('accountScreen');startLifetimePurchase(buyPlan);return true;
+        selectOfferPlan(buyPlan);showPaywall();startLifetimePurchase(buyPlan);return true;
       }
       if(askNext){showScreen('ask');$('askInput').focus();return true;}
       showScreen('accountScreen');return false;
@@ -385,7 +385,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           if(location.search.includes('payment='))history.replaceState({},document.title,location.pathname);
           renderAccessState();
           showScreen('accountScreen',true);
-          toast((paidPlan()==='quarterly'?'3-Month':'Annual')+' Access unlocked ✓');
+          toast(paidPlan()==='quarterly'?'3-Month Access unlocked ✓':'Annual Access unlocked ✓');
           return true;
         }
         await new Promise(r=>setTimeout(r,1500));
@@ -405,7 +405,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         // prove a payment, so don't claim one; access is on their account.
         showScreen('authScreen');
         $('authPageError').style.color='#2f7d32';
-        $('authPageError').textContent='If you have paid, sign in with the same mobile number or email you used to buy, and your Annual Access will be there.';
+        $('authPageError').textContent='If you have paid, sign in with the same mobile number or email you used to buy, and your access will be there.';
         return false;
       }
 
@@ -763,7 +763,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       try{localStorage.setItem(BUY_AFTER_SIGN_IN_KEY,String(Date.now()));localStorage.setItem(BUY_PLAN_KEY,plan)}catch(e){}
       showScreen('authScreen');
       $('authPageError').style.color='#2f7d32';
-      $('authPageError').textContent='Sign in or sign up first so Annual Access is linked to your account. Payment opens right after.';
+      $('authPageError').textContent='Sign in or sign up first so your plan is linked to your account. Payment opens right after.';
     }
     function takeBuyAfterSignIn(){
       let at=0,plan='';try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;plan=localStorage.getItem(BUY_PLAN_KEY)||'';localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY);localStorage.removeItem(BUY_PLAN_KEY)}catch(e){}
@@ -784,8 +784,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }).then(ok=>{if(!ok)razorpayLoading=null;return ok});
       return razorpayLoading;
     }
-    // plan: 'annual' (₹1,000, 1 year) or 'quarterly' (₹399, 3 months). Buttons
-    // other than the offer screen's pass a click event here, which means annual.
+    // plan: 'annual' (₹1,000, 1 year) or 'quarterly' (₹399, 3 months). Every
+    // buy button opens the offer screen first, so the buyer picks the plan there.
     async function startLifetimePurchase(plan){
       if(checkoutBusy)return;
       plan=plan==='quarterly'?'quarterly':'annual';
@@ -794,7 +794,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(!authSession?.access_token){askToSignInForPurchase(plan);return;}
 
       if(hasLifetimeAccess()){
-        toast('Annual Access is already active');
+        toast('Your access is already active');
         return;
       }
 
@@ -802,7 +802,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       const buttons=[$('buyLifetime'),$('accountUpgrade'),$('offerBuy'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
       buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
       let leaving=false,popupOpen=false;
-      const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
+      const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='See plans →'});};
       const popupReady=loadRazorpayCheckout();
 
       try{
@@ -827,7 +827,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         if(d.already_paid){
           await loadAccountProfile();
-          toast('Annual Access is already active');
+          toast('Your access is already active');
           showScreen('accountScreen');
           return;
         }
@@ -997,7 +997,7 @@ let offerReturnScreen='home';
 function showPaywall(lead="Keep Krishna's guidance with you every day."){
   logEvent('paywall_view');
   const current=document.querySelector('.screen.active')?.id;
-  if(current&&current!=='offerScreen')offerReturnScreen=current;
+  if(current&&current!=='offerScreen')offerReturnScreen=current==='authScreen'?'home':current;
   $('offerLead').textContent=lead;
   showScreen('offerScreen');
 }
@@ -1009,20 +1009,20 @@ function renderAccessState(){
   $('chatHint').textContent=oneMore?'One more question free with a quick sign-up':freeLeft?'Your first question is free · Grounded in the Gita':'Grounded in the Gita · practical for life today';
   $('heroFreeNote').hidden=!freeLeft;$('heroFreeNote').textContent=oneMore?'1 more free':'1st question free';
   // Until the free question is used, the bottom bar invites people to try it;
-  // afterwards it offers Annual Access.
+  // afterwards it opens the plan choice.
   const offer=freeLeft&&signedOut&&!oneMore
     ?['🙏','TRY IT FREE','Ask Krishna your first question','No sign-up needed · no payment','Ask free →']
     :oneMore
     ?['🙏','','Ask Krishna one more question','Free with a quick sign-up · no payment','Ask free →']
     :freeLeft
     ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
-    :['♕','SPECIAL 1-YEAR ACCESS','₹1,000 for 1 year','About ₹83/month · One-time payment, no autopay','Get access →'];
+    :['♕','FULL ACCESS','Plans from ₹399','3 months or 1 year · One-time payment, no autopay','See plans →'];
   ['offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i+1]});
   $('offerKicker').hidden=!offer[1];
   $('offer').dataset.mode=freeLeft?'free':'buy';
 }
 function openAskKrishna(){showScreen('ask');setTimeout(()=>$('askInput').focus({preventScroll:true}),150);}
-function offerAction(){$('offer').dataset.mode==='free'?openAskKrishna():startLifetimePurchase();}
+function offerAction(){$('offer').dataset.mode==='free'?openAskKrishna():showPaywall();}
 function updateAccountUI(){
   const logged=!!authSession?.access_token,paid=hasLifetimeAccess();
   $('welcomeUser').textContent=logged?'Welcome, '+(userDisplayName()||'friend')+' 🙏':'Sign in 🙏';
@@ -1409,8 +1409,8 @@ async function sendAsk(){
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
       appendText(card,'strong','That was your free question 🙏');
       appendText(card,'p','Keep talking with Krishna whenever you need guidance, plus all 701 verses with meaning, audio and 13 Indian languages.');
-      appendText(card,'p','₹1,000 for a full year · about ₹83 a month · no autopay','upgrade-price');
-      const buy=appendText(card,'button','Get Annual Access →','upgrade-btn');buy.type='button';buy.onclick=startLifetimePurchase;
+      appendText(card,'p','3 months ₹399 · 1 year ₹1,000 · no autopay','upgrade-price');
+      const buy=appendText(card,'button','See plans →','upgrade-btn');buy.type='button';buy.onclick=()=>showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");
     }
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
   finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
@@ -1464,13 +1464,17 @@ $('phoneNumber').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendOtp()}
 $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)verifyOtp()};
 function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=false;sendOtp();}
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
-$('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=startLifetimePurchase;
+$('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=()=>showPaywall();
 // Plan cards: the button names the chosen plan and buys it.
 const OFFER_PLANS={annual:'Continue · ₹1,000 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
-document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>{
-  document.querySelectorAll('.plan').forEach(c=>{const on=c===card;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
-  $('offerBuy').textContent=OFFER_PLANS[card.dataset.plan];
-});
+// The choice is locked while a payment is being opened.
+function selectOfferPlan(plan){
+  if(checkoutBusy)return;
+  plan=plan==='quarterly'?'quarterly':'annual';
+  document.querySelectorAll('.plan').forEach(c=>{const on=c.dataset.plan===plan;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
+  $('offerBuy').textContent=OFFER_PLANS[plan];
+}
+document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>selectOfferPlan(card.dataset.plan));
 $('offerBuy').onclick=()=>startLifetimePurchase(document.querySelector('.plan.selected')?.dataset.plan);$('offerBack').onclick=closeOffer;$('offerLater').onclick=closeOffer;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};
 document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>renderTab(b.dataset.tab));

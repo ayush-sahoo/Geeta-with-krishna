@@ -90,7 +90,7 @@ console.log('\n# On-site checkout fails to open');
   await pg.evaluate(() => startLifetimePurchase());
   await pg.waitForFunction(() => /payment window/.test(document.getElementById('toast').textContent), null, { timeout: 8000 }).catch(() => {});
   ok((await toastText(pg)).includes('Could not open the payment window'), 'buyer is told the payment window could not open', await toastText(pg));
-  ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('Get Annual Access'), 'buy buttons unlock so the buyer can try again', await pg.textContent('#accountUpgrade'));
+  ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('See plans'), 'buy buttons unlock so the buyer can try again', await pg.textContent('#accountUpgrade'));
   ok(await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'no pending payment is left behind');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
@@ -200,12 +200,12 @@ console.log('\n# Payment link cannot be created');
   await pg.waitForTimeout(800);
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(600);
   ok(S.links === 1 && (await pg.textContent('#toast')).includes('Could not start payment'), 'buyer sees "Could not start payment"', await pg.textContent('#toast'));
-  ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('Annual'), 'buy buttons unlock so they can try again', await pg.textContent('#accountUpgrade'));
+  ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('See plans'), 'buy buttons unlock so they can try again', await pg.textContent('#accountUpgrade'));
   ok(await pg.evaluate(() => window.__fb.some(a => a[1] === 'CheckoutError') && !window.__fb.some(a => a[1] === 'InitiateCheckout')), 'CheckoutError recorded, no InitiateCheckout');
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(600);
   ok(S.links === 2, 'a second tap after the error tries again');
-  ok((await pg.textContent('#offerText')) === 'About ₹83/month · One-time payment, no autopay' && (await pg.textContent('#offerTitle')) === '₹1,000 for 1 year', 'bottom offer bar shows per-month price and no autopay', await pg.textContent('#offerText'));
-  ok((await pg.innerHTML('#accountUpgrade')).includes('<small class="btn-sub">About ₹83/month · One-time payment, no autopay</small>'), 'paywall button keeps its per-month and no-autopay line after unlocking');
+  ok((await pg.textContent('#offerText')) === '3 months or 1 year · One-time payment, no autopay' && (await pg.textContent('#offerTitle')) === 'Plans from ₹399', 'bottom offer bar shows both plans and no autopay', await pg.textContent('#offerText'));
+  ok((await pg.innerHTML('#accountUpgrade')).includes('<small class="btn-sub">3 months or 1 year · One-time payment, no autopay</small>'), 'paywall button keeps its plans and no-autopay line after unlocking');
   await ctx.close(); }
 
 console.log('\n# Buy tapped by someone who already has access');
@@ -262,5 +262,30 @@ console.log('\n# Buy tapped while signed out: sign in, then payment opens by its
   await pg.click('#passwordLoginBtn');
   ok(!!(await nav) && S.links === 1, 'after signing in, Razorpay opens without another tap', 'links=' + S.links);
   await ctx.close(); }
+
+console.log('\n# Every buy button opens the plan choice first');
+{ const { ctx, pg, S, errs } = await open({ signedIn: true, paid: false });
+  await pg.waitForTimeout(800);
+  for (const [name, go] of [['Account page button', () => { showScreen('accountScreen'); document.getElementById('accountUpgrade').click(); }], ['bottom bar button', () => { showScreen('home'); offerAction(); }]]) {
+    await pg.evaluate(() => showScreen('home'));
+    await pg.evaluate(go); await pg.waitForTimeout(200);
+    ok((await screen(pg)) === 'offerScreen' && S.links === 0 && (await pg.locator('.plan').count()) === 2, name + ' opens the 1-year / 3-month choice', await screen(pg));
+  }
+  await pg.evaluate(() => { selectOfferPlan('quarterly'); showScreen('accountScreen'); document.getElementById('accountUpgrade').click(); });
+  ok(await pg.getAttribute('.plan[data-plan="quarterly"]', 'aria-checked') === 'true' && (await pg.textContent('#offerBuy')).includes('₹399'), 'the last chosen plan stays selected');
+  ok((await pg.textContent('#offerScreen .meta')) === 'Full Access' && !(await pg.textContent('#offerScreen')).includes('Annual Access'), 'the offer screen does not call both plans "Annual Access"');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
+console.log('\n# Offer screen in an Indian language');
+{ const { ctx, pg, errs } = await open({ signedIn: true, paid: false });
+  await pg.waitForTimeout(800);
+  await pg.evaluate(() => setWebsiteLanguage('hi')); await pg.waitForTimeout(800);
+  await pg.evaluate(() => showPaywall()); await pg.waitForTimeout(300);
+  const text = await pg.textContent('#offerScreen');
+  const english = ['3 months', '1 year', 'BEST VALUE', 'Unlimited Ask Krishna', 'Maybe later', 'One-time payment', 'Choose your plan', 'CHOOSE YOUR PLAN'].filter(t => text.includes(t));
+  ok(!english.length, 'plan names, benefits, badge and buttons are shown in Hindi', english.join(' | '));
+  await pg.click('.plan[data-plan="quarterly"]'); await pg.waitForTimeout(200);
+  ok(!(await pg.textContent('#offerBuy')).includes('months'), 'the button text for the chosen plan is translated too', await pg.textContent('#offerBuy'));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 await b.close();

@@ -122,7 +122,7 @@ check((await screen()) === 'ask', 'free bar opens Ask Krishna', await screen());
 await page.evaluate(() => showScreen('home'));
 await shot('01-home-signed-out');
 await page.click('#dailyRead'); await wait(300);
-check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('every verse'), 'Read verse (signed out) -> offer screen explaining what Annual Access includes', await screen());
+check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('every verse'), 'Read verse (signed out) -> offer screen explaining what full access includes', await screen());
 check((await page.textContent('#offerScreen')).includes('₹1,000') && (await page.textContent('#offerScreen')).includes('no autopay') && (await page.locator('.offer-benefits li').count()) === 4, 'offer screen shows the benefits, the price and no autopay');
 await page.click('#offerLater'); await wait(150);
 check((await screen()) === 'home', '"Maybe later" returns to where the visitor was', await screen());
@@ -171,9 +171,9 @@ await page.waitForFunction(() => /saved|Not saved/.test(document.getElementById(
 const savedRows = (S.chatWrites || []).filter(w => w.p === '/rest/v1/chat_messages').flatMap(w => JSON.parse(w.body));
 check(savedRows.some(r => r.role === 'user' && r.content === 'I am worried about my exams') && savedRows.some(r => r.role === 'user' && r.content === 'I am anxious about my career') && savedRows.every(r => r.user_id === 'u1'), 'after sign-up, the free chat and the new answer are saved to the account', JSON.stringify(savedRows.map(r => r.content)));
 check((await page.textContent('#chatSaveStatus')) === 'Conversation saved' && await page.isHidden('#chatSaveRetry'), 'chat shows "Conversation saved" (no false "Not saved" warning)', await page.textContent('#chatSaveStatus'));
-check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('₹83'), 'upgrade card shown under the free answer');
+check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('3 months ₹399 · 1 year ₹1,000') && (await page.textContent('.upgrade-btn')).includes('See plans'), 'upgrade card under the free answer shows both plans');
 check(!(await page.textContent('#chatHint')).includes('free'), 'free hint removed once used');
-check((await page.textContent('#offer')).includes('₹1,000') && await page.isHidden('#heroFreeNote'), 'after the free question, the bar goes back to Annual Access');
+check((await page.textContent('#offer')).includes('Plans from ₹399') && await page.isHidden('#heroFreeNote'), 'after the free question, the bar offers the plans');
 await shot('02a-free-answer');
 await page.fill('#askInput', 'And what about my family?'); await page.click('#sendAskButton'); await wait(300);
 check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('used your free questions'), 'second question -> offer screen', await screen());
@@ -201,8 +201,13 @@ await page.evaluate(() => showScreen('ask'));
 const nav = page.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 8000 }).catch(() => null);
 await page.click('.upgrade-btn');
 await wait(150);
-check((await page.textContent('.upgrade-btn')) === 'Opening secure payment…' && await page.isDisabled('.upgrade-btn') && await page.isDisabled('#buyLifetime'), 'buy tap shows progress at once and locks every buy button', await page.textContent('.upgrade-btn'));
-for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('.upgrade-btn').click()); await page.evaluate(() => startLifetimePurchase()); }
+check((await screen()) === 'offerScreen' && S.calls.every(c => c.p !== '/functions/v1/create-payment-link'), 'the button under the free answer opens the plan choice (no payment yet)', await screen());
+await page.click('#offerBuy');
+await wait(150);
+check((await page.textContent('#offerBuy')) === 'Opening secure payment…' && await page.isDisabled('#offerBuy') && await page.isDisabled('.upgrade-btn') && await page.isDisabled('#buyLifetime'), 'buy tap shows progress at once and locks every buy button', await page.textContent('#offerBuy'));
+await page.click('.plan[data-plan="quarterly"]', { force: true });
+check(await page.getAttribute('.plan[data-plan="annual"]', 'aria-checked') === 'true', 'the plan cannot be switched while payment is opening');
+for (let i = 0; i < 3; i++) { await page.evaluate(() => document.getElementById('offerBuy').click()); await page.evaluate(() => startLifetimePurchase()); }
 const navReq = await nav;
 await page.waitForURL(/rzp\.io/, { timeout: 5000 }).catch(() => {});
 const pl = S.calls.find(c => c.p === '/functions/v1/create-payment-link');

@@ -2,7 +2,7 @@ import {adminClient,GEMINI_URL} from '../_shared/server.ts';
 import {GITA_LANGUAGES} from '../_shared/languages.ts';
 import sources from '../_shared/ui-strings.json' with {type:'json'};
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'GET,OPTIONS','Cache-Control':'no-store'};
-const revision='ui-20261002-1';
+const revision='ui-20261004-1';
 function json(data:unknown,status=200){return Response.json(data,{status,headers:cors});}
 Deno.serve(async req=>{
   if(req.method==='OPTIONS')return new Response('ok',{headers:cors});
@@ -17,8 +17,12 @@ Deno.serve(async req=>{
     const {data:claimed,error:claimError}=await admin.rpc('claim_website_locale',{p_language:language,p_revision:revision});
     if(claimError)throw claimError;if(!claimed)return json({preparing:true},202);
     try{
+      // Strings already translated under an earlier revision are kept; only
+      // new catalog entries are sent for translation.
+      const previous:Record<string,string>=cached?.translations||{};
       const translations:Record<string,string>={};
-      const batches=[];for(let i=0;i<sources.length;i+=80)batches.push(sources.slice(i,i+80));
+      const pending=sources.filter((source:string)=>{if(previous[source]){translations[source]=previous[source];return false;}return true;});
+      const batches=[];for(let i=0;i<pending.length;i+=80)batches.push(pending.slice(i,i+80));
       // Only a fixed public UI catalog can be translated. No caller text or credentials.
       for(let i=0;i<batches.length;i+=4){
         await Promise.all(batches.slice(i,i+4).map(async batch=>{
