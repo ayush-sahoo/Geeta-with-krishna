@@ -126,6 +126,12 @@ footer{color:var(--muted);font-size:12px}
       <section class="card"><h2>Visitors over time (IST)</h2><div id="timeline" class="empty">Loading…</div></section>
     </div>
 
+    <section class="card">
+      <h2>Checkout steps</h2>
+      <div id="checkoutSteps" class="empty">Loading…</div>
+      <p class="note">People (by browser) at each step in this range. Steps are recorded from 4 Oct 2026; Razorpay's own record of failed payments is in its dashboard.</p>
+    </section>
+
     <section class="card" aria-labelledby="engTitle">
       <h2 id="engTitle">What visitors try, and how long they stay</h2>
       <div class="kpis eng-kpis">
@@ -304,6 +310,7 @@ footer{color:var(--muted);font-size:12px}
     const c = data.campaigns || [];
     $('campaigns').innerHTML = c.length ? c.map((r) => `<tr><td>${esc(r.campaign)}</td><td>${esc(r.ad)}</td><td class="r num">${fmt(r.visitors)}</td><td class="r num">${fmt(r.signups)}</td><td class="r num">${fmt(r.paid)}</td><td class="r num">${pctTxt(pct(r.signups, r.visitors))}</td></tr>`).join('')
       : `<tr><td colspan="6" class="empty">No UTM-tagged visits yet in this range.</td></tr>`;
+    renderCheckoutSteps();
     renderEngagement();
     renderUsers();
   }
@@ -320,6 +327,28 @@ footer{color:var(--muted);font-size:12px}
     $('eng-groups').innerHTML = rows.map(([k, n]) => { const r = groups[k] || {}; return `<tr><td>${n}</td><td class="r num">${fmt(r.people || 0)}</td><td class="r num">${dur(r.median_s)}</td><td class="r num">${dur(r.avg_s)}</td><td class="r num">${r.people ? fmt(r.over_1m) + ' · ' + pctTxt(pct(r.over_1m, r.people)) : '–'}</td><td class="r num">${r.people ? fmt(r.over_3m) + ' · ' + pctTxt(pct(r.over_3m, r.people)) : '–'}</td></tr>`; }).join('');
     $('eng-note').textContent = 'Time on site counts only while the page is on screen, added up across a person\'s visits in this range. ' + (data.sessions_since ? 'Measured since ' + ist(data.sessions_since) + '; for earlier visits the list shows whether they stayed 15 s or 45 s.' : 'Measuring starts with the next visit; until then the list shows whether people stayed 15 s or 45 s.') + ' Test accounts are left out.';
     renderEngaged();
+  }
+
+  function renderCheckoutSteps() {
+    const ev = data.events || {}, f = data.funnel || {};
+    const rows = [
+      ['Saw the plans', 'offer screen shown', ev.paywall_view],
+      ['Tapped 3 months', 'plan card', ev.plan_quarterly],
+      ['Tapped 1 year', 'plan card', ev.plan_annual],
+      ['Tapped Continue', 'any buy button', ev.checkout_click],
+      ['… for 1 year', 'plan being bought', ev.checkout_annual],
+      ['… for 3 months', 'plan being bought', ev.checkout_quarterly],
+      ['Payment window opened', 'Razorpay on the site', ev.checkout_open],
+      ['Sent to payment page', 'fallback when the window can\'t load', ev.checkout_redirect],
+      ['Closed without paying', 'dismissed the window', ev.checkout_dismiss],
+      ['A payment attempt failed', 'UPI/card declined or timed out', ev.checkout_payment_failed],
+      ['Window failed to open', 'browser blocked it', ev.checkout_open_failed],
+      ['Checkout could not be created', 'server or Razorpay error', ev.checkout_create_failed],
+      ['Paid', 'confirmed by Razorpay', f.purchases],
+    ];
+    const max = Math.max(1, ...rows.map((r) => r[2] || 0));
+    $('checkoutSteps').className = '';
+    $('checkoutSteps').innerHTML = rows.map(([n, h, v]) => `<div class="hbar"><span class="name">${n} <span class="sub">· ${h}</span></span><span class="num">${fmt(v || 0)}</span><span class="t"><i style="width:${((v || 0) / max) * 100}%"></i></span></div>`).join('');
   }
 
   function engagedRows() {

@@ -6,12 +6,12 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),vm=requir
 const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/create-payment-link/index.ts','utf8').replace(/^import .*;\n/gm,''))
   .replace('RAZORPAY_TIMEOUT_MS = 8000','RAZORPAY_TIMEOUT_MS = 50').replace('setTimeout(r, 1000)','setTimeout(r, 5)');
 const ago=min=>new Date(Date.now()-min*60e3).toISOString();
-function run(user,body,{open=[],lease=()=>true,linkStatus='created',slow=false}={}){
+function run(user,body,{open=[],lease=()=>true,linkStatus='created',slow=false,insertError=()=>false}={}){
   let serve;const rz=[],inserts=[],rpcs=[];
   const query=table=>{const st={};const b={
     select:()=>b,eq:(k,v)=>{if(k==='amount_paise')st.paise=v;return b},order:()=>b,limit:()=>b,like:(k,v)=>{st.prefix=v.replace('%','');return b},
     single:async()=>({data:{plan_status:'free',payment_status:'unpaid'}}),
-    insert:async row=>{inserts.push(row);return {error:null}},update:()=>({eq:async()=>({error:null})}),
+    insert:async row=>{if(insertError())return {error:{message:'db down'}};inserts.push(row);return {error:null}},update:()=>({eq:async()=>({error:null})}),
     then:(res,rej)=>Promise.resolve({data:table==='payment_transactions'?open.filter(r=>r.payment_link_id.startsWith(st.prefix)&&(r.amount_paise??99900)===st.paise):[],error:null}).then(res,rej)};return b;};
   const c=vm.createContext({Response,btoa,setTimeout,
     // A referenced timer, like Deno's (Node's AbortSignal.timeout lets the test process exit first).
@@ -70,4 +70,20 @@ test('an unpaid order for the other plan is not reused',async()=>{
   const open=[{payment_link_id:'order_annual',amount_paise:99900,created_at:ago(5)}];
   let r=await run({id:'u-12'},{mode:'popup',plan:'quarterly'},{open});assert.equal(r.json.order_id,'order_9');assert.equal(r.rz[0].body.amount,39900);
   r=await run({id:'u-12'},{mode:'popup'},{open});assert.equal(r.json.order_id,'order_annual');assert.equal(creates(r).length,0);
+});
+test('a checkout that cannot be recorded is not handed out (no untracked payable order)',async()=>{
+  for(const body of [{mode:'popup'},{}]){
+    let n=0;const r=await run({id:'u-13'},body,{insertError:()=>++n<=2});
+    assert.equal(r.status,502,JSON.stringify(body));assert.equal(r.json.order_id,undefined);assert.equal(r.json.short_url,undefined);assert.equal(n,2,'one retry');
+    assert.equal(r.rpcs.at(-1),'release_checkout_lease');
+  }
+});
+test('a recording hiccup is retried once and the checkout still opens',async()=>{
+  let n=0;const r=await run({id:'u-14'},{mode:'popup'},{insertError:()=>++n===1});
+  assert.equal(r.status,200);assert.equal(r.json.order_id,'order_9');assert.equal(n,2);
+});
+test('Meta browser ids ride along in the order notes, trimmed',async()=>{
+  const r=await run({id:'u-15'},{mode:'popup',meta:{fbp:'fb.1.1.2',fbc:'fb.1.1.abc',ua:'x'.repeat(400),extra:'no'}});
+  assert.deepEqual(Object.keys(r.rz[0].body.notes).sort(),['checkout','meta_fbc','meta_fbp','meta_ua','product','user_id']);
+  assert.equal(r.rz[0].body.notes.meta_ua.length,250);
 });

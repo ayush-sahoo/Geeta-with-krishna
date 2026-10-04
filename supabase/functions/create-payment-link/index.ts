@@ -39,6 +39,31 @@ async function claimLease(admin: any, uid: string) {
   return false;
 }
 
+// Records a new Razorpay order or link. A retry looks for it here to reuse it,
+// so a checkout that can't be recorded (after one retry) is not handed out:
+// the buyer gets an error and tries again instead of getting an untracked
+// payable checkout. (Unshared unpaid orders and links are harmless; links expire.)
+async function recordCheckout(admin: any, row: Record<string, unknown>) {
+  for (let i = 0; i < 2; i++) {
+    const { error } = await admin.from("payment_transactions").insert(row);
+    if (!error) return true;
+    console.error("payment_transactions insert failed", error.message);
+  }
+  return false;
+}
+
+// Browser ids Meta uses to match a server-side Purchase to the ad click
+// (_fbp/_fbc cookies, user agent). Kept in the order/link notes for
+// razorpay-webhook; Razorpay notes are limited to 256 characters each.
+function metaNotes(meta: any) {
+  const out: Record<string, string> = {};
+  for (const k of ["fbp", "fbc", "ua"]) {
+    const v = typeof meta?.[k] === "string" ? meta[k].slice(0, 250) : "";
+    if (v) out["meta_" + k] = v;
+  }
+  return out;
+}
+
 // The newest unpaid checkout of this kind and price, if it is recent and still payable.
 async function reusableCheckout(admin: any, uid: string, popup: boolean, paise: number, auth: string) {
   const { data } = await admin.from("payment_transactions")
@@ -114,11 +139,12 @@ Deno.serve(async (req) => {
     // buyer's phone or email). Otherwise a hosted payment link, the fallback when
     // the checkout script cannot load.
     // plan: "annual" (₹999, 1 year; the default) or "quarterly" (₹399, 3 months).
-    let mode = "link", planKey = "annual";
+    let mode = "link", planKey = "annual", meta: Record<string, string> = {};
     try {
       const body = await req.json();
       mode = body?.mode === "popup" ? "popup" : "link";
       if (body?.plan === "quarterly") planKey = "quarterly";
+      meta = metaNotes(body?.meta);
     } catch { /* no body */ }
     const plan = PLANS[planKey];
 
@@ -172,7 +198,7 @@ Deno.serve(async (req) => {
             receipt: referenceId,
             // razorpay-webhook unlocks only orders carrying this marker, so other
             // products on the same Razorpay account can never grant access.
-            notes: { user_id: uid, product: plan.product, checkout: "popup" }
+            notes: { user_id: uid, product: plan.product, checkout: "popup", ...meta }
           })
         });
         const order = await rzOrder.json();
@@ -182,19 +208,22 @@ Deno.serve(async (req) => {
         }
         // The order id is kept in payment_link_id, the column that holds the
         // Razorpay reference a payment is matched against.
-        await admin.from("payment_transactions").insert({
+        if (!await recordCheckout(admin, {
           user_id: uid,
           provider: "razorpay",
           payment_link_id: order.id,
           amount_paise: plan.paise,
           currency: "INR",
           status: "created"
-        });
-        await admin.from("user_accounts").update({
+        })) {
+          return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: json });
+        }
+        const { error: accountError } = await admin.from("user_accounts").update({
           payment_provider: "razorpay",
           payment_link_id: order.id,
           updated_at: new Date().toISOString()
         }).eq("user_id", uid);
+        if (accountError) console.error("user_accounts checkout update failed", accountError.message);
         return popupResponse(order.id);
       }
       const payload = {
@@ -212,7 +241,8 @@ Deno.serve(async (req) => {
         callback_method: "get",
         notes: {
           user_id: uid,
-          product: plan.product
+          product: plan.product,
+          ...meta
         }
       };
 
@@ -227,20 +257,23 @@ Deno.serve(async (req) => {
         return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: cors });
       }
 
-      await admin.from("payment_transactions").insert({
+      if (!await recordCheckout(admin, {
         user_id: uid,
         provider: "razorpay",
         payment_link_id: body.id,
         amount_paise: plan.paise,
         currency: "INR",
         status: body.status || "created"
-      });
+      })) {
+        return Response.json({ error: "Could not start payment. Please try again." }, { status: 502, headers: json });
+      }
 
-      await admin.from("user_accounts").update({
+      const { error: accountError } = await admin.from("user_accounts").update({
         payment_provider: "razorpay",
         payment_link_id: body.id,
         updated_at: new Date().toISOString()
       }).eq("user_id", uid);
+      if (accountError) console.error("user_accounts checkout update failed", accountError.message);
 
       return Response.json({
         id: body.id,
