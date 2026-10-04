@@ -33,12 +33,12 @@ test('annual price is ₹999; a ₹1,000 checkout opened before the change still
 });
 // Server-side Purchase (Conversions API): sent once per new payment with the
 // browser's event id, hashed contact details and the amount actually paid.
-function capiHandler({token='capi-token',duplicate=false,metaFails=false}={}){
+function capiHandler({token='capi-token',duplicate=false,metaFails=false,visitUa=''}={}){
   let serve;const sent=[];
   const c=vm.createContext({Response,TextEncoder,crypto:webcrypto,AbortSignal,PLANS:{annual:{paise:99900,product:'gita_verse_annual',oldPaise:[100000]},quarterly:{paise:39900,product:'gita_verse_quarterly'}},serviceKey:()=> 'mock',console:{error(){}},
     fetch:async(url,o)=>{sent.push({url,body:JSON.parse(o.body)});if(metaFails)throw new Error('meta down');return new Response('{}',{status:200});},
     Deno:{env:{get:k=>k==='RAZORPAY_WEBHOOK_SECRET'?'test-secret':k==='META_CAPI_TOKEN'?token:'mock'},serve:fn=>serve=fn},
-    createClient:()=>({from:()=>({insert:async()=>({error:null})}),rpc:async()=>({data:{unlocked:'test-user',duplicate},error:null}),
+    createClient:()=>({from:table=>{const q={insert:async()=>({error:null}),select:()=>q,eq:()=>q,order:()=>q,limit:async()=>({data:table==='site_events'?(visitUa?[{visitor_id:'v_buyer'}]:[]):table==='site_visits'?[{user_agent:visitUa}]:[]}),maybeSingle:async()=>({data:null})};return q;},rpc:async()=>({data:{unlocked:'test-user',duplicate},error:null}),
       auth:{admin:{getUserById:async()=>({data:{user:{email:' Buyer@Example.com ',phone:'919876543210'}}})}}})});
   vm.runInContext(source,c);return {req:body=>serve(new Request('https://test',{method:'POST',headers:{'x-razorpay-signature':sign(body)},body})),sent};
 }
@@ -61,4 +61,8 @@ test('server Purchase: an old ₹1,000 checkout reports ₹1,000, not today\'s p
 test('server Purchase is skipped without a token, for a repeat delivery, or without browser details; a Meta error never fails the payment',async()=>{
   for(const [opts,notes] of [[{token:''},capiNotes],[{duplicate:true},capiNotes],[{},quarterNotes]]){const h=capiHandler(opts);const r=await h.req(orderEvent(notes,39900));assert.equal(r.status,200);assert.equal(h.sent.length,0);}
   const h=capiHandler({metaFails:true});const r=await h.req(orderEvent(capiNotes,39900));assert.equal(r.status,200);assert.equal(h.sent.length,1);
+});
+test('server Purchase falls back to the browser recorded on the buyer\'s visit when the checkout had no details',async()=>{
+  const h=capiHandler({visitUa:'Mozilla/5.0 (iPhone) Instagram 448'});await h.req(orderEvent(quarterNotes,39900));
+  assert.equal(h.sent.length,1);assert.equal(h.sent[0].body.data[0].user_data.client_user_agent,'Mozilla/5.0 (iPhone) Instagram 448');assert.equal(h.sent[0].body.data[0].user_data.fbp,undefined);
 });
