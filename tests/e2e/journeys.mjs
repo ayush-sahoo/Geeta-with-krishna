@@ -122,8 +122,13 @@ check((await screen()) === 'ask', 'free bar opens Ask Krishna', await screen());
 await page.evaluate(() => showScreen('home'));
 await shot('01-home-signed-out');
 await page.click('#dailyRead'); await wait(300);
-check((await screen()) === 'authScreen', 'Read verse (signed out) -> sign-in screen', await screen());
-await page.evaluate(() => showScreen('home'));
+check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('every verse'), 'Read verse (signed out) -> offer screen explaining what Annual Access includes', await screen());
+check((await page.textContent('#offerScreen')).includes('₹1,000') && (await page.textContent('#offerScreen')).includes('no autopay') && (await page.locator('.offer-benefits li').count()) === 4, 'offer screen shows the benefits, the price and no autopay');
+await page.click('#offerLater'); await wait(150);
+check((await screen()) === 'home', '"Maybe later" returns to where the visitor was', await screen());
+await page.click('#dailyRead'); await wait(300); await page.click('#offerBuy'); await wait(300);
+check((await screen()) === 'authScreen' && !S.calls.some(c => c.p === '/functions/v1/create-payment-link'), 'buying from the offer while signed out asks to sign in first', await screen());
+await page.evaluate(() => { localStorage.removeItem('gitaBuyAfterSignIn'); showScreen('home'); });
 await page.evaluate(() => showScreen('ask')); await wait(100);
 check((await page.textContent('#chatHint')).includes('first question is free'), 'Ask screen tells visitors the first question is free');
 // The first question is answered before sign-up.
@@ -171,7 +176,9 @@ check(!(await page.textContent('#chatHint')).includes('free'), 'free hint remove
 check((await page.textContent('#offer')).includes('₹1,000') && await page.isHidden('#heroFreeNote'), 'after the free question, the bar goes back to Annual Access');
 await shot('02a-free-answer');
 await page.fill('#askInput', 'And what about my family?'); await page.click('#sendAskButton'); await wait(300);
-check((await screen()) === 'accountScreen', 'second question -> paywall', await screen());
+check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('used your free questions'), 'second question -> offer screen', await screen());
+await shot('02b-offer');
+await page.evaluate(() => showScreen('accountScreen'));
 check(S.calls.filter(c => c.p === '/functions/v1/ask-krishna' && c.auth).length === 1, 'second question not sent to the server');
 check((await page.textContent('#accountPlan')).trim() === 'Free', 'new account shows Free plan', await page.textContent('#accountPlan'));
 check((await fbFull()).filter(a => a[1] === 'CompleteRegistration').length === 1 && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[3]?.eventID === 'gita_reg_u1' && (await fbFull()).find(a => a[1] === 'CompleteRegistration')?.[2]?.registration_method === 'email', 'Meta CompleteRegistration fires once on email sign-up, with method email and a dedup eventID');
@@ -181,7 +188,7 @@ await shot('02-account-free');
 
 // Free user is still locked out
 await page.evaluate(() => openVerse(2, 47)); await wait(300);
-check((await screen()) === 'accountScreen', 'free user opening a verse -> paywall/account', await screen());
+check((await screen()) === 'offerScreen', 'free user opening a verse -> offer screen', await screen());
 check(!S.calls.some(c => c.p === '/rest/v1/gita_verses'), 'free user never fetches verse data');
 
 // ===== 3. Checkout =====
@@ -189,6 +196,7 @@ console.log('\n# Checkout');
 // The buy button under the free answer, tapped repeatedly while the link is slow
 // to arrive (a real visitor tapped 5 times and got 5 payment links).
 S.linkDelay = 1500;
+const fbBeforeCheckout = ALLFB.length; // an earlier signed-out tap on the offer sent its own CheckoutClick
 await page.evaluate(() => showScreen('ask'));
 const nav = page.waitForRequest(r => r.url().startsWith('https://rzp.io/'), { timeout: 8000 }).catch(() => null);
 await page.click('.upgrade-btn');
@@ -200,7 +208,7 @@ await page.waitForURL(/rzp\.io/, { timeout: 5000 }).catch(() => {});
 const pl = S.calls.find(c => c.p === '/functions/v1/create-payment-link');
 check(!!pl && pl.auth === 'Bearer tok_u1', 'Get Annual Access calls create-payment-link with the user\'s login');
 check(S.calls.filter(c => c.p === '/functions/v1/create-payment-link').length === 1, 'repeated buy taps create only one payment link', String(S.calls.filter(c => c.p === '/functions/v1/create-payment-link').length));
-check(ALLFB.filter(a => a[1] === 'InitiateCheckout').length === 1 && ALLFB.filter(a => a[1] === 'CheckoutClick').length === 1, 'repeated buy taps send Meta one CheckoutClick and one InitiateCheckout');
+check(ALLFB.slice(fbBeforeCheckout).filter(a => a[1] === 'InitiateCheckout').length === 1 && ALLFB.slice(fbBeforeCheckout).filter(a => a[1] === 'CheckoutClick').length === 1, 'repeated buy taps send Meta one CheckoutClick and one InitiateCheckout');
 check(!!navReq, 'browser is sent to the Razorpay payment page');
 const ic = ALLFB.find(a => a[1] === 'InitiateCheckout');
 check(ic?.[2]?.value === 1000 && ic?.[2]?.currency === 'INR', 'Meta InitiateCheckout fires with 1000 INR before redirect', JSON.stringify(ic));

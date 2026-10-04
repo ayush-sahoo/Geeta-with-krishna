@@ -790,7 +790,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
 
       checkoutBusy=true;
-      const buttons=[$('buyLifetime'),$('accountUpgrade'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
+      const buttons=[$('buyLifetime'),$('accountUpgrade'),$('offerBuy'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
       buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
       let leaving=false,popupOpen=false;
       const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
@@ -982,10 +982,17 @@ function openFreeQuestionSignup(){
   showScreen('authScreen');setAuthPageMode('signup');
   $('authModeLead').textContent='Create a free account to continue this conversation with Krishna.';
 }
-function showPaywall(message='Sign in and get Annual Access to continue.'){
+// Free users who reach something that needs Annual Access see what it
+// includes and the price, then pay (signed-out visitors sign in first).
+let offerReturnScreen='home';
+function showPaywall(lead="Keep Krishna's guidance with you every day, for a full year."){
   logEvent('paywall_view');
-  openAccount();toast(authSession?.access_token?'Get Annual Access to unlock all verses and guidance.':message);
+  const current=document.querySelector('.screen.active')?.id;
+  if(current&&current!=='offerScreen')offerReturnScreen=current;
+  $('offerLead').textContent=lead;
+  showScreen('offerScreen');
 }
+function closeOffer(){showScreen(offerReturnScreen||'home');}
 function renderAccessState(){
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
@@ -1037,7 +1044,7 @@ async function loadDailyVerse(){
   }catch(e){}
 }
 async function openVerse(ch,v){
-  if(!hasLifetimeAccess()){showPaywall();return}
+  if(!hasLifetimeAccess()){showPaywall('Read every verse of the Gita with its meaning, reflection and audio.');return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
   renderChapterPage();
   $('chapterKicker').textContent='CHAPTER '+ch;
@@ -1345,7 +1352,7 @@ async function sendAsk(){
     if(!authSession?.access_token){
       if(anonQuestionUsed()){savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
       anonymous=true;
-    }else if(!accountProfile?.free_question_available){showPaywall();return}
+    }else if(!accountProfile?.free_question_available){showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");return}
   }
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
   const generation=chatGeneration,language=chatLanguage==='auto'?undefined:chatLanguage;
@@ -1363,7 +1370,7 @@ async function sendAsk(){
       body:JSON.stringify(anonymous?{question:q,language,visitor_id:VISITOR_ID}:{question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
     if(r.status===403&&d.signup){markAnonQuestionUsed();renderAccessState();answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
-    if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall();return}
+    if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");return}
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';answer.dir='auto';if(language)answer.lang=language;
     if(d.style==='krishna_inspired'){
@@ -1400,7 +1407,7 @@ async function sendAsk(){
   finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
 }
 function openTopic(key,title){
-  if(!hasLifetimeAccess()){showPaywall();return}const t=LIFE_TOPICS[key];if(!t)return;
+  if(!hasLifetimeAccess()){showPaywall('Get guidance from the Gita on fear, anger, career, relationships and more.');return}const t=LIFE_TOPICS[key];if(!t)return;
   $('topicTitle').textContent=title||t.label;$('topicIntro').textContent=t.intro;
   ['Dos','Donts'].forEach(kind=>{const el=$('topic'+kind);el.replaceChildren();t[kind.toLowerCase()].forEach(x=>appendText(el,'li',x));});
   $('topicPractice').textContent=t.practice;$('topicVerses').replaceChildren();
@@ -1449,6 +1456,7 @@ $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)ver
 function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=false;sendOtp();}
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=startLifetimePurchase;
+$('offerBuy').onclick=startLifetimePurchase;$('offerBack').onclick=closeOffer;$('offerLater').onclick=closeOffer;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};
 document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>renderTab(b.dataset.tab));
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});

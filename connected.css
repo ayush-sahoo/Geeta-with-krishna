@@ -9,3 +9,15 @@
 .bubble.assistant p{margin:0 0 12px}.chat-ref{display:inline;border:0;padding:1px 5px;margin:0;border-radius:8px;background:#fbe3b0;color:var(--brown);font:inherit;font-size:12px;font-weight:600;white-space:nowrap}.chat-follow-up{font-style:italic;color:var(--brown)}
 .app-legal-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin:10px 18px 0;padding-bottom:6px;font-size:12px}.app-legal-links a{color:#7a3b18;font-weight:600;text-decoration:none}.app-legal-links a:hover{text-decoration:underline}.account-legal-links{margin:18px 0 0;padding-top:14px;border-top:1px solid #ead9bd}
 .inapp-note{margin:4px 0 14px;padding:12px 14px;border:1px solid #e4c28c;border-radius:14px;background:#fff5da;color:#5a260e;text-align:left}.inapp-note b{display:block;font-size:14px}.inapp-note p{margin:4px 0 0;font-size:13px;line-height:1.5;color:#7a3b18}.inapp-chrome{display:block;width:100%;margin-top:10px;padding:10px 12px;border:1px solid #d9a15a;border-radius:12px;background:#fff;color:#5a260e;font-weight:700;font-size:13px}.inapp-tip b{display:inline;font-size:13px}.auth-page-card.in-app .google-btn{opacity:.85}
+/* Offer screen: shown whenever a free user reaches something that needs Annual Access. */
+#offerScreen{padding:18px 14px 40px;min-height:calc(100vh - 120px);background:linear-gradient(180deg,#fff8e9,#f9d77c)}
+.offer-page-card h2{font-size:28px;line-height:1.2}
+.offer-lead{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 14px}
+.offer-benefits{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:10px}
+.offer-benefits li{display:grid;gap:2px;padding:12px 14px 12px 40px;position:relative;background:#fffaf0;border:1px solid #ecd9b4;border-radius:14px;font-size:14px}
+.offer-benefits li::before{content:"✓";position:absolute;left:14px;top:12px;color:#2f7d32;font-weight:800}
+.offer-benefits span{font-size:12px;color:var(--muted)}
+.offer-price{text-align:center;font-size:15px;color:var(--brown);padding:14px 10px 4px}
+.offer-price b{font:34px Georgia;display:block}
+.offer-price small{display:block;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
+.offer-trust{text-align:center;font-size:12px;color:var(--muted);margin:4px 0 0}
