@@ -61,6 +61,7 @@ There is no automatic schedule; runs are started by hand. The 13 Indian language
 
 | Task | How |
 | --- | --- |
+| Add or change website text | Add the exact English string to `supabase/functions/_shared/ui-strings.json`, bump `revision` in `website-language/index.ts` and deploy it (with the `_shared` files). Call `website-language?language=<code>` once per language (e.g. `net.http_get` from SQL); only new strings are translated, saved ones are reused. Copy the new keys from `website_locales` into `locales/*.json`, which the site loads first. `tests/website-language.cjs` fails if offer-screen text is missing. |
 | Change a price | `PLANS` in `supabase/functions/_shared/server.ts`, then redeploy `create-payment-link` and `razorpay-webhook`, and change the amount → length mapping in `apply_annual_payment` (a migration). Update the price text in `index.html`/`app.js` (plan cards, `OFFER_PLANS`), the Meta `annualEvent`/`quarterlyEvent` values and `paidPlan()` in `app.js`, and the policy pages. |
 | Change the Gemini model | `GEMINI_MODEL` in `_shared/server.ts`, then redeploy `ask-krishna`, `tts-krishna` and `translation-worker`. |
 | Grant or extend someone's access by hand | Update their `user_accounts` row (`plan_status='annual'`, `payment_status='paid'`, `access_expires_at`) in the SQL editor, and note why. |
