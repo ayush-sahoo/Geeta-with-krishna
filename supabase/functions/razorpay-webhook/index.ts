@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { ANNUAL_PRICE_PAISE, serviceKey } from "../_shared/server.ts";
+import { PLANS, serviceKey } from "../_shared/server.ts";
 
 async function hmacHex(secret: string, raw: string) {
   const enc = new TextEncoder();
@@ -81,17 +81,22 @@ Deno.serve(async (req) => {
     // Two ways to pay: a hosted payment link (payment_link.paid) or the on-site
     // checkout, whose orders carry notes.checkout = "popup" (order.paid). Other
     // events, and orders from other products on the same Razorpay account, are
-    // only logged above.
+    // only logged above. notes.product names the plan bought; the amount paid
+    // must be that plan's price.
+    const planFor = (product: unknown) => Object.values(PLANS).find((p) => p.product === product);
     const link = event?.payload?.payment_link?.entity || {};
     const order = event?.payload?.order?.entity || {};
     const payment = event?.payload?.payment?.entity || {};
-    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean;
+    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean, plan;
     if (event?.event === "payment_link.paid") {
+      // Links made before the 3-month plan carry no product: they were annual.
+      plan = planFor(link?.notes?.product || "gita_verse_annual");
       userId = link?.notes?.user_id || payment?.notes?.user_id || null;
       reference = link?.id || null;
       amount = Number(payment?.amount ?? link?.amount_paid ?? 0);
       referencePaid = String(link?.status || "") === "paid";
-    } else if (event?.event === "order.paid" && order?.notes?.checkout === "popup" && order?.notes?.product === "gita_verse_annual") {
+    } else if (event?.event === "order.paid" && order?.notes?.checkout === "popup" && planFor(order?.notes?.product)) {
+      plan = planFor(order?.notes?.product);
       userId = order?.notes?.user_id || null;
       reference = order?.id || null;
       amount = Number(payment?.amount ?? order?.amount_paid ?? 0);
@@ -106,7 +111,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Missing payment identity" }, { status: 400 });
     }
 
-    if (amount !== ANNUAL_PRICE_PAISE || !referencePaid || !["captured","authorized"].includes(paymentStatus)) {
+    if (!plan || amount !== plan.paise || !referencePaid || !["captured","authorized"].includes(paymentStatus)) {
       return Response.json({ error: "Payment validation failed" }, { status: 400 });
     }
 

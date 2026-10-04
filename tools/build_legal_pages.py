@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 EMAIL = "support@edumorph.in"
 UPDATED = "30 September 2026"
 # Pages changed since then show their own date.
-UPDATED_ON = {"privacy.html": "3 October 2026"}
+UPDATED_ON = {"privacy.html": "4 October 2026", "terms.html": "4 October 2026", "refund.html": "4 October 2026"}
 MAIL = f'<a href="mailto:{EMAIL}">{EMAIL}</a>'
 NAV = [("privacy.html", "Privacy Policy"), ("terms.html", "Terms of Service"),
        ("refund.html", "Refund Policy"), ("contact.html", "Contact Us")]
@@ -19,7 +19,7 @@ PAGES = {
 <h2>Information we collect</h2>
 <ul>
 <li><strong>Account details:</strong> your mobile number or email address, depending on how you sign in, and, if you sign in with Google, your name and email as shared by Google.</li>
-<li><strong>Purchase details:</strong> the amount, date, payment ID and access expiry of your Annual Access purchase. Payments are processed by Razorpay; we never see or store your card, UPI or bank details.</li>
+<li><strong>Purchase details:</strong> the amount, date, payment ID and access expiry of your access purchase. Payments are processed by Razorpay; we never see or store your card, UPI or bank details.</li>
 <li><strong>Questions you ask Krishna:</strong> the text you type in Ask Krishna, and your recent messages in that conversation, are sent to generate a reply. If you are signed in, your conversations with Krishna are saved to your account so you can see and continue them later; only you can see them. If you ask without signing in, the conversation is kept only in your browser, and to limit misuse of the free question we keep a one-way code (hash) of your network address, never the address itself.</li>
 <li><strong>Usage and device data:</strong> basic technical information such as browser type, pages visited and approximate location derived from your IP address.</li>
 <li><strong>Saved verses:</strong> verses you save are stored in your own browser, not on our servers.</li>
@@ -70,7 +70,7 @@ PAGES = {
 <p>These Terms govern your use of Gita Verse (<a href="https://gitaverse.co.in">gitaverse.co.in</a>). By creating an account or using the service, you agree to them.</p>
 
 <h2>The service</h2>
-<p>Gita Verse offers Bhagavad Gita verses with translations and explanations, life-topic guidance, verse narration and "Ask Krishna", an AI-generated devotional reflection based on the Gita. Some content is free; full access requires Annual Access.</p>
+<p>Gita Verse offers Bhagavad Gita verses with translations and explanations, life-topic guidance, verse narration and "Ask Krishna", an AI-generated devotional reflection based on the Gita. Some content is free; full access requires a paid plan (Annual Access or 3-Month Access).</p>
 
 <h2>Your account</h2>
 <ul>
@@ -79,10 +79,11 @@ PAGES = {
 <li>You must be 18 or older, or use Gita Verse with a parent or guardian's consent.</li>
 </ul>
 
-<h2>Annual Access and payment</h2>
+<h2>Plans and payment</h2>
 <ul>
 <li>Annual Access costs <strong>₹1,000</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
-<li>It is a one-time payment. It does <strong>not</strong> renew automatically, and you will never be charged again unless you choose to buy another year.</li>
+<li>3-Month Access costs <strong>₹399</strong> (inclusive of applicable taxes) and gives full access for <strong>3 months</strong> from the date of payment.</li>
+<li>Each plan is a one-time payment. It does <strong>not</strong> renew automatically, and you will never be charged again unless you choose to buy again. A purchase made while access is active is added on after the current access ends.</li>
 <li>Payments are processed securely by Razorpay. All purchases are final and non-refundable, except for billing errors described in our <a href="refund.html">Refund Policy</a>.</li>
 <li>We may change prices for future purchases; this never affects access you have already paid for.</li>
 </ul>
@@ -110,17 +111,17 @@ PAGES = {
 """),
 
 "refund.html": ("Refund Policy", "Refunds", f"""
-<p>This policy applies to Annual Access (₹1,000 for 12 months) on Gita Verse.</p>
+<p>This policy applies to Annual Access (₹1,000 for 12 months) and 3-Month Access (₹399 for 3 months) on Gita Verse.</p>
 
 <h2>No refunds</h2>
-<p>All purchases of Annual Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>
+<p>All purchases of Annual Access and 3-Month Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>
 <p>You can explore today's verse and the free parts of Gita Verse before you buy.</p>
 
 <h2>Billing errors</h2>
-<p>If you were charged more than once for the same purchase, or money was deducted but your Annual Access was not activated, email {MAIL} with your payment ID or the date and time of payment. We will activate your access or return the extra charge to your original payment method through Razorpay.</p>
+<p>If you were charged more than once for the same purchase, or money was deducted but your access was not activated, email {MAIL} with your payment ID or the date and time of payment. We will activate your access or return the extra charge to your original payment method through Razorpay.</p>
 
 <h2>No automatic renewals</h2>
-<p>Annual Access is a one-time payment and never renews automatically, so there is nothing to cancel. You will not be charged again unless you choose to buy another year.</p>
+<p>Both plans are one-time payments and never renew automatically, so there is nothing to cancel. You will not be charged again unless you choose to buy again.</p>
 
 <h2>Contact</h2>
 <p>For any payment question, email {MAIL}. We usually reply within 2 business days.</p>

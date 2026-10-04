@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { ANNUAL_PRICE_PAISE, serviceKey } from "../_shared/server.ts";
+import { PLANS, serviceKey } from "../_shared/server.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -39,11 +39,11 @@ async function claimLease(admin: any, uid: string) {
   return false;
 }
 
-// The newest unpaid checkout of this kind, if it is recent and still payable.
-async function reusableCheckout(admin: any, uid: string, popup: boolean, auth: string) {
+// The newest unpaid checkout of this kind and price, if it is recent and still payable.
+async function reusableCheckout(admin: any, uid: string, popup: boolean, paise: number, auth: string) {
   const { data } = await admin.from("payment_transactions")
     .select("payment_link_id,created_at")
-    .eq("user_id", uid).eq("status", "created").eq("amount_paise", ANNUAL_PRICE_PAISE)
+    .eq("user_id", uid).eq("status", "created").eq("amount_paise", paise)
     .like("payment_link_id", popup ? "order_%" : "plink_%")
     .order("created_at", { ascending: false }).limit(1);
   const row = data?.[0];
@@ -113,8 +113,14 @@ Deno.serve(async (req) => {
     // "popup": a Razorpay order for the on-site checkout (which can prefill the
     // buyer's phone or email). Otherwise a hosted payment link, the fallback when
     // the checkout script cannot load.
-    let mode = "link";
-    try { mode = (await req.json())?.mode === "popup" ? "popup" : "link"; } catch { /* no body */ }
+    // plan: "annual" (₹1,000, 1 year; the default) or "quarterly" (₹399, 3 months).
+    let mode = "link", planKey = "annual";
+    try {
+      const body = await req.json();
+      mode = body?.mode === "popup" ? "popup" : "link";
+      if (body?.plan === "quarterly") planKey = "quarterly";
+    } catch { /* no body */ }
+    const plan = PLANS[planKey];
 
     const { data: account } = await admin
       .from("user_accounts")
@@ -141,14 +147,15 @@ Deno.serve(async (req) => {
     const popupResponse = (orderId: string) => Response.json({
       order_id: orderId,
       key_id: keyId,
-      amount: ANNUAL_PRICE_PAISE,
+      amount: plan.paise,
       currency: "INR",
+      plan: planKey,
       prefill: { ...(phone ? { contact: "+" + phone } : {}), ...(email ? { email } : {}) }
     }, { headers: json });
 
     const leased = await claimLease(admin, uid);
     try {
-      const reuse = await reusableCheckout(admin, uid, popup, razorpayAuth);
+      const reuse = await reusableCheckout(admin, uid, popup, plan.paise, razorpayAuth);
       if (reuse) {
         return "order_id" in reuse ? popupResponse(reuse.order_id) : Response.json(reuse, { headers: json });
       }
@@ -160,12 +167,12 @@ Deno.serve(async (req) => {
         const rzOrder = await razorpay("orders", razorpayAuth, {
           method: "POST",
           body: JSON.stringify({
-            amount: ANNUAL_PRICE_PAISE,
+            amount: plan.paise,
             currency: "INR",
             receipt: referenceId,
             // razorpay-webhook unlocks only orders carrying this marker, so other
             // products on the same Razorpay account can never grant access.
-            notes: { user_id: uid, product: "gita_verse_annual", checkout: "popup" }
+            notes: { user_id: uid, product: plan.product, checkout: "popup" }
           })
         });
         const order = await rzOrder.json();
@@ -179,7 +186,7 @@ Deno.serve(async (req) => {
           user_id: uid,
           provider: "razorpay",
           payment_link_id: order.id,
-          amount_paise: ANNUAL_PRICE_PAISE,
+          amount_paise: plan.paise,
           currency: "INR",
           status: "created"
         });
@@ -191,10 +198,10 @@ Deno.serve(async (req) => {
         return popupResponse(order.id);
       }
       const payload = {
-        amount: ANNUAL_PRICE_PAISE,
+        amount: plan.paise,
         currency: "INR",
         accept_partial: false,
-        description: "Gita Verse Annual Access",
+        description: plan.description,
         reference_id: referenceId,
         customer: email ? { email } : undefined,
         notify: { sms: false, email: false },
@@ -205,7 +212,7 @@ Deno.serve(async (req) => {
         callback_method: "get",
         notes: {
           user_id: uid,
-          product: "gita_verse_annual"
+          product: plan.product
         }
       };
 
@@ -224,7 +231,7 @@ Deno.serve(async (req) => {
         user_id: uid,
         provider: "razorpay",
         payment_link_id: body.id,
-        amount_paise: ANNUAL_PRICE_PAISE,
+        amount_paise: plan.paise,
         currency: "INR",
         status: body.status || "created"
       });

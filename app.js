@@ -28,6 +28,10 @@ function setMetaUser(user){
   }catch(e){}
 }
 const annualEvent={value:1000,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+const quarterlyEvent={value:399,currency:'INR',content_name:'Gita Verse 3-Month Access',content_ids:['gita_quarterly'],content_type:'product',num_items:1};
+const planEvent=plan=>plan==='quarterly'?quarterlyEvent:annualEvent;
+// The plan an account paid for, from the amount (₹399 is the 3-month plan).
+const paidPlan=()=>accountProfile?.amount_paid_paise===39900?'quarterly':'annual';
 // Fires Meta Purchase once per payment. Called on the return from Razorpay and
 // on any later account load, so a payment confirmed after the buyer stopped
 // waiting is still reported (only for purchases in the last 3 days, so an old
@@ -39,7 +43,7 @@ function trackConfirmedPurchase(){
   if(!paidAt||Date.now()-paidAt>3*864e5)return;
   const key='gitaMetaPurchase:'+id;
   try{if(localStorage.getItem(key)||localStorage.getItem('metaPurchaseTracked')===id)return}catch(e){}
-  if(trackMeta('Purchase',annualEvent,false,'gita_purchase_'+id)){
+  if(trackMeta('Purchase',planEvent(paidPlan()),false,'gita_purchase_'+id)){
     try{localStorage.setItem(key,'1');localStorage.setItem('metaPurchaseTracked',id)}catch(e){}
   }
 }
@@ -331,8 +335,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(q&&(hasLifetimeAccess()||accountProfile?.free_question_available)){
         showScreen('ask');$('askInput').value=q;sendAsk();return true;
       }
-      if(takeBuyAfterSignIn()&&!hasLifetimeAccess()){
-        showScreen('accountScreen');startLifetimePurchase();return true;
+      const buyPlan=takeBuyAfterSignIn();
+      if(buyPlan&&!hasLifetimeAccess()){
+        showScreen('accountScreen');startLifetimePurchase(buyPlan);return true;
       }
       if(askNext){showScreen('ask');$('askInput').focus();return true;}
       showScreen('accountScreen');return false;
@@ -380,7 +385,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           if(location.search.includes('payment='))history.replaceState({},document.title,location.pathname);
           renderAccessState();
           showScreen('accountScreen',true);
-          toast('Annual Access unlocked ✓');
+          toast((paidPlan()==='quarterly'?'3-Month':'Annual')+' Access unlocked ✓');
           return true;
         }
         await new Promise(r=>setTimeout(r,1500));
@@ -752,17 +757,17 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     // progress and further taps are ignored, so one tap makes one link.
     let checkoutBusy=false;
     // A buy tap while signed out: sign in first, then payment opens by itself
-    // (afterSignIn picks this up; it expires after 30 minutes).
-    const BUY_AFTER_SIGN_IN_KEY='gitaBuyAfterSignIn';
-    function askToSignInForPurchase(){
-      try{localStorage.setItem(BUY_AFTER_SIGN_IN_KEY,String(Date.now()))}catch(e){}
+    // (afterSignIn picks this up, with the plan chosen; it expires after 30 minutes).
+    const BUY_AFTER_SIGN_IN_KEY='gitaBuyAfterSignIn',BUY_PLAN_KEY='gitaBuyPlan';
+    function askToSignInForPurchase(plan){
+      try{localStorage.setItem(BUY_AFTER_SIGN_IN_KEY,String(Date.now()));localStorage.setItem(BUY_PLAN_KEY,plan)}catch(e){}
       showScreen('authScreen');
       $('authPageError').style.color='#2f7d32';
       $('authPageError').textContent='Sign in or sign up first so Annual Access is linked to your account. Payment opens right after.';
     }
     function takeBuyAfterSignIn(){
-      let at=0;try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY)}catch(e){}
-      return at&&Date.now()-at<30*60e3;
+      let at=0,plan='';try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;plan=localStorage.getItem(BUY_PLAN_KEY)||'';localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY);localStorage.removeItem(BUY_PLAN_KEY)}catch(e){}
+      return at&&Date.now()-at<30*60e3?(plan==='quarterly'?'quarterly':'annual'):'';
     }
     // Razorpay's on-site checkout keeps buyers on Gita Verse and fills in the
     // phone or email they signed up with. If its script can't load in time, the
@@ -779,10 +784,14 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }).then(ok=>{if(!ok)razorpayLoading=null;return ok});
       return razorpayLoading;
     }
-    async function startLifetimePurchase(){
+    // plan: 'annual' (₹1,000, 1 year) or 'quarterly' (₹399, 3 months). Buttons
+    // other than the offer screen's pass a click event here, which means annual.
+    async function startLifetimePurchase(plan){
       if(checkoutBusy)return;
-      trackMeta('CheckoutClick',annualEvent,true);logEvent('checkout_click',{keepalive:true});
-      if(!authSession?.access_token){askToSignInForPurchase();return;}
+      plan=plan==='quarterly'?'quarterly':'annual';
+      const metaEvent=planEvent(plan);
+      trackMeta('CheckoutClick',metaEvent,true);logEvent('checkout_click',{keepalive:true});
+      if(!authSession?.access_token){askToSignInForPurchase(plan);return;}
 
       if(hasLifetimeAccess()){
         toast('Annual Access is already active');
@@ -790,7 +799,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }
 
       checkoutBusy=true;
-      const buttons=[$('buyLifetime'),$('accountUpgrade'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
+      const buttons=[$('buyLifetime'),$('accountUpgrade'),$('offerBuy'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
       buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
       let leaving=false,popupOpen=false;
       const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='Get Annual Access →'});};
@@ -798,7 +807,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
       try{
         await freshSession();
-        if(!authSession?.access_token){askToSignInForPurchase();return;}
+        if(!authSession?.access_token){askToSignInForPurchase(plan);return;}
         const checkoutSession=authSession,checkoutGeneration=authSessionGeneration;
         const usePopup=await popupReady;
         if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
@@ -809,7 +818,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
             Authorization:'Bearer '+authSession.access_token,
             'Content-Type':'application/json'
           },
-          body:JSON.stringify(usePopup?{mode:'popup'}:{})
+          body:JSON.stringify(usePopup?{mode:'popup',plan}:{plan})
         });
 
         const d=await r.json();
@@ -824,10 +833,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         }
 
         if(usePopup&&d.order_id&&window.Razorpay){
-          trackMeta('InitiateCheckout',annualEvent);
+          trackMeta('InitiateCheckout',metaEvent);
           const checkout=new window.Razorpay({
             key:d.key_id,order_id:d.order_id,amount:d.amount,currency:d.currency||'INR',
-            name:'Gita Verse',description:'Annual Access · 1 year',
+            name:'Gita Verse',description:plan==='quarterly'?'3-Month Access · 3 months':'Annual Access · 1 year',
             prefill:d.prefill||{},theme:{color:'#f6bf42'},
             retry:{enabled:true},
             modal:{ondismiss:()=>{markCheckoutPending(false);reset();}},
@@ -846,7 +855,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         if(!d.short_url) throw new Error('Payment link was not returned');
 
-        trackMeta('InitiateCheckout',annualEvent);
+        trackMeta('InitiateCheckout',metaEvent);
         // Give the pixel a moment to send InitiateCheckout before the page unloads.
         await new Promise(r=>setTimeout(r,300));
 
@@ -982,10 +991,17 @@ function openFreeQuestionSignup(){
   showScreen('authScreen');setAuthPageMode('signup');
   $('authModeLead').textContent='Create a free account to continue this conversation with Krishna.';
 }
-function showPaywall(message='Sign in and get Annual Access to continue.'){
+// Free users who reach something that needs Annual Access see what it
+// includes and the price, then pay (signed-out visitors sign in first).
+let offerReturnScreen='home';
+function showPaywall(lead="Keep Krishna's guidance with you every day."){
   logEvent('paywall_view');
-  openAccount();toast(authSession?.access_token?'Get Annual Access to unlock all verses and guidance.':message);
+  const current=document.querySelector('.screen.active')?.id;
+  if(current&&current!=='offerScreen')offerReturnScreen=current;
+  $('offerLead').textContent=lead;
+  showScreen('offerScreen');
 }
+function closeOffer(){showScreen(offerReturnScreen||'home');}
 function renderAccessState(){
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
@@ -1013,7 +1029,7 @@ function updateAccountUI(){
   const phone=authSession?.user?.phone;
   $('accountEmail').textContent=authSession?.user?.email||(phone?'+'+String(phone).replace(/^\+/,''):'—');
   $('accountProvider').textContent={phone:'Mobile',google:'Google',email:'Email'}[authSession?.user?.app_metadata?.provider]||'Email';
-  $('accountPlan').textContent=paid?'Annual':'Free';
+  $('accountPlan').textContent=paid?(paidPlan()==='quarterly'?'3 months':'Annual'):'Free';
   $('accountPayment').textContent=accountProfile?.payment_status||'Unpaid';
   for(const [id,key] of [['accountPurchased','purchased_at'],['accountExpires','access_expires_at']]){
     $(id).textContent=accountProfile?.[key]?new Date(accountProfile[key]).toLocaleDateString():'—';
@@ -1037,7 +1053,7 @@ async function loadDailyVerse(){
   }catch(e){}
 }
 async function openVerse(ch,v){
-  if(!hasLifetimeAccess()){showPaywall();return}
+  if(!hasLifetimeAccess()){showPaywall('Read every verse of the Gita with its meaning, reflection and audio.');return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
   renderChapterPage();
   $('chapterKicker').textContent='CHAPTER '+ch;
@@ -1345,7 +1361,7 @@ async function sendAsk(){
     if(!authSession?.access_token){
       if(anonQuestionUsed()){savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
       anonymous=true;
-    }else if(!accountProfile?.free_question_available){showPaywall();return}
+    }else if(!accountProfile?.free_question_available){showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");return}
   }
   trackMeta('AskKrishnaUsed',{},true);logEvent('ask_krishna');
   const generation=chatGeneration,language=chatLanguage==='auto'?undefined:chatLanguage;
@@ -1363,7 +1379,7 @@ async function sendAsk(){
       body:JSON.stringify(anonymous?{question:q,language,visitor_id:VISITOR_ID}:{question:q,language,history:chatHistory.slice(-8)})});
     const d=await r.json();if(generation!==chatGeneration)return;
     if(r.status===403&&d.signup){markAnonQuestionUsed();renderAccessState();answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;savePendingQuestion(q);logEvent('paywall_view');openFreeQuestionSignup();return}
-    if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall();return}
+    if(r.status===403&&d.paywall){if(accountProfile)accountProfile.free_question_available=false;answer.remove();$('chat').lastElementChild?.remove();$('askInput').value=q;renderAccessState();showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");return}
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach the guide. Please try again.');
     answer.textContent='';answer.dir='auto';if(language)answer.lang=language;
     if(d.style==='krishna_inspired'){
@@ -1400,7 +1416,7 @@ async function sendAsk(){
   finally{if(generation===chatGeneration){chatRequest=null;chatBusy=false;$('sendAskButton').disabled=false;}}
 }
 function openTopic(key,title){
-  if(!hasLifetimeAccess()){showPaywall();return}const t=LIFE_TOPICS[key];if(!t)return;
+  if(!hasLifetimeAccess()){showPaywall('Get guidance from the Gita on fear, anger, career, relationships and more.');return}const t=LIFE_TOPICS[key];if(!t)return;
   $('topicTitle').textContent=title||t.label;$('topicIntro').textContent=t.intro;
   ['Dos','Donts'].forEach(kind=>{const el=$('topic'+kind);el.replaceChildren();t[kind.toLowerCase()].forEach(x=>appendText(el,'li',x));});
   $('topicPractice').textContent=t.practice;$('topicVerses').replaceChildren();
@@ -1449,6 +1465,13 @@ $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)ver
 function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=false;sendOtp();}
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=startLifetimePurchase;
+// Plan cards: the button names the chosen plan and buys it.
+const OFFER_PLANS={annual:'Continue · ₹1,000 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
+document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>{
+  document.querySelectorAll('.plan').forEach(c=>{const on=c===card;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
+  $('offerBuy').textContent=OFFER_PLANS[card.dataset.plan];
+});
+$('offerBuy').onclick=()=>startLifetimePurchase(document.querySelector('.plan.selected')?.dataset.plan);$('offerBack').onclick=closeOffer;$('offerLater').onclick=closeOffer;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};
 document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>renderTab(b.dataset.tab));
 document.querySelectorAll('.topic-row .topic').forEach((b,i)=>{b.onclick=()=>openTopic(['duty','love','mind','devotion','ego','mind'][i],b.querySelector('b').textContent)});

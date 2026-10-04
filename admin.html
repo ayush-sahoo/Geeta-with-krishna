@@ -254,7 +254,7 @@ footer{color:var(--muted);font-size:12px}
     $('k-paid').textContent = fmt(f.purchases); $('k-paidrate').textContent = pctTxt(pct(f.purchases, f.visitors)) + ' of visitors';
     $('k-rev').textContent = '₹' + fmt(Math.round((f.revenue_paise || 0) / 100));
 
-    const stages = [['Visited', 'unique visitors', f.visitors], ['Started sign-in', 'email or Google', f.signin_start], ['Signed up', 'new accounts', f.signups], ['Started checkout', 'opened Razorpay', f.checkout], ['Paid ₹1,000', 'confirmed', f.purchases]];
+    const stages = [['Visited', 'unique visitors', f.visitors], ['Started sign-in', 'email or Google', f.signin_start], ['Signed up', 'new accounts', f.signups], ['Started checkout', 'opened Razorpay', f.checkout], ['Paid', 'confirmed', f.purchases]];
     const top = Math.max(f.visitors || 0, f.signups || 0, 1);
     $('funnel').className = '';
     $('funnel').innerHTML = stages.map(([n, h, v], i) => `<div class="stage"><div>${n}<small>${h}</small></div><div class="track"><div class="fill" style="width:${v ? Math.max(1.5, (v / top) * 100) : 0}%"></div></div><div class="count"><b class="num">${fmt(v)}</b><span>${i ? pctTxt(pct(v, stages[i - 1][2])) + ' of previous' : fmt(f.page_views) + ' views'}</span></div></div>`).join('');

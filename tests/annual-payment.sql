@@ -6,6 +6,7 @@ declare
   first jsonb;
   second jsonb;
   replay jsonb;
+  quarter jsonb;
   expiry timestamptz;
   seed text := 'regression_' || gen_random_uuid()::text;
 begin
@@ -33,9 +34,19 @@ begin
   exception when others then
     if sqlerrm <> 'Payment identity mismatch' then raise; end if;
   end;
+  quarter := public.apply_annual_payment(uid,seed||'_q',seed||'_link_q',39900,'INR','{}');
+  if (quarter->>'access_expires_at')::timestamptz <> (second->>'access_expires_at')::timestamptz + interval '3 months' then
+    raise exception '3-month plan did not add 3 months';
+  end if;
+  begin
+    perform public.apply_annual_payment(uid,seed||'_odd',seed||'_link_odd',50000,'INR','{}');
+    raise exception 'Unknown amount accepted';
+  exception when others then
+    if sqlerrm <> 'Invalid annual payment' then raise; end if;
+  end;
   select access_expires_at into expiry from public.user_accounts where user_id=uid;
-  if expiry <> (second->>'access_expires_at')::timestamptz then raise exception 'Failed request changed entitlement'; end if;
+  if expiry <> (quarter->>'access_expires_at')::timestamptz then raise exception 'Failed request changed entitlement'; end if;
 end;
 $$;
-select 'renewal, old duplicate, currency rejection and identity rejection passed' as result;
+select 'renewal, 3-month plan, unknown amount, old duplicate, currency rejection and identity rejection passed' as result;
 rollback;
