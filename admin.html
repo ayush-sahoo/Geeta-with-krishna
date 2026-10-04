@@ -71,6 +71,9 @@ tr:last-child td{border-bottom:0}
 .gate p{color:var(--ink2)}
 .login{display:grid;gap:6px;text-align:left}.login label{font-size:12px;font-weight:600;color:var(--ink2)}.login input{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;margin-bottom:6px}.login .btn{padding:10px;font-size:14px;margin-top:4px}.login-msg{min-height:1.2em;margin:6px 0 0;font-size:13px;color:var(--bad)}
 .empty{color:var(--muted);font-size:13px}
+.eng-kpis{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.eng-kpis{grid-template-columns:repeat(2,1fr)}}
+.est{color:var(--muted);font-size:11px;display:block}
 .note{color:var(--muted);font-size:12px;margin:10px 0 0}
 footer{color:var(--muted);font-size:12px}
 </style>
@@ -121,6 +124,35 @@ footer{color:var(--muted);font-size:12px}
       <section class="card"><h2>Funnel</h2><div id="funnel" class="empty">Loading…</div></section>
       <section class="card"><h2>Visitors over time (IST)</h2><div id="timeline" class="empty">Loading…</div></section>
     </div>
+
+    <section class="card" aria-labelledby="engTitle">
+      <h2 id="engTitle">What visitors try, and how long they stay</h2>
+      <div class="kpis eng-kpis">
+        <div class="kpi"><small>Tried the free chat</small><b class="num" id="e-asked">–</b><em id="e-questions">–</em></div>
+        <div class="kpi"><small>Tried to open a shloka</small><b class="num" id="e-opened">–</b><em>tapped a verse</em></div>
+        <div class="kpi"><small>Played a shloka</small><b class="num" id="e-played">–</b><em>tapped ▶ on a verse</em></div>
+        <div class="kpi"><small>Median time on site</small><b class="num" id="e-median">–</b><em id="e-median-sub">–</em></div>
+      </div>
+      <div class="tablewrap" style="margin-top:14px"><table>
+        <thead><tr><th>Group</th><th class="r">People</th><th class="r">Median time</th><th class="r">Average time</th><th class="r">Stayed 1 min+</th><th class="r">Stayed 3 min+</th></tr></thead>
+        <tbody id="eng-groups"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+      <p class="note" id="eng-note"></p>
+      <h2 style="margin-top:18px">People who tried the chat or a shloka</h2>
+      <div class="toolbar">
+        <select id="ef" aria-label="Filter people">
+          <option value="all">Chat or shloka</option>
+          <option value="asked">Tried the free chat</option>
+          <option value="verse">Opened or played a shloka</option>
+          <option value="played">Played a shloka</option>
+        </select>
+        <span class="sub" id="ecount"></span>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Last active (IST)</th><th>Who</th><th class="r">Questions</th><th>Shloka</th><th class="r">Time on site</th><th>Came from</th><th>Location</th></tr></thead>
+        <tbody id="engaged"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+    </section>
 
     <section class="card">
       <h2>Signed-up users</h2>
@@ -271,7 +303,40 @@ footer{color:var(--muted);font-size:12px}
     const c = data.campaigns || [];
     $('campaigns').innerHTML = c.length ? c.map((r) => `<tr><td>${esc(r.campaign)}</td><td>${esc(r.ad)}</td><td class="r num">${fmt(r.visitors)}</td><td class="r num">${fmt(r.signups)}</td><td class="r num">${fmt(r.paid)}</td><td class="r num">${pctTxt(pct(r.signups, r.visitors))}</td></tr>`).join('')
       : `<tr><td colspan="6" class="empty">No UTM-tagged visits yet in this range.</td></tr>`;
+    renderEngagement();
     renderUsers();
+  }
+
+  // Seconds as "45s", "3m 20s" or "1h 5m".
+  const dur = (s) => s == null ? '–' : s < 60 ? Math.round(s) + 's' : s < 3600 ? Math.floor(s / 60) + 'm ' + String(Math.round(s % 60)).padStart(2, '0') + 's' : Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+
+  function renderEngagement() {
+    const g = data.engagement || {}, groups = g.groups || {}, all = groups.all || {};
+    $('e-asked').textContent = fmt(g.asked); $('e-questions').textContent = fmt(g.questions) + ' question' + (g.questions === 1 ? '' : 's') + ' asked';
+    $('e-opened').textContent = fmt(g.opened_verse); $('e-played').textContent = fmt(g.played);
+    $('e-median').textContent = dur(all.median_s); $('e-median-sub').textContent = all.people ? 'across ' + fmt(all.people) + ' visitors' : 'no timed visits yet';
+    const rows = [['all', 'Everyone'], ['asked', 'Tried the free chat'], ['opened_verse', 'Tried to open a shloka'], ['played', 'Played a shloka'], ['neither', 'Did none of these']];
+    $('eng-groups').innerHTML = rows.map(([k, n]) => { const r = groups[k] || {}; return `<tr><td>${n}</td><td class="r num">${fmt(r.people || 0)}</td><td class="r num">${dur(r.median_s)}</td><td class="r num">${dur(r.avg_s)}</td><td class="r num">${r.people ? fmt(r.over_1m) + ' · ' + pctTxt(pct(r.over_1m, r.people)) : '–'}</td><td class="r num">${r.people ? fmt(r.over_3m) + ' · ' + pctTxt(pct(r.over_3m, r.people)) : '–'}</td></tr>`; }).join('');
+    $('eng-note').textContent = 'Time on site counts only while the page is on screen, added up across a person\'s visits in this range. ' + (data.sessions_since ? 'Measured since ' + ist(data.sessions_since) + '; for earlier visits the list shows whether they stayed 15 s or 45 s.' : 'Measuring starts with the next visit; until then the list shows whether people stayed 15 s or 45 s.') + ' Test accounts are left out.';
+    renderEngaged();
+  }
+
+  function engagedRows() {
+    const f = $('ef').value;
+    return (data.engaged || []).filter((r) => f === 'asked' ? r.asked > 0 : f === 'verse' ? (r.opened_verse || r.played) : f === 'played' ? r.played : true);
+  }
+
+  function renderEngaged() {
+    const rows = engagedRows();
+    $('ecount').textContent = rows.length + ' of ' + (data.engaged || []).length + ' people';
+    $('engaged').innerHTML = rows.length ? rows.map((r) => {
+      const contact = [r.email, phoneOf(r)].filter(Boolean);
+      const status = r.payment_status === 'paid' ? '<span class="chip paid">Paid</span>' : r.signed_up ? '<span class="chip free">Signed up</span>' : '<span class="chip free">Visitor</span>';
+      const shloka = r.played ? 'Played' : r.opened_verse ? 'Opened' : '–';
+      const time = r.seconds != null ? dur(r.seconds) + (r.sessions > 1 ? `<span class="est">${r.sessions} visits</span>` : '') : `<span class="est">${r.stay45 ? '45s+' : r.stay15 ? '15s+' : 'under 15s'} (before timing)</span>`;
+      const src = r.source ? esc(r.source) + (r.campaign && r.campaign !== '(none)' ? ' · ' + esc(r.campaign) : '') : '<span class="empty">earlier visit</span>';
+      return `<tr><td class="num">${ist(r.last_at)}</td><td class="who"><b>${esc(contact[0] || 'Anonymous visitor')}</b>${contact.slice(1).map((c) => `<span>${esc(c)}</span>`).join('')}<span>${status}</span></td><td class="r num">${fmt(r.asked)}</td><td>${shloka}</td><td class="r num">${time}</td><td class="src">${src}</td><td class="src place">${placeText(r.place)}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">Nobody has tried the chat or a shloka in this range yet.</td></tr>';
   }
 
   function renderBars(id, rows, label, value) {
@@ -371,6 +436,7 @@ footer{color:var(--muted);font-size:12px}
   $('signout').addEventListener('click', signOut);
   $('q').addEventListener('input', () => data && renderUsers());
   $('f').addEventListener('change', () => data && renderUsers());
+  $('ef').addEventListener('change', () => data && renderEngaged());
   $('csv').addEventListener('click', () => data && exportCsv());
   setInterval(() => { if (document.visibilityState === 'visible' && !$('app').hidden) load(); }, 120000);
   load();

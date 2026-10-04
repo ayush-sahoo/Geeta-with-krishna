@@ -31,11 +31,12 @@ Anonymous visitor id: `gitaVisitorId` in localStorage.
 | --- | --- |
 | `signin_start`, `google_click`, `google_blocked_in_app`, `open_in_browser` | Sign-in attempts |
 | `signup`, `login` | Account created / signed in |
-| `ask_krishna`, `open_verse`, `paywall_view`, `checkout_click` | Core actions |
+| `ask_krishna`, `open_verse`, `play_verse`, `paywall_view`, `checkout_click` | Core actions (`open_verse` is logged even when a free user is shown the plans; `play_verse` is the ▶ on a verse) |
 | `tap_hero_ask`, `tap_hero_read`, `tap_offer_free`, `tap_daily_verse`, `tap_topic`, `tap_prompt`, `tap_nav_ask`, `tap_nav_explore`, `tap_sign_in` | Taps (once per page load) |
 | `ask_typing` | Started typing a question |
 | `scroll_half`, `scroll_end` | Home page scroll depth |
 | `stay_15s`, `stay_45s` | Visible time on page |
+| `log_session` (table `site_sessions`) | Visible seconds per page load, sent every 30 s and when the tab is hidden; the admin dashboard shows time on site from it |
 
 **Attribution.** After sign-in, `set_my_attribution` copies the visitor's first visit (UTM, `fbclid`, in-app browser, location) into `user_accounts.signup_source` and `signup_visitor_id`. It only fills an empty value, so later logins never overwrite it.
 

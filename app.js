@@ -1053,6 +1053,7 @@ async function loadDailyVerse(){
   }catch(e){}
 }
 async function openVerse(ch,v){
+  logOnce('open_verse');
   if(!hasLifetimeAccess()){showPaywall('Read every verse of the Gita with its meaning, reflection and audio.');return}
   const request=++verseRequest;currentChapter=Number(ch);currentPage=Math.ceil(v/PAGE_SIZE);
   renderChapterPage();
@@ -1285,7 +1286,7 @@ async function playText(text,language,generation,firstClip){
   }
 }
 async function speak(){
-  if(speaking){stopSpeech();return}if(!selectedVerse||!hasLifetimeAccess())return;
+  if(speaking){stopSpeech();return}logOnce('play_verse');if(!selectedVerse||!hasLifetimeAccess())return;
   stopSpeech();const generation=narrationGeneration,v=selectedVerse,ready=meaningReady;
   // Start both players inside the tap so Safari allows them to play later.
   unlockVoice();
@@ -1452,13 +1453,22 @@ addEventListener('scroll',()=>{
   if(seen>=.5)logOnce('scroll_half');
   if(seen>=.9)logOnce('scroll_end');
 },{passive:true});
-// Time on page counts only while the page is visible.
-let visibleMs=0,lastTick=Date.now();
+// Time on page counts only while the page is visible. It is reported for the
+// admin dashboard every 30 s and when the page is hidden or closed.
+let visibleMs=0,lastTick=Date.now(),reportedS=0;
+const SESSION_ID='s_'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Math.random().toString(36).slice(2)+Date.now().toString(36));
+function reportSession(keepalive){
+  const s=Math.floor(visibleMs/1000);if(s<5||s===reportedS)return;reportedS=s;
+  rpc('log_session',{p_session_id:SESSION_ID,p_visitor_id:VISITOR_ID,p_seconds:s},{keepalive});
+}
 setInterval(()=>{
   const now=Date.now();if(document.visibilityState==='visible')visibleMs+=now-lastTick;lastTick=now;
   if(visibleMs>=15e3)logOnce('stay_15s');
   if(visibleMs>=45e3)logOnce('stay_45s');
+  if(visibleMs-reportedS*1000>=30e3)reportSession(false);
 },1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){const now=Date.now();visibleMs+=now-lastTick;lastTick=now;reportSession(true);}else lastTick=Date.now();});
+addEventListener('pagehide',()=>reportSession(true));
 $('sendOtpBtn').onclick=sendOtp;$('verifyOtpBtn').onclick=verifyOtp;$('resendOtp').onclick=sendOtpAgain;$('changePhone').onclick=changePhone;
 $('phoneNumber').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendOtp()}};
 $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)verifyOtp()};
