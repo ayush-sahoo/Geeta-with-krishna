@@ -151,6 +151,7 @@ TEMPLATE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="only light">
 <title>{title} · Gita Verse</title>
 <meta name="description" content="{title} for Gita Verse (gitaverse.co.in).">
 <link rel="stylesheet" href="legal.css">
