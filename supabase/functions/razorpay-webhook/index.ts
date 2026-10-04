@@ -52,15 +52,32 @@ const META_CONTENT: Record<string, { id: string; name: string }> = {
   gita_verse_quarterly: { id: "gita_quarterly", name: "Gita Verse 3-Month Access" },
 };
 
+// The buyer's browser (user agent) from their own visit log, for checkouts
+// that didn't pass it (older pages): the latest visit of the browser they
+// used while signed in, or the one they signed up from.
+async function visitUserAgent(admin: any, userId: string) {
+  const { data: ev } = await admin.from("site_events").select("visitor_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
+  let visitor = ev?.[0]?.visitor_id;
+  if (!visitor) {
+    const { data: acct } = await admin.from("user_accounts").select("signup_visitor_id").eq("user_id", userId).maybeSingle();
+    visitor = acct?.signup_visitor_id;
+  }
+  if (!visitor) return "";
+  const { data: v } = await admin.from("site_visits").select("user_agent").eq("visitor_id", visitor).order("created_at", { ascending: false }).limit(1);
+  return String(v?.[0]?.user_agent || "");
+}
+
 // Server-side Purchase (Meta Conversions API), so a payment is reported even
 // if the buyer never comes back to the site. Uses the browser's event id, so
 // Meta counts it once when the pixel also fires. Off until the
 // META_CAPI_TOKEN secret is set; never affects payment handling.
 async function sendMetaPurchase(admin: any, p: { userId: string; paymentId: string; amount: number; product: string; notes: any }) {
   const token = Deno.env.get("META_CAPI_TOKEN") || "";
-  const ua = String(p.notes?.meta_ua || "");
-  if (!token || !ua) return;
+  if (!token) return;
   try {
+    // Meta needs the browser's user agent for a website event.
+    const ua = String(p.notes?.meta_ua || "") || await visitUserAgent(admin, p.userId);
+    if (!ua) return;
     const { data } = await admin.auth.admin.getUserById(p.userId);
     const email = String(data?.user?.email || "").trim().toLowerCase();
     const phone = String(data?.user?.phone || "").replace(/\D/g, "");
