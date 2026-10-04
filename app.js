@@ -27,7 +27,7 @@ function setMetaUser(user){
     fbq('init',META_PIXEL_ID,data);
   }catch(e){}
 }
-const annualEvent={value:1000,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+const annualEvent={value:999,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
 const quarterlyEvent={value:399,currency:'INR',content_name:'Gita Verse 3-Month Access',content_ids:['gita_quarterly'],content_type:'product',num_items:1};
 const planEvent=plan=>plan==='quarterly'?quarterlyEvent:annualEvent;
 // The plan an account paid for, from the amount (₹399 is the 3-month plan).
@@ -784,7 +784,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }).then(ok=>{if(!ok)razorpayLoading=null;return ok});
       return razorpayLoading;
     }
-    // plan: 'annual' (₹1,000, 1 year) or 'quarterly' (₹399, 3 months). Every
+    // plan: 'annual' (₹999, 1 year) or 'quarterly' (₹399, 3 months). Every
     // buy button opens the offer screen first, so the buyer picks the plan there.
     async function startLifetimePurchase(plan){
       if(checkoutBusy)return;
@@ -1409,7 +1409,7 @@ async function sendAsk(){
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
       appendText(card,'strong','That was your free question 🙏');
       appendText(card,'p','Keep talking with Krishna whenever you need guidance, plus all 701 verses with meaning, audio and 13 Indian languages.');
-      appendText(card,'p','3 months ₹399 · 1 year ₹1,000 · no autopay','upgrade-price');
+      appendText(card,'p','3 months ₹399 · 1 year ₹999 · no autopay','upgrade-price');
       const buy=appendText(card,'button','See plans →','upgrade-btn');buy.type='button';buy.onclick=()=>showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");
     }
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
@@ -1466,7 +1466,7 @@ function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=f
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=()=>showPaywall();
 // Plan cards: the button names the chosen plan and buys it.
-const OFFER_PLANS={annual:'Continue · ₹1,000 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
+const OFFER_PLANS={annual:'Continue · ₹999 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
 // The choice is locked while a payment is being opened.
 function selectOfferPlan(plan){
   if(checkoutBusy)return;

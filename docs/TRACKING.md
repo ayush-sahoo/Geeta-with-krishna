@@ -12,7 +12,7 @@ Loaded in `index.html`. The campaign is optimised for **Purchase**; don't rename
 | --- | --- | --- | --- |
 | `PageView` | standard | Every page load | From `index.html`. |
 | `CompleteRegistration` | standard | A new account's first sign-in (email, Google or phone) | `trackNewAccount`. eventID `gita_reg_<user id>`, `registration_method`, fires once per account (localStorage guard). Phone sign-ups count from `phone_confirmed_at`, because the account is created when the OTP is requested. |
-| `InitiateCheckout` | standard | When the Razorpay checkout opens | ₹1,000 INR (annual) or ₹399 (3 months), `content_ids` `gita_annual` / `gita_quarterly`; `Purchase` uses the plan paid. |
+| `InitiateCheckout` | standard | When the Razorpay checkout opens | ₹999 INR (annual) or ₹399 (3 months), `content_ids` `gita_annual` / `gita_quarterly`; `Purchase` uses the plan paid. |
 | `Purchase` | standard | Access confirmed after returning from Razorpay | `trackConfirmedPurchase`. eventID `gita_purchase_<payment id>`, fires once per payment. |
 | `ViewContent` | standard | Opening a verse | |
 | `Login`, `ScreenView`, `AskKrishnaUsed`, `CheckoutClick`, `CheckoutError`, `SaveVerse`, `RegistrationSubmitted`, `GoogleBlockedInApp`, `OpenInBrowser`, `OpenedFromInApp` | custom | As named | Diagnostics only. |

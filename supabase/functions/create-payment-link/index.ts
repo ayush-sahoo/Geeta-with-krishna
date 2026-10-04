@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     // "popup": a Razorpay order for the on-site checkout (which can prefill the
     // buyer's phone or email). Otherwise a hosted payment link, the fallback when
     // the checkout script cannot load.
-    // plan: "annual" (₹1,000, 1 year; the default) or "quarterly" (₹399, 3 months).
+    // plan: "annual" (₹999, 1 year; the default) or "quarterly" (₹399, 3 months).
     let mode = "link", planKey = "annual";
     try {
       const body = await req.json();

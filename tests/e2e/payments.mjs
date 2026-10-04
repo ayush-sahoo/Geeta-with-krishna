@@ -46,12 +46,12 @@ async function open(opts, path = '/') {
       S.polls++;
       const paid = opts.paidAfterPolls ? S.polls >= opts.paidAfterPolls : !!opts.paid;
       return j(paid
-        ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', amount_paid_paise: opts.paidPaise || 100000, purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
+        ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', amount_paid_paise: opts.paidPaise || 99900, purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
         : { plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: false });
     }
     if (p.endsWith('create-payment-link')) {
       S.links++; S.linkAuth.push(r.request().headers()['authorization']); S.linkBodies.push(r.request().postData() || '');
-      if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: (r.request().postData() || '').includes('"quarterly"') ? 39900 : 100000, currency: 'INR', prefill: { contact: '+919876543210' } });
+      if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: (r.request().postData() || '').includes('"quarterly"') ? 39900 : 99900, currency: 'INR', prefill: { contact: '+919876543210' } });
       return j(opts.linkBody || { id: 'plink_B', short_url: 'https://rzp.io/l/b' }, opts.linkStatus || 200);
     }
     return j([]);
@@ -74,7 +74,7 @@ console.log('\n# On-site checkout (Razorpay pop-up)');
   await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
   const o = await pg.evaluate(() => window.__rzp?.opts);
   ok(S.links === 1 && S.linkBodies[0].includes('"popup"'), 'asks the server for an on-site checkout order', JSON.stringify(S.linkBodies));
-  ok(o?.order_id === 'order_B' && o?.key === 'rzp_live_key' && o?.amount === 100000 && o?.name === 'Gita Verse', 'Razorpay pop-up opens for the Gita Verse order', JSON.stringify(o));
+  ok(o?.order_id === 'order_B' && o?.key === 'rzp_live_key' && o?.amount === 99900 && o?.name === 'Gita Verse', 'Razorpay pop-up opens for the Gita Verse order', JSON.stringify(o));
   ok(o?.prefill?.contact === '+919876543210', 'phone number from sign-up is filled in for the buyer', JSON.stringify(o?.prefill));
   ok(pg.url() === urlBefore, 'buyer stays on Gita Verse (no redirect to a payment page)', pg.url());
   ok((await pg.evaluate(() => window.__fb.filter(a => a[1] === 'InitiateCheckout').length)) === 1, 'Meta InitiateCheckout sent once when the pop-up opens');
