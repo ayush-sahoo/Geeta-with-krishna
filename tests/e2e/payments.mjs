@@ -269,6 +269,18 @@ console.log('\n# Buy tapped while signed out: sign in, then payment opens by its
   ok(!!(await nav) && S.links === 1, 'after signing in, Razorpay opens without another tap', 'links=' + S.links);
   await ctx.close(); }
 
+console.log('\n# Payment already made, confirmation not in yet');
+{ const o = { signedIn: true, checkout: 'popup', paidAfterPolls: 0, linkStatus: 409, linkBody: { error: 'Your payment was received and is being confirmed. Please wait a moment.', payment_processing: true } };
+  const { ctx, pg, S, errs } = await open(o);
+  await pg.waitForTimeout(800);
+  o.paidAfterPolls = S.polls + 2;
+  await pg.evaluate(() => startLifetimePurchase('quarterly'));
+  await pg.waitForFunction(() => window.__fb.some(a => a[1] === 'Purchase'), null, { timeout: 15000 }).catch(() => {});
+  ok(S.links === 1 && !(await pg.evaluate(() => window.__rzp?.opened)), 'no payment window is opened again', 'links=' + S.links);
+  ok((await purchases(pg)).length === 1 && (await screen(pg)) === 'accountScreen', 'the site waits for the confirmation, then shows access and sends Purchase', await screen(pg));
+  ok(!S.events.includes('checkout_create_failed'), 'not counted as a failed checkout', S.events.join(','));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+
 console.log('\n# Meta Purchase value is what was actually paid');
 { const { ctx, pg, errs } = await open({ signedIn: true, paid: true, paidPaise: 100000 });
   await pg.waitForFunction(() => window.__fb.some(a => a[1] === 'Purchase'), null, { timeout: 8000 }).catch(() => {});

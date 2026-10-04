@@ -832,6 +832,9 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
         const d=await r.json();
         if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
+        // Razorpay already has this person's payment; access follows as soon as
+        // the confirmation lands, so wait for it instead of opening a new payment.
+        if(d.payment_processing){await confirmPaidAccess();return;}
         if(!r.ok) throw new Error(d.error||d.details?.error?.description||'Could not create payment link');
 
         if(d.already_paid){

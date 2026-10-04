@@ -73,10 +73,24 @@ async function reusableCheckout(admin: any, uid: string, popup: boolean, paise: 
     .order("created_at", { ascending: false }).limit(1);
   const row = data?.[0];
   if (!row || Date.now() - new Date(row.created_at).getTime() > (popup ? REUSE_ORDER_MS : REUSE_LINK_MS)) return null;
-  if (popup) return { order_id: row.payment_link_id };
+  // Ask Razorpay before handing an order out again: if it was paid (and the
+  // webhook hasn't landed yet) the buyer must not be sent to pay it, or
+  // anything new, again.
+  if (popup) {
+    try {
+      const r = await razorpay("orders/" + encodeURIComponent(row.payment_link_id), auth);
+      const order = await r.json();
+      if (!r.ok) return null;
+      if (order?.status === "paid" || Number(order?.amount_paid) > 0) return { paid: true };
+      return ["created", "attempted"].includes(order?.status) && Number(order?.amount) === paise ? { order_id: row.payment_link_id } : null;
+    } catch {
+      return null;
+    }
+  }
   try {
     const r = await razorpay("payment_links/" + encodeURIComponent(row.payment_link_id), auth);
     const link = await r.json();
+    if (r.ok && link?.status === "paid") return { paid: true };
     return r.ok && link?.status === "created" && link?.short_url ? { id: link.id, short_url: link.short_url } : null;
   } catch {
     return null;
@@ -182,6 +196,9 @@ Deno.serve(async (req) => {
     const leased = await claimLease(admin, uid);
     try {
       const reuse = await reusableCheckout(admin, uid, popup, plan.paise, razorpayAuth);
+      if (reuse && "paid" in reuse) {
+        return Response.json({ error: "Your payment was received and is being confirmed. Please wait a moment.", payment_processing: true }, { status: 409, headers: json });
+      }
       if (reuse) {
         return "order_id" in reuse ? popupResponse(reuse.order_id) : Response.json(reuse, { headers: json });
       }

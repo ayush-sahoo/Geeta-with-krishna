@@ -37,3 +37,12 @@ verify_jwt = false
 
 [functions.razorpay-health]
 verify_jwt = false
+
+# Called by the pg_cron job "meta-purchase-retry" with a vault token, not a login.
+[functions.meta-purchase-retry]
+verify_jwt = false
+
+# The one function that keeps gateway JWT checking on: the site calls it with
+# the publishable key, and it only returns the fixed UI translation catalog.
+[functions.website-language]
+verify_jwt = true

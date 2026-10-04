@@ -6,7 +6,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),vm=requir
 const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/create-payment-link/index.ts','utf8').replace(/^import .*;\n/gm,''))
   .replace('RAZORPAY_TIMEOUT_MS = 8000','RAZORPAY_TIMEOUT_MS = 50').replace('setTimeout(r, 1000)','setTimeout(r, 5)');
 const ago=min=>new Date(Date.now()-min*60e3).toISOString();
-function run(user,body,{open=[],lease=()=>true,linkStatus='created',slow=false,insertError=()=>false}={}){
+function run(user,body,{open=[],lease=()=>true,linkStatus='created',orderStatus='created',slow=false,insertError=()=>false}={}){
   let serve;const rz=[],inserts=[],rpcs=[];
   const query=table=>{const st={};const b={
     select:()=>b,eq:(k,v)=>{if(k==='amount_paise')st.paise=v;return b},order:()=>b,limit:()=>b,like:(k,v)=>{st.prefix=v.replace('%','');return b},
@@ -20,7 +20,7 @@ function run(user,body,{open=[],lease=()=>true,linkStatus='created',slow=false,i
     createClient:()=>({auth:{getUser:async()=>({data:{user},error:null})},from:query,rpc:async(name,args)=>{rpcs.push(name);return {data:name==='claim_checkout_lease'?lease():null,error:null};}}),
     fetch:(url,o)=>{const method=o.method||'GET';rz.push({url,method,body:o.body?JSON.parse(o.body):null});
       if(slow)return new Promise((_,reject)=>o.signal.addEventListener('abort',()=>reject(o.signal.reason)));
-      const out=method==='GET'?{id:url.split('/').pop(),status:linkStatus,short_url:'https://rzp.io/l/old'}:url.endsWith('/orders')?{id:'order_9',status:'created'}:{id:'plink_9',short_url:'https://rzp.io/l/9',status:'created'};
+      const out=method==='GET'?(url.includes('/orders/')?{id:url.split('/').pop(),status:orderStatus,amount:99900,amount_paid:orderStatus==='paid'?99900:0}:{id:url.split('/').pop(),status:linkStatus,short_url:'https://rzp.io/l/old'}):url.endsWith('/orders')?{id:'order_9',status:'created'}:{id:'plink_9',short_url:'https://rzp.io/l/9',status:'created'};
       return Promise.resolve(new Response(JSON.stringify(out),{status:200}));}});
   vm.runInContext(source,c);
   return serve(new Request('https://f',{method:'POST',headers:{Authorization:'Bearer t','Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)})).then(async r=>({status:r.status,json:await r.json(),rz,inserts,rpcs}));
@@ -44,7 +44,7 @@ test('an old unpaid order is not reused',async()=>{const r=await run({id:'u-5'},
 test('a retry reuses the unpaid payment link only while Razorpay still accepts it',async()=>{
   let r=await run({id:'u-6'},{},{open:[{payment_link_id:'plink_old',created_at:ago(10)}]});
   assert.equal(r.json.short_url,'https://rzp.io/l/old');assert.equal(creates(r).length,0);
-  for(const linkStatus of ['expired','paid','cancelled']){r=await run({id:'u-6'},{},{open:[{payment_link_id:'plink_old',created_at:ago(10)}],linkStatus});assert.equal(r.json.short_url,'https://rzp.io/l/9',linkStatus);assert.equal(creates(r).length,1);}
+  for(const linkStatus of ['expired','cancelled']){r=await run({id:'u-6'},{},{open:[{payment_link_id:'plink_old',created_at:ago(10)}],linkStatus});assert.equal(r.json.short_url,'https://rzp.io/l/9',linkStatus);assert.equal(creates(r).length,1);}
 });
 test('while another request is preparing a checkout, a retry waits and reuses it',async()=>{
   let calls=0;const r=await run({id:'u-7'},{mode:'popup'},{lease:()=>++calls>3,open:[{payment_link_id:'order_first',created_at:ago(0)}]});
@@ -86,4 +86,16 @@ test('Meta browser ids ride along in the order notes, trimmed',async()=>{
   const r=await run({id:'u-15'},{mode:'popup',meta:{fbp:'fb.1.1.2',fbc:'fb.1.1.abc',ua:'x'.repeat(400),extra:'no'}});
   assert.deepEqual(Object.keys(r.rz[0].body.notes).sort(),['checkout','meta_fbc','meta_fbp','meta_ua','product','user_id']);
   assert.equal(r.rz[0].body.notes.meta_ua.length,250);
+});
+test('a recent order is reused only after Razorpay confirms it is still unpaid',async()=>{
+  const open=[{payment_link_id:'order_old',created_at:ago(5)}];
+  let r=await run({id:'u-20'},{mode:'popup'},{open,orderStatus:'attempted'});assert.equal(r.json.order_id,'order_old');assert.equal(creates(r).length,0);
+  assert.ok(r.rz.some(x=>x.method==='GET'&&/\/v1\/orders\/order_old$/.test(x.url)),'asked Razorpay about the order');
+});
+test('an order Razorpay shows as paid (webhook not landed yet) is not handed out, and no new one is made',async()=>{
+  for(const body of [{mode:'popup'},{}]){
+    const open=[{payment_link_id:body.mode?'order_old':'plink_old',created_at:ago(5)}];
+    const r=await run({id:'u-21'},body,{open,orderStatus:'paid',linkStatus:'paid'});
+    assert.equal(r.status,409);assert.equal(r.json.payment_processing,true);assert.equal(creates(r).length,0);assert.equal(r.json.order_id,undefined);
+  }
 });

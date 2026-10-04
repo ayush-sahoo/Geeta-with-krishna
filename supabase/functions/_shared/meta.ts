@@ -48,8 +48,17 @@ export async function deliverMetaPurchase(admin: any, paymentId: string): Promis
   if (!t || t.meta_sent_at) return "skipped";
   const token = Deno.env.get("META_CAPI_TOKEN") || "";
   if (!token) return "pending";
-  const record = (fields: Record<string, unknown>) =>
-    admin.from("payment_transactions").update(fields).eq("id", t.id).is("meta_sent_at", null);
+  // Saves the delivery outcome, retrying the write once. If it still fails the
+  // payment simply stays pending: a later retry re-sends, and Meta counts it
+  // once (same event id).
+  const record = async (fields: Record<string, unknown>) => {
+    for (let i = 0; i < 2; i++) {
+      const { error } = await admin.from("payment_transactions").update(fields).eq("id", t.id).is("meta_sent_at", null);
+      if (!error) return true;
+      console.error("Meta Purchase delivery status not saved", paymentId, error.message);
+    }
+    return false;
+  };
   const attempts = Number(t.meta_attempts || 0) + 1;
   const fail = async (error: string) => {
     console.error("Meta Purchase (server) failed", paymentId, error);
