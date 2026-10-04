@@ -502,9 +502,21 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
           <li><strong>13 Indian languages</strong><span>Read and listen in the language you love</span></li>
           <li><strong>Life guidance topics</strong><span>Fear, anger, career, relationships and more</span></li>
         </ul>
-        <div class="offer-price"><b>₹1,000</b> for 1 year<small>Less than ₹3 a day · about ₹83/month · one-time payment, no autopay</small></div>
-        <button id="offerBuy" class="auth-main-btn">Get Annual Access →</button>
-        <p class="offer-trust">🔒 Secure payment by Razorpay · UPI, cards and net banking</p>
+        <div class="plan-options" role="radiogroup" aria-label="Choose your plan">
+          <button type="button" class="plan selected" data-plan="annual" role="radio" aria-checked="true">
+            <span class="plan-badge">BEST VALUE · SAVE 37%</span>
+            <span class="plan-radio" aria-hidden="true"></span>
+            <span class="plan-info"><span class="plan-name">1 year</span><span class="plan-note">₹83/month · less than ₹3 a day</span></span>
+            <span class="plan-price">₹1,000</span>
+          </button>
+          <button type="button" class="plan" data-plan="quarterly" role="radio" aria-checked="false">
+            <span class="plan-radio" aria-hidden="true"></span>
+            <span class="plan-info"><span class="plan-name">3 months</span><span class="plan-note">₹133/month</span></span>
+            <span class="plan-price">₹399</span>
+          </button>
+        </div>
+        <button id="offerBuy" class="auth-main-btn offer-buy">Continue · ₹1,000 for 1 year →</button>
+        <ul class="offer-trust"><li>✓ One-time payment · no autopay</li><li>🔒 Secured by Razorpay · UPI, cards, net banking</li></ul>
         <button id="offerLater" class="auth-signout">Maybe later</button>
       </div>
     </section>

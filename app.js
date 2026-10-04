@@ -1456,6 +1456,13 @@ $('otpCode').oninput=()=>{if($('otpCode').value.replace(/\D/g,'').length===6)ver
 function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=false;sendOtp();}
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=startLifetimePurchase;
+// Plan cards: the button names the chosen plan. (Preview: the 3-month plan
+// isn't sold yet; buying uses Annual Access until the server supports it.)
+const OFFER_PLANS={annual:'Continue · ₹1,000 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
+document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>{
+  document.querySelectorAll('.plan').forEach(c=>{const on=c===card;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
+  $('offerBuy').textContent=OFFER_PLANS[card.dataset.plan];
+});
 $('offerBuy').onclick=startLifetimePurchase;$('offerBack').onclick=closeOffer;$('offerLater').onclick=closeOffer;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};
 document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>renderTab(b.dataset.tab));
