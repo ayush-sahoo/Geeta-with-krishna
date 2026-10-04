@@ -14,6 +14,11 @@ const STATS={tracking_since:iso(3*36e5),funnel:{visitors:124,page_views:180,sign
   {id:'2',email:null,phone:'917076131555',name:null,provider:'phone',signed_up_at:iso(2*36e5),payment_status:'unpaid',checkouts:1,signup_source:{has_fbclid:true,in_app:'Facebook',country:'IN'},is_test:false},
   {id:'3',email:'me@test.in',name:'Owner',provider:'email',signed_up_at:iso(90*864e5),payment_status:'paid',access_expires_at:iso(-200*864e5),checkouts:2,signup_source:{device:'desktop',city:'New Delhi',region:'Delhi',country:'IN',backfilled:true},is_test:true},
   {id:'4',email:'<img src=x onerror=alert(1)>@x.in',name:'<b>xss</b>',provider:'email',signed_up_at:iso(5e6),payment_status:'unpaid',checkouts:0,signup_source:{utm_campaign:'<script>'},is_test:false}],
+ engagement:{asked:12,questions:19,opened_verse:7,played:2,groups:{all:{people:40,median_s:95,avg_s:140,over_1m:22,over_3m:8},asked:{people:10,median_s:260,avg_s:300,over_1m:9,over_3m:6},opened_verse:{people:6,median_s:200,avg_s:210,over_1m:5,over_3m:3},played:{people:2,median_s:400,avg_s:420,over_1m:2,over_3m:2},neither:{people:25,median_s:30,avg_s:45,over_1m:5,over_3m:1}}},
+ sessions_since:iso(2*36e5),
+ engaged:[{visitor_id:'v_a',last_at:iso(6e5),asked:3,opened_verse:true,played:true,seconds:425,sessions:2,source:'facebook (ad click)',campaign:'launch',place:{city:'Pune',region:'MH',country:'IN',device:'android'},email:null,phone:'919812345678',payment_status:'unpaid',signed_up:true},
+  {visitor_id:'v_b',last_at:iso(9e5),asked:1,opened_verse:false,played:false,seconds:null,sessions:null,stay15:true,stay45:false,source:'instagram app',campaign:'(none)',place:{city:'Lucknow',region:'UP',country:'IN',device:'android'},signed_up:false},
+  {visitor_id:'v_c',last_at:iso(12e5),asked:0,opened_verse:true,played:false,seconds:61,sessions:1,source:null,place:null,email:'<img src=x onerror=alert(2)>',signed_up:true}],
  generated_at:new Date().toISOString(),admin:'ayushsahoo2000@gmail.com'};
 async function run(name,session,mode){
   const ctx=await b.newContext({viewport:{width:1280,height:1800},acceptDownloads:true});
@@ -62,6 +67,17 @@ ok(utext.includes('Pune, Maharashtra')&&utext.includes('Android'),'user location
 ok(utext.includes('New Delhi, Delhi')&&utext.includes('from server logs'),'backfilled location labelled');
 const ltext=await p.textContent('#countries'); ok(ltext.includes('Lucknow, Uttar Pradesh')&&ltext.includes('Austin, Texas (US)'),'Locations card lists cities',ltext);
 ok((await p.textContent('#countryline')).includes('India 120'),'country summary line');
+ok((await p.textContent('#e-asked')).trim()==='12'&&(await p.textContent('#e-questions')).includes('19 questions')&&(await p.textContent('#e-played')).trim()==='2'&&(await p.textContent('#e-median')).trim()==='1m 35s','engagement tiles: tried chat, played shloka, median time on site');
+const gtext=await p.textContent('#eng-groups');
+ok((await p.locator('#eng-groups tr').count())===5&&gtext.includes('Tried the free chat')&&gtext.includes('4m 20s')&&gtext.includes('6 · 60%'),'time on site by group (median, 3 min+ share)',gtext);
+ok((await p.locator('#engaged tr').count())===3,'people who tried chat or a shloka are listed');
+const etext=await p.textContent('#engaged');
+ok(etext.includes('+91 98123 45678')&&etext.includes('7m 05s')&&etext.includes('2 visits')&&etext.includes('Played'),'person row: contact, time on site, visits, played',etext);
+ok(etext.includes('15s+ (before timing)')&&etext.includes('Anonymous visitor'),'older visit shows the 15s/45s estimate');
+ok(await p.evaluate(()=>!document.querySelector('#engaged img')),'engaged list escapes user text');
+await p.selectOption('#ef','asked'); ok((await p.locator('#engaged tr').count())===2,'filter: tried the free chat');
+await p.selectOption('#ef','played'); ok((await p.locator('#engaged tr').count())===1,'filter: played a shloka');
+await p.selectOption('#ef','all');
 await p.click('#r-30d'); await p.waitForTimeout(400); const last=JSON.parse(t.calls().filter(c=>c.p.includes('admin-stats')).pop().body); ok(Date.now()-Date.parse(last.since)>29*864e5,'range switch sends new since date');
 await p.screenshot({path:OUT+'/admin.png',fullPage:true});
 ok(!t.errs.length,'no JS errors / dialogs',t.errs.join('|'));
@@ -88,6 +104,14 @@ await s.goto(BASE+'/?utm_source=facebook&utm_medium=paid&utm_campaign=launch&utm
   const ev=rpcs.filter(x=>x.fn==='log_event').map(x=>x.body.p_event);
   const once=(n)=>ev.filter(e=>e===n).length===1;
   ok(once('tap_hero_ask')&&once('tap_prompt')&&once('ask_typing')&&once('scroll_half')&&once('scroll_end'),'engagement taps, typing and scroll depth logged once each',ev.join(',')); }
+// Trying a verse (free users see the plans) and the play button are logged;
+// time on site is reported with a per-page-load session id.
+{ await s.evaluate(()=>openVerse(2,47)); await s.waitForTimeout(150); await s.evaluate(()=>{speak();speak();}); await s.waitForTimeout(150);
+  const ev=rpcs.filter(x=>x.fn==='log_event').map(x=>x.body.p_event);
+  ok(ev.filter(e=>e==='open_verse').length===1&&ev.filter(e=>e==='play_verse').length===1,'open_verse and play_verse logged once each',ev.join(','));
+  await s.evaluate(()=>{visibleMs=37000;reportSession(false);reportSession(false);}); await s.waitForTimeout(150);
+  const ss=rpcs.filter(x=>x.fn==='log_session');
+  ok(ss.length===1&&ss[0].body.p_seconds===37&&/^s_[a-z0-9]{8,}$/.test(ss[0].body.p_session_id)&&/^v_/.test(ss[0].body.p_visitor_id),'time on site reported once per change, with session and visitor ids',JSON.stringify(ss)); }
 const v=rpcs.find(x=>x.fn==='log_visit');
 ok(v&&v.body.p_utm_campaign==='launch'&&v.body.p_utm_content==='reel1'&&v.body.p_has_fbclid===true&&v.body.p_in_app==='Instagram'&&v.body.p_device==='android'&&v.body.p_city==='Lucknow'&&v.body.p_region==='Uttar Pradesh','visit logged with city, with UTM, fbclid, in-app and device',JSON.stringify(v&&v.body));
 const vid=v&&v.body.p_visitor_id; ok(/^v_[a-z0-9]{8,}$/.test(vid||''),'anonymous visitor id created',vid);
