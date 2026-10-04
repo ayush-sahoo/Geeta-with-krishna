@@ -245,7 +245,7 @@ page.once('dialog', d => d.dismiss()); await page.click('#deleteChatsBtn'); awai
 check(!(S.chatWrites || []).some(w => w.m === 'DELETE'), 'cancelling the confirmation deletes nothing');
 page.once('dialog', d => d.accept()); await page.click('#deleteChatsBtn'); await wait(600);
 const deletes = (S.chatWrites || []).filter(w => w.m === 'DELETE').map(w => w.p);
-check(JSON.stringify(deletes) === JSON.stringify(['/rest/v1/chat_messages', '/rest/v1/chat_threads']) && S.calls.filter(c => c.m === 'DELETE').every(c => c.auth === 'Bearer tok_u1' && c.q === '?user_id=eq.u1'), 'confirmed delete removes the user\'s own messages and conversations', JSON.stringify(deletes));
+check(JSON.stringify(deletes) === JSON.stringify(['/rest/v1/chat_threads']) && S.calls.filter(c => c.m === 'DELETE').every(c => c.auth === 'Bearer tok_u1' && c.q === '?user_id=eq.u1'), 'confirmed delete removes the user\'s conversations (messages go with them) in one request', JSON.stringify(deletes));
 check((await page.textContent('#toast')).includes('chat history has been deleted') && (await page.locator('#chat .bubble').count()) === 0, 'user is told the history was deleted and the open chat is cleared', await page.textContent('#toast'));
 console.log('\n# Paid user');
 await page.goto(BASE + '/'); await wait(600);

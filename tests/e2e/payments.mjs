@@ -19,7 +19,7 @@ async function open(opts, path = '/') {
     window.__fb = []; window.fbq = function () { window.__fb.push([...arguments]); };
     if (signedIn) localStorage.setItem('gitaAuthSession', JSON.stringify(s));
   }, [opts.session || session, !!opts.signedIn]);
-  const S = { polls: 0, links: 0, refreshes: 0, linkAuth: [], linkBodies: [] };
+  const S = { polls: 0, links: 0, refreshes: 0, linkAuth: [], linkBodies: [], events: [] };
   await ctx.route(/facebook|fonts\.g/, r => r.fulfill({ status: 204, body: '' }));
   // Razorpay's on-site checkout script: blocked unless a test opts in, which
   // also exercises the fallback to the hosted payment link.
@@ -49,6 +49,7 @@ async function open(opts, path = '/') {
         ? { plan_status: 'annual', payment_status: 'paid', payment_id: 'pay_B1', amount_paid_paise: opts.paidPaise || 99900, purchased_at: new Date(Date.now() - (opts.paidAt || 60e3)).toISOString(), access_expires_at: new Date(Date.now() + 300 * DAY).toISOString(), access_active: true }
         : { plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: false });
     }
+    if (p.endsWith('/rpc/log_event')) { S.events.push(JSON.parse(r.request().postData() || '{}').p_event); return j(null); }
     if (p.endsWith('create-payment-link')) {
       S.links++; S.linkAuth.push(r.request().headers()['authorization']); S.linkBodies.push(r.request().postData() || '');
       if ((r.request().postData() || '').includes('"popup"') && !opts.linkBody) return j({ order_id: 'order_B', key_id: 'rzp_live_key', amount: (r.request().postData() || '').includes('"quarterly"') ? 39900 : 99900, currency: 'INR', prefill: { contact: '+919876543210' } });
@@ -82,16 +83,19 @@ console.log('\n# On-site checkout (Razorpay pop-up)');
   await pg.evaluate(() => window.__rzp.opts.modal.ondismiss()); await pg.waitForTimeout(200);
   ok(!(await pg.isDisabled('#accountUpgrade')) && await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'closing the pop-up unlocks the buy buttons');
   ok((await purchases(pg)).length === 0 && !(await toastText(pg)).includes('not confirmed'), 'closing it without paying sends no Purchase and no payment message');
+  ok(['checkout_click', 'checkout_annual', 'checkout_open', 'checkout_dismiss'].every((e) => S.events.includes(e)) && !S.events.includes('checkout_open_failed'), 'checkout steps recorded: click, plan, window opened, closed without paying', S.events.join(','));
+  ok(JSON.parse(S.linkBodies[0]).meta?.ua?.length > 10, 'browser details for Meta matching are sent with the checkout', S.linkBodies[0]);
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# On-site checkout fails to open');
-{ const { ctx, pg, errs } = await open({ signedIn: true, session: phoneSession, checkout: 'popup-broken', paidAfterPolls: 0 });
+{ const { ctx, pg, S, errs } = await open({ signedIn: true, session: phoneSession, checkout: 'popup-broken', paidAfterPolls: 0 });
   await pg.waitForTimeout(800);
   await pg.evaluate(() => startLifetimePurchase());
   await pg.waitForFunction(() => /payment window/.test(document.getElementById('toast').textContent), null, { timeout: 8000 }).catch(() => {});
   ok((await toastText(pg)).includes('Could not open the payment window'), 'buyer is told the payment window could not open', await toastText(pg));
   ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('See plans'), 'buy buttons unlock so the buyer can try again', await pg.textContent('#accountUpgrade'));
   ok(await pg.evaluate(() => sessionStorage.getItem('gitaCheckoutPending') === null), 'no pending payment is left behind');
+  ok(S.events.includes('checkout_open_failed') && !S.events.includes('checkout_create_failed'), 'recorded as "window failed to open"', S.events.join(','));
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# On-site checkout: paid');
@@ -114,6 +118,7 @@ console.log('\n# Offer screen: 3-month plan');
   await pg.waitForTimeout(800);
   await pg.evaluate(() => showPaywall());
   await pg.click('.plan[data-plan="quarterly"]');
+  ok(S.events.includes('plan_quarterly'), 'tapping the 3-month card is recorded', S.events.join(','));
   ok((await pg.textContent('#offerBuy')).includes('₹399 for 3 months') && await pg.getAttribute('.plan[data-plan="quarterly"]', 'aria-checked') === 'true', 'choosing 3 months selects it and names it on the button', await pg.textContent('#offerBuy'));
   await pg.click('#offerBuy');
   await pg.waitForFunction(() => window.__rzp?.opened === 1, null, { timeout: 8000 }).catch(() => {});
@@ -200,6 +205,7 @@ console.log('\n# Payment link cannot be created');
   await pg.waitForTimeout(800);
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(600);
   ok(S.links === 1 && (await pg.textContent('#toast')).includes('Could not start payment'), 'buyer sees "Could not start payment"', await pg.textContent('#toast'));
+  ok(S.events.includes('checkout_create_failed') && !S.events.includes('checkout_open_failed'), 'recorded as "checkout could not be created"', S.events.join(','));
   ok(!(await pg.isDisabled('#accountUpgrade')) && (await pg.textContent('#accountUpgrade')).includes('See plans'), 'buy buttons unlock so they can try again', await pg.textContent('#accountUpgrade'));
   ok(await pg.evaluate(() => window.__fb.some(a => a[1] === 'CheckoutError') && !window.__fb.some(a => a[1] === 'InitiateCheckout')), 'CheckoutError recorded, no InitiateCheckout');
   await pg.evaluate(() => startLifetimePurchase()); await pg.waitForTimeout(600);
@@ -262,6 +268,13 @@ console.log('\n# Buy tapped while signed out: sign in, then payment opens by its
   await pg.click('#passwordLoginBtn');
   ok(!!(await nav) && S.links === 1, 'after signing in, Razorpay opens without another tap', 'links=' + S.links);
   await ctx.close(); }
+
+console.log('\n# Meta Purchase value is what was actually paid');
+{ const { ctx, pg, errs } = await open({ signedIn: true, paid: true, paidPaise: 100000 });
+  await pg.waitForFunction(() => window.__fb.some(a => a[1] === 'Purchase'), null, { timeout: 8000 }).catch(() => {});
+  const p = await purchases(pg);
+  ok(p.length === 1 && p[0][2].value === 1000 && p[0][2].content_ids[0] === 'gita_annual', 'an annual purchase made at ₹1,000 is reported as ₹1,000', JSON.stringify(p));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# Every buy button opens the plan choice first');
 { const { ctx, pg, S, errs } = await open({ signedIn: true, paid: false });

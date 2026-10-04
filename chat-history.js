@@ -18,12 +18,15 @@ async function deleteSavedChats(){
   const owner=authSession?.user?.id;if(!owner)return;
   if(!confirm('Delete all your saved conversations with Krishna? This cannot be undone.'))return;
   const button=$('deleteChatsBtn');button.disabled=true;
-  try{
-    await savedChatQueue.catch(()=>{});
-    await chatStoreRequest('chat_messages?user_id=eq.'+encodeURIComponent(owner),{method:'DELETE'},owner);
-    await chatStoreRequest('chat_threads?user_id=eq.'+encodeURIComponent(owner),{method:'DELETE'},owner);
-    clearChatConversation();toast('Your chat history has been deleted.');
-  }catch(e){toast('Could not delete your chat history. Please try again.');}
+  // Clearing first stops saves of the current conversation (they belong to the
+  // old epoch). The delete then runs in the save queue, so a message sent while
+  // it runs is saved after it, never half-deleted with it. One request: deleting
+  // the conversations removes their messages too (on delete cascade), all or nothing.
+  clearChatConversation();
+  const run=savedChatQueue.catch(()=>{}).then(()=>chatStoreRequest('chat_threads?user_id=eq.'+encodeURIComponent(owner),{method:'DELETE'},owner));
+  savedChatQueue=run.catch(()=>{});
+  try{await run;toast('Your chat history has been deleted.');}
+  catch(e){toast('Could not delete your chat history. Please try again.');}
   finally{button.disabled=false;}
 }
 function setupChatHistory(){

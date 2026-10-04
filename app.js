@@ -43,7 +43,9 @@ function trackConfirmedPurchase(){
   if(!paidAt||Date.now()-paidAt>3*864e5)return;
   const key='gitaMetaPurchase:'+id;
   try{if(localStorage.getItem(key)||localStorage.getItem('metaPurchaseTracked')===id)return}catch(e){}
-  if(trackMeta('Purchase',planEvent(paidPlan()),false,'gita_purchase_'+id)){
+  // The value is what this account actually paid (an older purchase may be ₹1,000).
+  const paid=Number(accountProfile?.amount_paid_paise)||0,event={...planEvent(paidPlan()),...(paid?{value:paid/100}:{})};
+  if(trackMeta('Purchase',event,false,'gita_purchase_'+id)){
     try{localStorage.setItem(key,'1');localStorage.setItem('metaPurchaseTracked',id)}catch(e){}
   }
 }
@@ -72,6 +74,12 @@ function rpc(fn,args,opts={}){
   return fetch(SUPA+'/rest/v1/rpc/'+fn,{method:'POST',headers,body:JSON.stringify(args),keepalive:!!opts.keepalive}).catch(()=>{});
 }
 function logEvent(event,opts){rpc('log_event',{p_visitor_id:VISITOR_ID,p_event:event},opts)}
+// Meta's browser ids (pixel cookies) and the user agent, sent with a checkout so
+// a server-side Purchase can be matched to the same person and ad click.
+function metaBrowserIds(){
+  const cookie=k=>{try{return decodeURIComponent((document.cookie.match('(?:^|; )'+k+'=([^;]*)')||[])[1]||'')}catch(e){return ''}};
+  return {fbp:cookie('_fbp'),fbc:cookie('_fbc'),ua:navigator.userAgent};
+}
 async function visitorGeo(){
   // City/region from Vercel's edge (/api/geo). Best effort: never delays the visit log by more than 1.5s.
   try{
@@ -790,7 +798,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       if(checkoutBusy)return;
       plan=plan==='quarterly'?'quarterly':'annual';
       const metaEvent=planEvent(plan);
-      trackMeta('CheckoutClick',metaEvent,true);logEvent('checkout_click',{keepalive:true});
+      trackMeta('CheckoutClick',metaEvent,true);logEvent('checkout_click',{keepalive:true});logEvent('checkout_'+plan,{keepalive:true});
       if(!authSession?.access_token){askToSignInForPurchase(plan);return;}
 
       if(hasLifetimeAccess()){
@@ -801,7 +809,8 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       checkoutBusy=true;
       const buttons=[$('buyLifetime'),$('accountUpgrade'),$('offerBuy'),...document.querySelectorAll('.upgrade-btn')].filter(Boolean);
       buttons.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.textContent='Opening secure payment…'});
-      let leaving=false,popupOpen=false;
+      // stage: which step failed, for the admin dashboard's checkout steps.
+      let leaving=false,popupOpen=false,stage='create';
       const reset=()=>{checkoutBusy=false;buttons.forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label;else b.textContent='See plans →'});};
       const popupReady=loadRazorpayCheckout();
 
@@ -818,7 +827,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
             Authorization:'Bearer '+authSession.access_token,
             'Content-Type':'application/json'
           },
-          body:JSON.stringify(usePopup?{mode:'popup',plan}:{plan})
+          body:JSON.stringify(usePopup?{mode:'popup',plan,meta:metaBrowserIds()}:{plan,meta:metaBrowserIds()})
         });
 
         const d=await r.json();
@@ -839,17 +848,18 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
             name:'Gita Verse',description:plan==='quarterly'?'3-Month Access · 3 months':'Annual Access · 1 year',
             prefill:d.prefill||{},theme:{color:'#f6bf42'},
             retry:{enabled:true},
-            modal:{ondismiss:()=>{markCheckoutPending(false);reset();}},
+            modal:{ondismiss:()=>{markCheckoutPending(false);reset();logEvent('checkout_dismiss');}},
             // Access is unlocked by the server (razorpay-webhook); this only
             // waits for it and then shows the result.
             handler:()=>{markCheckoutPending(false);reset();confirmPaidAccess();}
           });
-          checkout.on?.('payment.failed',()=>trackMeta('CheckoutError',{stage:'payment_failed'},true));
+          checkout.on?.('payment.failed',()=>{trackMeta('CheckoutError',{stage:'payment_failed'},true);logOnce('checkout_payment_failed');});
           // Counted as open only once it has opened; if opening throws, the
           // error is shown and the buttons unlock below.
           markCheckoutPending(true);
+          stage='open';
           try{checkout.open();}catch(e){markCheckoutPending(false);throw new Error('Could not open the payment window. Please try again.');}
-          popupOpen=true;
+          popupOpen=true;logEvent('checkout_open');
           return;
         }
 
@@ -860,10 +870,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         await new Promise(r=>setTimeout(r,300));
 
         if(checkoutGeneration!==authSessionGeneration||authSession!==checkoutSession)return;
-        leaving=true;
+        leaving=true;logEvent('checkout_redirect',{keepalive:true});
         window.location.href=d.short_url;
       }catch(e){
-        trackMeta('CheckoutError',{stage:'create_payment_link'},true);
+        trackMeta('CheckoutError',{stage:'create_payment_link'},true);logEvent(stage==='open'?'checkout_open_failed':'checkout_create_failed');
         toast(e.message||'Could not start payment');
       }finally{
         // While the browser opens Razorpay the buttons stay locked; if it never
@@ -1484,7 +1494,7 @@ function selectOfferPlan(plan){
   document.querySelectorAll('.plan').forEach(c=>{const on=c.dataset.plan===plan;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
   $('offerBuy').textContent=OFFER_PLANS[plan];
 }
-document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>selectOfferPlan(card.dataset.plan));
+document.querySelectorAll('.plan').forEach(card=>card.onclick=()=>{if(!checkoutBusy)logEvent('plan_'+card.dataset.plan);selectOfferPlan(card.dataset.plan);});
 $('offerBuy').onclick=()=>startLifetimePurchase(document.querySelector('.plan.selected')?.dataset.plan);$('offerBack').onclick=closeOffer;$('offerLater').onclick=closeOffer;
 $('askInput').onkeydown=e=>{if(e.key==='Enter')sendAsk()};
 document.querySelectorAll('#meaningTabs button').forEach(b=>b.onclick=()=>renderTab(b.dataset.tab));

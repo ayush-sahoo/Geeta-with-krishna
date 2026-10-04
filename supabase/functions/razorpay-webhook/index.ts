@@ -40,6 +40,56 @@ function eventSummary(event: any) {
   };
 }
 
+async function sha256(value: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Same pixel and product metadata as the browser's Purchase event (app.js).
+const META_PIXEL_ID = "2178415463100322";
+const META_CONTENT: Record<string, { id: string; name: string }> = {
+  gita_verse_annual: { id: "gita_annual", name: "Gita Verse Annual Access" },
+  gita_verse_quarterly: { id: "gita_quarterly", name: "Gita Verse 3-Month Access" },
+};
+
+// Server-side Purchase (Meta Conversions API), so a payment is reported even
+// if the buyer never comes back to the site. Uses the browser's event id, so
+// Meta counts it once when the pixel also fires. Off until the
+// META_CAPI_TOKEN secret is set; never affects payment handling.
+async function sendMetaPurchase(admin: any, p: { userId: string; paymentId: string; amount: number; product: string; notes: any }) {
+  const token = Deno.env.get("META_CAPI_TOKEN") || "";
+  const ua = String(p.notes?.meta_ua || "");
+  if (!token || !ua) return;
+  try {
+    const { data } = await admin.auth.admin.getUserById(p.userId);
+    const email = String(data?.user?.email || "").trim().toLowerCase();
+    const phone = String(data?.user?.phone || "").replace(/\D/g, "");
+    const content = META_CONTENT[p.product] || META_CONTENT.gita_verse_annual;
+    const user_data: Record<string, unknown> = { external_id: [await sha256(p.userId)], client_user_agent: ua };
+    if (email) user_data.em = [await sha256(email)];
+    if (phone) user_data.ph = [await sha256(phone)];
+    if (p.notes?.meta_fbp) user_data.fbp = String(p.notes.meta_fbp);
+    if (p.notes?.meta_fbc) user_data.fbc = String(p.notes.meta_fbc);
+    const r = await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ data: [{
+        event_name: "Purchase",
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: "gita_purchase_" + p.paymentId,
+        action_source: "website",
+        event_source_url: "https://gitaverse.co.in/",
+        user_data,
+        custom_data: { value: p.amount / 100, currency: "INR", content_name: content.name, content_ids: [content.id], content_type: "product", num_items: 1 },
+      }] }),
+    });
+    if (!r.ok) console.error("Meta Purchase (server) failed", r.status, (await r.text()).slice(0, 200));
+  } catch (e) {
+    console.error("Meta Purchase (server) failed", String(e));
+  }
+}
+
 function safeEqual(a: string, b: string) {
   if (!a || !b || a.length !== b.length) return false;
   let out = 0;
@@ -87,16 +137,18 @@ Deno.serve(async (req) => {
     const link = event?.payload?.payment_link?.entity || {};
     const order = event?.payload?.order?.entity || {};
     const payment = event?.payload?.payment?.entity || {};
-    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean, plan;
+    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean, plan, notes: any;
     if (event?.event === "payment_link.paid") {
       // Links made before the 3-month plan carry no product: they were annual.
       plan = planFor(link?.notes?.product || "gita_verse_annual");
+      notes = link?.notes || {};
       userId = link?.notes?.user_id || payment?.notes?.user_id || null;
       reference = link?.id || null;
       amount = Number(payment?.amount ?? link?.amount_paid ?? 0);
       referencePaid = String(link?.status || "") === "paid";
     } else if (event?.event === "order.paid" && order?.notes?.checkout === "popup" && planFor(order?.notes?.product)) {
       plan = planFor(order?.notes?.product);
+      notes = order?.notes || {};
       userId = order?.notes?.user_id || null;
       reference = order?.id || null;
       amount = Number(payment?.amount ?? order?.amount_paid ?? 0);
@@ -126,6 +178,9 @@ Deno.serve(async (req) => {
       p_event: event
     });
     if (error) throw error;
+    if (!result?.duplicate) {
+      await sendMetaPurchase(admin, { userId, paymentId, amount, product: plan.product, notes });
+    }
     return Response.json({ ok: true, ...result });
 
   } catch (e) {
