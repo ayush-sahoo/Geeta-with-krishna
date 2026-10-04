@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PLANS, serviceKey } from "../_shared/server.ts";
+import { deliverMetaPurchase } from "../_shared/meta.ts";
 
 async function hmacHex(secret: string, raw: string) {
   const enc = new TextEncoder();
@@ -38,73 +39,6 @@ function eventSummary(event: any) {
     error_step: payment?.error_step || null,
     error_reason: payment?.error_reason || null
   };
-}
-
-async function sha256(value: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Same pixel and product metadata as the browser's Purchase event (app.js).
-const META_PIXEL_ID = "2178415463100322";
-const META_CONTENT: Record<string, { id: string; name: string }> = {
-  gita_verse_annual: { id: "gita_annual", name: "Gita Verse Annual Access" },
-  gita_verse_quarterly: { id: "gita_quarterly", name: "Gita Verse 3-Month Access" },
-};
-
-// The buyer's browser (user agent) from their own visit log, for checkouts
-// that didn't pass it (older pages): the latest visit of the browser they
-// used while signed in, or the one they signed up from.
-async function visitUserAgent(admin: any, userId: string) {
-  const { data: ev } = await admin.from("site_events").select("visitor_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
-  let visitor = ev?.[0]?.visitor_id;
-  if (!visitor) {
-    const { data: acct } = await admin.from("user_accounts").select("signup_visitor_id").eq("user_id", userId).maybeSingle();
-    visitor = acct?.signup_visitor_id;
-  }
-  if (!visitor) return "";
-  const { data: v } = await admin.from("site_visits").select("user_agent").eq("visitor_id", visitor).order("created_at", { ascending: false }).limit(1);
-  return String(v?.[0]?.user_agent || "");
-}
-
-// Server-side Purchase (Meta Conversions API), so a payment is reported even
-// if the buyer never comes back to the site. Uses the browser's event id, so
-// Meta counts it once when the pixel also fires. Off until the
-// META_CAPI_TOKEN secret is set; never affects payment handling.
-async function sendMetaPurchase(admin: any, p: { userId: string; paymentId: string; amount: number; product: string; notes: any }) {
-  const token = Deno.env.get("META_CAPI_TOKEN") || "";
-  if (!token) return;
-  try {
-    // Meta needs the browser's user agent for a website event.
-    const ua = String(p.notes?.meta_ua || "") || await visitUserAgent(admin, p.userId);
-    if (!ua) return;
-    const { data } = await admin.auth.admin.getUserById(p.userId);
-    const email = String(data?.user?.email || "").trim().toLowerCase();
-    const phone = String(data?.user?.phone || "").replace(/\D/g, "");
-    const content = META_CONTENT[p.product] || META_CONTENT.gita_verse_annual;
-    const user_data: Record<string, unknown> = { external_id: [await sha256(p.userId)], client_user_agent: ua };
-    if (email) user_data.em = [await sha256(email)];
-    if (phone) user_data.ph = [await sha256(phone)];
-    if (p.notes?.meta_fbp) user_data.fbp = String(p.notes.meta_fbp);
-    if (p.notes?.meta_fbc) user_data.fbc = String(p.notes.meta_fbc);
-    const r = await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(4000),
-      body: JSON.stringify({ data: [{
-        event_name: "Purchase",
-        event_time: Math.floor(Date.now() / 1000),
-        event_id: "gita_purchase_" + p.paymentId,
-        action_source: "website",
-        event_source_url: "https://gitaverse.co.in/",
-        user_data,
-        custom_data: { value: p.amount / 100, currency: "INR", content_name: content.name, content_ids: [content.id], content_type: "product", num_items: 1 },
-      }] }),
-    });
-    if (!r.ok) console.error("Meta Purchase (server) failed", r.status, (await r.text()).slice(0, 200));
-  } catch (e) {
-    console.error("Meta Purchase (server) failed", String(e));
-  }
 }
 
 function safeEqual(a: string, b: string) {
@@ -154,18 +88,16 @@ Deno.serve(async (req) => {
     const link = event?.payload?.payment_link?.entity || {};
     const order = event?.payload?.order?.entity || {};
     const payment = event?.payload?.payment?.entity || {};
-    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean, plan, notes: any;
+    let userId: string | null, reference: string | null, amount: number, referencePaid: boolean, plan;
     if (event?.event === "payment_link.paid") {
       // Links made before the 3-month plan carry no product: they were annual.
       plan = planFor(link?.notes?.product || "gita_verse_annual");
-      notes = link?.notes || {};
       userId = link?.notes?.user_id || payment?.notes?.user_id || null;
       reference = link?.id || null;
       amount = Number(payment?.amount ?? link?.amount_paid ?? 0);
       referencePaid = String(link?.status || "") === "paid";
     } else if (event?.event === "order.paid" && order?.notes?.checkout === "popup" && planFor(order?.notes?.product)) {
       plan = planFor(order?.notes?.product);
-      notes = order?.notes || {};
       userId = order?.notes?.user_id || null;
       reference = order?.id || null;
       amount = Number(payment?.amount ?? order?.amount_paid ?? 0);
@@ -195,9 +127,10 @@ Deno.serve(async (req) => {
       p_event: event
     });
     if (error) throw error;
-    if (!result?.duplicate) {
-      await sendMetaPurchase(admin, { userId, paymentId, amount, product: plan.product, notes });
-    }
+    // Server-side Meta Purchase, also on a repeat delivery if Meta hasn't
+    // accepted it yet (meta-purchase-retry keeps trying on a schedule).
+    // Never affects the response: the payment is already recorded.
+    try { await deliverMetaPurchase(admin, paymentId); } catch (e) { console.error("Meta Purchase (server) failed", String(e)); }
     return Response.json({ ok: true, ...result });
 
   } catch (e) {
