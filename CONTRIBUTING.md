@@ -14,7 +14,7 @@ Edge functions and database migrations are **not** deployed by merging. Deploy t
 
 - **Meta tracking:** did you rename, remove or add a Meta Pixel event, or touch the pixel snippet in `index.html`? The ad campaign is optimised on these events; read [docs/TRACKING.md](docs/TRACKING.md) first.
 - **In-app browsers:** most visitors arrive from Instagram and Facebook ads. Sign-in and Ask Krishna must work inside those apps' browsers and on iPhone Safari (`tests/e2e/phone.mjs` and `inapp.mjs` cover this).
-- **Price or plan:** prices are set once (`PLANS`) in `supabase/functions/_shared/server.ts`, but the ₹1,000 text and the Meta event value also appear in the site and the policy pages (see [docs/OPERATIONS.md](docs/OPERATIONS.md#common-tasks)).
+- **Price or plan:** prices are set once (`PLANS`) in `supabase/functions/_shared/server.ts`, but the price text and the Meta event value also appear in the site and the policy pages (see [docs/OPERATIONS.md](docs/OPERATIONS.md#common-tasks)).
 - **Secrets:** no API keys, tokens or passwords in code, commits or pull requests. The Supabase publishable key in `app.js` is public by design.
 - **Database:** new tables have row-level security on; user writes go through `security definer` functions with their own checks.
 - **User data:** questions people ask Krishna are never sent to analytics or Meta. Signed-in users' conversations are saved to their own account (`chat_threads` / `chat_messages`, readable only by that user); any change to what is stored must be reflected in the privacy policy (`tools/build_legal_pages.py`).

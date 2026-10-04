@@ -81,7 +81,7 @@ PAGES = {
 
 <h2>Plans and payment</h2>
 <ul>
-<li>Annual Access costs <strong>₹1,000</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
+<li>Annual Access costs <strong>₹999</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
 <li>3-Month Access costs <strong>₹399</strong> (inclusive of applicable taxes) and gives full access for <strong>3 months</strong> from the date of payment.</li>
 <li>Each plan is a one-time payment. It does <strong>not</strong> renew automatically, and you will never be charged again unless you choose to buy again. A purchase made while access is active is added on after the current access ends.</li>
 <li>Payments are processed securely by Razorpay. All purchases are final and non-refundable, except for billing errors described in our <a href="refund.html">Refund Policy</a>.</li>
@@ -111,7 +111,7 @@ PAGES = {
 """),
 
 "refund.html": ("Refund Policy", "Refunds", f"""
-<p>This policy applies to Annual Access (₹1,000 for 12 months) and 3-Month Access (₹399 for 3 months) on Gita Verse.</p>
+<p>This policy applies to Annual Access (₹999 for 12 months) and 3-Month Access (₹399 for 3 months) on Gita Verse.</p>
 
 <h2>No refunds</h2>
 <p>All purchases of Annual Access and 3-Month Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>

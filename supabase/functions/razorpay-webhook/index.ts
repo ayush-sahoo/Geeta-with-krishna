@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Missing payment identity" }, { status: 400 });
     }
 
-    if (!plan || amount !== plan.paise || !referencePaid || !["captured","authorized"].includes(paymentStatus)) {
+    if (!plan || (amount !== plan.paise && !plan.oldPaise?.includes(amount)) || !referencePaid || !["captured","authorized"].includes(paymentStatus)) {
       return Response.json({ error: "Payment validation failed" }, { status: 400 });
     }
 

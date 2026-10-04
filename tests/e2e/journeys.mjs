@@ -13,7 +13,7 @@ const DAILY = V(12, 19, 'Who is indifferent to praise and censure, who enjoys si
 const user = () => ({ id: 'u1', email: 'test@example.com', created_at: S.createdAt, app_metadata: { provider: 'email' } });
 const session = () => ({ access_token: 'tok_u1', refresh_token: 'ref_u1', token_type: 'bearer', expires_in: 3600, user: user() });
 const account = () => S.paid
-  ? { email: 'test@example.com', plan_status: 'annual', payment_status: 'paid', payment_provider: 'razorpay', payment_id: 'pay_TEST1', amount_paid_paise: 100000, purchased_at: new Date().toISOString(), access_expires_at: new Date(Date.now() + 365 * 864e5).toISOString(), access_active: true, user_id: 'u1' }
+  ? { email: 'test@example.com', plan_status: 'annual', payment_status: 'paid', payment_provider: 'razorpay', payment_id: 'pay_TEST1', amount_paid_paise: 99900, purchased_at: new Date().toISOString(), access_expires_at: new Date(Date.now() + 365 * 864e5).toISOString(), access_active: true, user_id: 'u1' }
   : { email: 'test@example.com', plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: !S.freeUsed, user_id: 'u1' };
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
 
@@ -123,7 +123,7 @@ await page.evaluate(() => showScreen('home'));
 await shot('01-home-signed-out');
 await page.click('#dailyRead'); await wait(300);
 check((await screen()) === 'offerScreen' && (await page.textContent('#offerLead')).includes('every verse'), 'Read verse (signed out) -> offer screen explaining what full access includes', await screen());
-check((await page.textContent('#offerScreen')).includes('₹1,000') && (await page.textContent('#offerScreen')).includes('no autopay') && (await page.locator('.offer-benefits li').count()) === 4, 'offer screen shows the benefits, the price and no autopay');
+check((await page.textContent('#offerScreen')).includes('₹999') && (await page.textContent('#offerScreen')).includes('no autopay') && (await page.locator('.offer-benefits li').count()) === 4, 'offer screen shows the benefits, the price and no autopay');
 await page.click('#offerLater'); await wait(150);
 check((await screen()) === 'home', '"Maybe later" returns to where the visitor was', await screen());
 await page.click('#dailyRead'); await wait(300); await page.click('#offerBuy'); await wait(300);
@@ -171,7 +171,7 @@ await page.waitForFunction(() => /saved|Not saved/.test(document.getElementById(
 const savedRows = (S.chatWrites || []).filter(w => w.p === '/rest/v1/chat_messages').flatMap(w => JSON.parse(w.body));
 check(savedRows.some(r => r.role === 'user' && r.content === 'I am worried about my exams') && savedRows.some(r => r.role === 'user' && r.content === 'I am anxious about my career') && savedRows.every(r => r.user_id === 'u1'), 'after sign-up, the free chat and the new answer are saved to the account', JSON.stringify(savedRows.map(r => r.content)));
 check((await page.textContent('#chatSaveStatus')) === 'Conversation saved' && await page.isHidden('#chatSaveRetry'), 'chat shows "Conversation saved" (no false "Not saved" warning)', await page.textContent('#chatSaveStatus'));
-check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('3 months ₹399 · 1 year ₹1,000') && (await page.textContent('.upgrade-btn')).includes('See plans'), 'upgrade card under the free answer shows both plans');
+check(await page.isVisible('.upgrade-card') && (await page.textContent('.upgrade-card')).includes('3 months ₹399 · 1 year ₹999') && (await page.textContent('.upgrade-btn')).includes('See plans'), 'upgrade card under the free answer shows both plans');
 check(!(await page.textContent('#chatHint')).includes('free'), 'free hint removed once used');
 check((await page.textContent('#offer')).includes('Plans from ₹399') && await page.isHidden('#heroFreeNote'), 'after the free question, the bar offers the plans');
 await shot('02a-free-answer');
@@ -216,7 +216,7 @@ check(S.calls.filter(c => c.p === '/functions/v1/create-payment-link').length ==
 check(ALLFB.slice(fbBeforeCheckout).filter(a => a[1] === 'InitiateCheckout').length === 1 && ALLFB.slice(fbBeforeCheckout).filter(a => a[1] === 'CheckoutClick').length === 1, 'repeated buy taps send Meta one CheckoutClick and one InitiateCheckout');
 check(!!navReq, 'browser is sent to the Razorpay payment page');
 const ic = ALLFB.find(a => a[1] === 'InitiateCheckout');
-check(ic?.[2]?.value === 1000 && ic?.[2]?.currency === 'INR', 'Meta InitiateCheckout fires with 1000 INR before redirect', JSON.stringify(ic));
+check(ic?.[2]?.value === 999 && ic?.[2]?.currency === 'INR', 'Meta InitiateCheckout fires with 999 INR before redirect', JSON.stringify(ic));
 const fbBeforeNav = S.calls.length; // (fb events are lost on navigation; InitiateCheckout checked via code order below)
 
 // ===== 4. Return from Razorpay =====
@@ -228,7 +228,7 @@ check((await page.textContent('#accountPlan')).trim() === 'Annual', 'returning b
 check(!page.url().includes('payment=success'), 'payment=success removed from the URL');
 const purchases = (await fbFull()).filter(a => a[1] === 'Purchase');
 check(purchases.length === 1, 'Meta Purchase fires exactly once', JSON.stringify(purchases));
-check(purchases[0]?.[2]?.value === 1000 && purchases[0]?.[2]?.currency === 'INR', 'Purchase value = 1000 INR');
+check(purchases[0]?.[2]?.value === 999 && purchases[0]?.[2]?.currency === 'INR', 'Purchase value = 999 INR');
 check(purchases[0]?.[3]?.eventID === 'gita_purchase_pay_TEST1', 'Purchase has dedup eventID');
 await shot('03-account-paid');
 await page.goto(BASE + '/?payment=success'); await wait(1500);

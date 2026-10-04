@@ -12,10 +12,10 @@ function run(user,body,{open=[],lease=()=>true,linkStatus='created',slow=false}=
     select:()=>b,eq:(k,v)=>{if(k==='amount_paise')st.paise=v;return b},order:()=>b,limit:()=>b,like:(k,v)=>{st.prefix=v.replace('%','');return b},
     single:async()=>({data:{plan_status:'free',payment_status:'unpaid'}}),
     insert:async row=>{inserts.push(row);return {error:null}},update:()=>({eq:async()=>({error:null})}),
-    then:(res,rej)=>Promise.resolve({data:table==='payment_transactions'?open.filter(r=>r.payment_link_id.startsWith(st.prefix)&&(r.amount_paise??100000)===st.paise):[],error:null}).then(res,rej)};return b;};
+    then:(res,rej)=>Promise.resolve({data:table==='payment_transactions'?open.filter(r=>r.payment_link_id.startsWith(st.prefix)&&(r.amount_paise??99900)===st.paise):[],error:null}).then(res,rej)};return b;};
   const c=vm.createContext({Response,btoa,setTimeout,
     // A referenced timer, like Deno's (Node's AbortSignal.timeout lets the test process exit first).
-    AbortSignal:{timeout:ms=>{const c=new AbortController();setTimeout(()=>c.abort(new DOMException('timed out','TimeoutError')),ms);return c.signal;}},console:{log(){},error(){}},PLANS:{annual:{paise:100000,product:'gita_verse_annual',description:'Gita Verse Annual Access'},quarterly:{paise:39900,product:'gita_verse_quarterly',description:'Gita Verse 3-Month Access'}},serviceKey:()=> 'service',
+    AbortSignal:{timeout:ms=>{const c=new AbortController();setTimeout(()=>c.abort(new DOMException('timed out','TimeoutError')),ms);return c.signal;}},console:{log(){},error(){}},PLANS:{annual:{paise:99900,product:'gita_verse_annual',description:'Gita Verse Annual Access',oldPaise:[100000]},quarterly:{paise:39900,product:'gita_verse_quarterly',description:'Gita Verse 3-Month Access'}},serviceKey:()=> 'service',
     Deno:{env:{get:k=>({SUPABASE_URL:'https://x.supabase.co',SUPABASE_ANON_KEY:'anon',RAZORPAY_KEY_ID:'rzp_live_key',RAZORPAY_KEY_SECRET:'secret'})[k]||''},serve:fn=>serve=fn},
     createClient:()=>({auth:{getUser:async()=>({data:{user},error:null})},from:query,rpc:async(name,args)=>{rpcs.push(name);return {data:name==='claim_checkout_lease'?lease():null,error:null};}}),
     fetch:(url,o)=>{const method=o.method||'GET';rz.push({url,method,body:o.body?JSON.parse(o.body):null});
@@ -30,7 +30,7 @@ test('pop-up order carries the Gita Verse marker and prefills the phone',async()
   const r=await run({id:'u-1',phone:'919876543210',email:''},{mode:'popup'});
   assert.equal(r.status,200);assert.equal(creates(r).length,1);assert.match(r.rz[0].url,/\/v1\/orders$/);
   assert.deepEqual(r.rz[0].body.notes,{user_id:'u-1',product:'gita_verse_annual',checkout:'popup'});
-  assert.equal(r.rz[0].body.amount,100000);
+  assert.equal(r.rz[0].body.amount,99900);
   assert.equal(r.json.order_id,'order_9');assert.equal(r.json.key_id,'rzp_live_key');assert.deepEqual(r.json.prefill,{contact:'+919876543210'});
   assert.equal(r.inserts[0].payment_link_id,'order_9');assert.deepEqual(r.rpcs,['claim_checkout_lease','release_checkout_lease']);
 });
@@ -65,9 +65,9 @@ test('the 3-month plan creates a ₹399 order and link tagged with its product',
   r=await run({id:'u-10'},{plan:'quarterly'});
   assert.equal(r.rz[0].body.amount,39900);assert.equal(r.rz[0].body.notes.product,'gita_verse_quarterly');assert.equal(r.rz[0].body.description,'Gita Verse 3-Month Access');
 });
-test('an unknown plan is charged as the annual plan',async()=>{const r=await run({id:'u-11'},{mode:'popup',plan:'free'});assert.equal(r.rz[0].body.amount,100000);assert.equal(r.json.plan,'annual');});
+test('an unknown plan is charged as the annual plan',async()=>{const r=await run({id:'u-11'},{mode:'popup',plan:'free'});assert.equal(r.rz[0].body.amount,99900);assert.equal(r.json.plan,'annual');});
 test('an unpaid order for the other plan is not reused',async()=>{
-  const open=[{payment_link_id:'order_annual',amount_paise:100000,created_at:ago(5)}];
+  const open=[{payment_link_id:'order_annual',amount_paise:99900,created_at:ago(5)}];
   let r=await run({id:'u-12'},{mode:'popup',plan:'quarterly'},{open});assert.equal(r.json.order_id,'order_9');assert.equal(r.rz[0].body.amount,39900);
   r=await run({id:'u-12'},{mode:'popup'},{open});assert.equal(r.json.order_id,'order_annual');assert.equal(creates(r).length,0);
 });

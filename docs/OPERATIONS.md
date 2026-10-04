@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Vercel (project `geeta-with-krishna`) | Hosting gitaverse.co.in; deploys every push to `main` | vercel.com |
 | Supabase (`bkwvuckznpaawmqrjjgk`, Mumbai) | Database, Auth, edge functions, secrets | supabase.com dashboard |
-| Razorpay (live keys) | ₹1,000 Annual Access and ₹399 3-Month Access payments; webhook → `razorpay-webhook` | Razorpay dashboard |
+| Razorpay (live keys) | ₹999 Annual Access and ₹399 3-Month Access payments; webhook → `razorpay-webhook` | Razorpay dashboard |
 | Google Gemini | Ask Krishna replies, translations | Google AI Studio |
 | ElevenLabs | Verse narration | elevenlabs.io |
 | MSG91 | Sign-in OTP SMS (DLT template) | msg91.com (keep the wallet topped up) |
