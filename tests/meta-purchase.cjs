@@ -5,12 +5,12 @@ const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/_shared/me
 const sha=v=>createHash('sha256').update(v).digest('hex');
 const paidRow=(o={})=>({id:7,user_id:'u-1',amount_paise:39900,paid_at:'2026-10-04T17:45:00Z',meta_sent_at:null,meta_attempts:0,
   raw_event:{payload:{order:{entity:{notes:{product:'gita_verse_quarterly',meta_ua:'Mozilla/5.0 Instagram',meta_fbp:'fb.1.1.2',meta_fbc:'fb.1.1.abc'}}}}},...o});
-function load({row=paidRow(),token='tok',meta=()=>({status:200,body:{events_received:1}}),visitUa=''}={}){
+function load({row=paidRow(),token='tok',meta=()=>({status:200,body:{events_received:1}}),visitUa='',updateErrors=0}={}){
   const updates=[],sent=[];
   const admin={from:table=>{const q={select:()=>q,eq:()=>q,is:()=>q,order:()=>q,
       limit:async()=>({data:table==='site_events'?(visitUa?[{visitor_id:'v1'}]:[]):table==='site_visits'?[{user_agent:visitUa}]:[]}),
       maybeSingle:async()=>({data:table==='payment_transactions'?row:null}),
-      update:fields=>{updates.push(fields);return q;},then:(res)=>res({error:null})};return q;},
+      update:fields=>{updates.push(fields);return q;},then:(res)=>res({error:updateErrors-->0?{message:'db down'}:null})};return q;},
     auth:{admin:{getUserById:async()=>({data:{user:{email:' Buyer@Example.com ',phone:'919876543210'}}})}}};
   const c=vm.createContext({crypto:webcrypto,TextEncoder,AbortSignal,Response,console:{error(){}},Date,Math,JSON,Number,String,
     Deno:{env:{get:k=>k==='META_CAPI_TOKEN'?token:''}},
@@ -50,4 +50,8 @@ test('an old ₹1,000 annual payment reports ₹1,000; a checkout without browse
 });
 test('no browser at all: recorded as a failure (retried in case a visit turns up), nothing sent',async()=>{
   const m=load({row:paidRow({raw_event:{}})});assert.equal(await m.deliver('pay_3'),'failed');assert.equal(m.sent.length,0);assert.match(m.updates[0].meta_last_error,/user agent/);
+});
+test('saving the delivery status is retried once; if it still fails the payment stays pending (resent later, counted once)',async()=>{
+  let m=load({updateErrors:1});assert.equal(await m.deliver('pay_1'),'sent');assert.equal(m.updates.length,2);assert.ok(m.updates[1].meta_sent_at);
+  m=load({updateErrors:5});assert.equal(await m.deliver('pay_1'),'sent');assert.equal(m.updates.length,2);
 });
