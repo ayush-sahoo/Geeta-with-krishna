@@ -18,7 +18,7 @@ export const PLANS: Record<string, { paise: number; product: string; description
 };
 
 // Gemini model used for Ask Krishna answers and translations.
-export const GEMINI_MODEL = "gemini-3.5-flash";
+export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 export const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // The project's server key (bypasses row-level security; never send it to a browser).
