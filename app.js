@@ -27,11 +27,14 @@ function setMetaUser(user){
     fbq('init',META_PIXEL_ID,data);
   }catch(e){}
 }
-const annualEvent={value:999,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+const annualEvent={value:499,currency:'INR',content_name:'Gita Verse Annual Access',content_ids:['gita_annual'],content_type:'product',num_items:1};
+const monthlyEvent={value:149,currency:'INR',content_name:'Gita Verse 1-Month Access',content_ids:['gita_monthly'],content_type:'product',num_items:1};
 const quarterlyEvent={value:399,currency:'INR',content_name:'Gita Verse 3-Month Access',content_ids:['gita_quarterly'],content_type:'product',num_items:1};
-const planEvent=plan=>plan==='quarterly'?quarterlyEvent:annualEvent;
-// The plan an account paid for, from the amount (₹399 is the 3-month plan).
-const paidPlan=()=>accountProfile?.amount_paid_paise===39900?'quarterly':'annual';
+const planEvent=plan=>plan==='monthly'?monthlyEvent:plan==='quarterly'?quarterlyEvent:annualEvent;
+// The plan an account paid for, from the amount. quarterly is the retired
+// ₹399 plan, still shown for people who bought it.
+const paidPlan=()=>({14900:'monthly',39900:'quarterly'})[accountProfile?.amount_paid_paise]||'annual';
+const PAID_PLAN_NAME={annual:'Annual',monthly:'1 month',quarterly:'3 months'};
 // Fires Meta Purchase once per payment. Called on the return from Razorpay and
 // on any later account load, so a payment confirmed after the buyer stopped
 // waiting is still reported (only for purchases in the last 3 days, so an old
@@ -393,7 +396,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           if(location.search.includes('payment='))history.replaceState({},document.title,location.pathname);
           renderAccessState();
           showScreen('accountScreen',true);
-          toast(paidPlan()==='quarterly'?'3-Month Access unlocked ✓':'Annual Access unlocked ✓');
+          toast({monthly:'1-Month Access unlocked ✓',quarterly:'3-Month Access unlocked ✓'}[paidPlan()]||'Annual Access unlocked ✓');
           return true;
         }
         await new Promise(r=>setTimeout(r,1500));
@@ -775,7 +778,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
     }
     function takeBuyAfterSignIn(){
       let at=0,plan='';try{at=Number(localStorage.getItem(BUY_AFTER_SIGN_IN_KEY))||0;plan=localStorage.getItem(BUY_PLAN_KEY)||'';localStorage.removeItem(BUY_AFTER_SIGN_IN_KEY);localStorage.removeItem(BUY_PLAN_KEY)}catch(e){}
-      return at&&Date.now()-at<30*60e3?(plan==='quarterly'?'quarterly':'annual'):'';
+      return at&&Date.now()-at<30*60e3?(plan==='monthly'?'monthly':'annual'):'';
     }
     // Razorpay's on-site checkout keeps buyers on Gita Verse and fills in the
     // phone or email they signed up with. If its script can't load in time, the
@@ -792,11 +795,11 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
       }).then(ok=>{if(!ok)razorpayLoading=null;return ok});
       return razorpayLoading;
     }
-    // plan: 'annual' (₹999, 1 year) or 'quarterly' (₹399, 3 months). Every
+    // plan: 'annual' (₹499, 1 year) or 'monthly' (₹149, 1 month). Every
     // buy button opens the offer screen first, so the buyer picks the plan there.
     async function startLifetimePurchase(plan){
       if(checkoutBusy)return;
-      plan=plan==='quarterly'?'quarterly':'annual';
+      plan=plan==='monthly'?'monthly':'annual';
       const metaEvent=planEvent(plan);
       trackMeta('CheckoutClick',metaEvent,true);logEvent('checkout_click',{keepalive:true});logEvent('checkout_'+plan,{keepalive:true});
       if(!authSession?.access_token){askToSignInForPurchase(plan);return;}
@@ -848,7 +851,7 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
           trackMeta('InitiateCheckout',metaEvent);
           const checkout=new window.Razorpay({
             key:d.key_id,order_id:d.order_id,amount:d.amount,currency:d.currency||'INR',
-            name:'Gita Verse',description:plan==='quarterly'?'3-Month Access · 3 months':'Annual Access · 1 year',
+            name:'Gita Verse',description:plan==='monthly'?'1-Month Access · 1 month':'Annual Access · 1 year',
             prefill:d.prefill||{},theme:{color:'#f6bf42'},
             retry:{enabled:true},
             modal:{ondismiss:()=>{markCheckoutPending(false);reset();logEvent('checkout_dismiss');}},
@@ -1029,7 +1032,7 @@ function renderAccessState(){
     ?['🙏','','Ask Krishna one more question','Free with a quick sign-up · no payment','Ask free →']
     :freeLeft
     ?['🙏','TRY IT FREE','Ask Krishna your first question','Free with a quick sign-up · no payment','Ask free →']
-    :['♕','FULL ACCESS','Plans from ₹399','3 months or 1 year · One-time payment, no autopay','See plans →'];
+    :['♕','FULL ACCESS','Plans from ₹149','1 month or 1 year · One-time payment, no autopay','See plans →'];
   ['offerKicker','offerTitle','offerText','buyLifetime'].forEach((id,i)=>{if(!$(id).disabled)$(id).textContent=offer[i+1]});
   $('offerKicker').hidden=!offer[1];
   $('offer').dataset.mode=freeLeft?'free':'buy';
@@ -1042,7 +1045,7 @@ function updateAccountUI(){
   const phone=authSession?.user?.phone;
   $('accountEmail').textContent=authSession?.user?.email||(phone?'+'+String(phone).replace(/^\+/,''):'—');
   $('accountProvider').textContent={phone:'Mobile',google:'Google',email:'Email'}[authSession?.user?.app_metadata?.provider]||'Email';
-  $('accountPlan').textContent=paid?(paidPlan()==='quarterly'?'3 months':'Annual'):'Free';
+  $('accountPlan').textContent=paid?PAID_PLAN_NAME[paidPlan()]:'Free';
   $('accountPayment').textContent=accountProfile?.payment_status||'Unpaid';
   for(const [id,key] of [['accountPurchased','purchased_at'],['accountExpires','access_expires_at']]){
     $(id).textContent=accountProfile?.[key]?new Date(accountProfile[key]).toLocaleDateString():'—';
@@ -1423,7 +1426,7 @@ async function sendAsk(){
       const card=appendText($('chat'),'div','','bubble assistant upgrade-card');
       appendText(card,'strong','That was your free question 🙏');
       appendText(card,'p','Keep talking with Krishna whenever you need guidance, plus all 701 verses with meaning, audio and 13 Indian languages.');
-      appendText(card,'p','3 months ₹399 · 1 year ₹999 · no autopay','upgrade-price');
+      appendText(card,'p','1 month ₹149 · 1 year ₹499 · no autopay','upgrade-price');
       const buy=appendText(card,'button','See plans →','upgrade-btn');buy.type='button';buy.onclick=()=>showPaywall("You've used your free questions. Keep talking with Krishna, as often as you need.");
     }
   }catch(e){if(generation===chatGeneration){answer.textContent=e.message||'Could not reach the guide. Please try again.';if(!$('askInput').value)$('askInput').value=q;}}
@@ -1489,11 +1492,11 @@ function sendOtpAgain(){$('sendOtpBtn').hidden=false;$('phoneNumber').disabled=f
 $('signupPassword').onkeydown=e=>{if(e.key==='Enter')signUpWithPassword()};
 $('signOutBtn').onclick=signOut;$('accountUpgrade').onclick=()=>showPaywall();
 // Plan cards: the button names the chosen plan and buys it.
-const OFFER_PLANS={annual:'Continue · ₹999 for 1 year →',quarterly:'Continue · ₹399 for 3 months →'};
+const OFFER_PLANS={annual:'Continue · ₹499 for 1 year →',monthly:'Continue · ₹149 for 1 month →'};
 // The choice is locked while a payment is being opened.
 function selectOfferPlan(plan){
   if(checkoutBusy)return;
-  plan=plan==='quarterly'?'quarterly':'annual';
+  plan=plan==='monthly'?'monthly':'annual';
   document.querySelectorAll('.plan').forEach(c=>{const on=c.dataset.plan===plan;c.classList.toggle('selected',on);c.setAttribute('aria-checked',String(on));});
   $('offerBuy').textContent=OFFER_PLANS[plan];
 }

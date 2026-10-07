@@ -5,7 +5,7 @@ const ok=(c,m,d='')=>console.log((c?'PASS ':'FAIL ')+m+(c?'':' -> '+d));
 const b=await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','content-type':'application/json'};
 const now=Date.now(), iso=(ms)=>new Date(now-ms).toISOString();
-const STATS={tracking_since:iso(3*36e5),funnel:{visitors:124,page_views:180,signin_start:14,signups:6,checkout:3,purchases:1,revenue_paise:100000},events:{signup:6,paywall_view:30,plan_quarterly:9,checkout_click:7,checkout_quarterly:4,checkout_open:6,checkout_dismiss:4,checkout_payment_failed:2},
+const STATS={tracking_since:iso(3*36e5),funnel:{visitors:124,page_views:180,signin_start:14,signups:6,checkout:3,purchases:1,revenue_paise:100000},events:{signup:6,paywall_view:30,plan_monthly:9,checkout_click:7,checkout_monthly:4,checkout_open:6,checkout_dismiss:4,checkout_payment_failed:2},
  sources:[{source:'facebook',visitors:90,signups:5,paid:1},{source:'instagram app',visitors:20,signups:1,paid:0},{source:'direct',visitors:14,signups:0,paid:0}],
  campaigns:[{campaign:'Purchase campaign 28-09-26',ad:'reel-krishna-1',visitors:70,signups:4,paid:1},{campaign:'Purchase campaign 28-09-26',ad:'static-verse',visitors:20,signups:1,paid:0}],
  browsers:[{browser:'Instagram',visitors:80},{browser:'Facebook',visitors:20},{browser:'Android browser',visitors:24}],countries:[{country:'IN',visitors:120},{country:'US',visitors:4}],cities:[{city:'Lucknow',region:'UP',country:'IN',visitors:40},{city:'Austin',region:'Texas',country:'US',visitors:3}],
@@ -68,7 +68,7 @@ ok(utext.includes('New Delhi, Delhi')&&utext.includes('from server logs'),'backf
 const ltext=await p.textContent('#countries'); ok(ltext.includes('Lucknow, Uttar Pradesh')&&ltext.includes('Austin, Texas (US)'),'Locations card lists cities',ltext);
 ok((await p.textContent('#countryline')).includes('India 120'),'country summary line');
 const ctext=await p.textContent('#checkoutSteps');
-ok((await p.locator('#checkoutSteps .hbar').count())===13&&/Tapped 3 months[^0-9]*9/.test(ctext)&&/Closed without paying[^0-9]*4/.test(ctext)&&/A payment attempt failed[^0-9]*2/.test(ctext),'checkout steps card: plan taps, window opened/closed, failed attempts',ctext);
+ok((await p.locator('#checkoutSteps .hbar').count())===13&&/Tapped 1 month[^0-9]*9/.test(ctext)&&/Closed without paying[^0-9]*4/.test(ctext)&&/A payment attempt failed[^0-9]*2/.test(ctext),'checkout steps card: plan taps, window opened/closed, failed attempts',ctext);
 ok((await p.textContent('#e-asked')).trim()==='12'&&(await p.textContent('#e-questions')).includes('19 questions')&&(await p.textContent('#e-played')).trim()==='2'&&(await p.textContent('#e-median')).trim()==='1m 35s','engagement tiles: tried chat, played shloka, median time on site');
 const gtext=await p.textContent('#eng-groups');
 ok((await p.locator('#eng-groups tr').count())===5&&gtext.includes('Tried the free chat')&&gtext.includes('4m 20s')&&gtext.includes('6 · 60%'),'time on site by group (median, 3 min+ share)',gtext);

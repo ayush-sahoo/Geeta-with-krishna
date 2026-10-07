@@ -12,7 +12,7 @@ Loaded in `index.html`. The campaign is optimised for **Purchase**; don't rename
 | --- | --- | --- | --- |
 | `PageView` | standard | Every page load | From `index.html`. |
 | `CompleteRegistration` | standard | A new account's first sign-in (email, Google or phone) | `trackNewAccount`. eventID `gita_reg_<user id>`, `registration_method`, fires once per account (localStorage guard). Phone sign-ups count from `phone_confirmed_at`, because the account is created when the OTP is requested. |
-| `InitiateCheckout` | standard | When the Razorpay checkout opens | ₹999 INR (annual) or ₹399 (3 months), `content_ids` `gita_annual` / `gita_quarterly`; `Purchase` uses the plan paid. |
+| `InitiateCheckout` | standard | When the Razorpay checkout opens | ₹499 INR (annual) or ₹149 (1 month), `content_ids` `gita_annual` / `gita_monthly`; `Purchase` uses the plan paid. |
 | `Purchase` | standard | Access confirmed after returning from Razorpay | `trackConfirmedPurchase`. eventID `gita_purchase_<payment id>`, fires once per payment. Value is the amount actually paid. Also sent from the server by `razorpay-webhook` (Conversions API, same event id, deduplicated by Meta) once `META_CAPI_TOKEN` is set; the checkout passes `_fbp`/`_fbc` and the user agent in the Razorpay notes for matching. |
 | `ViewContent` | standard | Opening a verse | |
 | `Login`, `ScreenView`, `AskKrishnaUsed`, `CheckoutClick`, `CheckoutError`, `SaveVerse`, `RegistrationSubmitted`, `GoogleBlockedInApp`, `OpenInBrowser`, `OpenedFromInApp` | custom | As named | Diagnostics only. |
@@ -36,7 +36,7 @@ Anonymous visitor id: `gitaVisitorId` in localStorage.
 | `ask_typing` | Started typing a question |
 | `scroll_half`, `scroll_end` | Home page scroll depth |
 | `stay_15s`, `stay_45s` | Visible time on page |
-| `plan_annual`, `plan_quarterly`; `checkout_annual`, `checkout_quarterly`; `checkout_open`, `checkout_dismiss`, `checkout_redirect`, `checkout_payment_failed`, `checkout_open_failed`, `checkout_create_failed` | Checkout steps: plan card tapped, plan being bought, Razorpay window opened / closed unpaid / fallback page, a failed attempt, window blocked, server could not create the checkout (admin "Checkout steps") |
+| `plan_annual`, `plan_monthly`; `checkout_annual`, `checkout_monthly` (`plan_quarterly`/`checkout_quarterly` until 7 Oct 2026, the retired ₹399 plan); `checkout_open`, `checkout_dismiss`, `checkout_redirect`, `checkout_payment_failed`, `checkout_open_failed`, `checkout_create_failed` | Checkout steps: plan card tapped, plan being bought, Razorpay window opened / closed unpaid / fallback page, a failed attempt, window blocked, server could not create the checkout (admin "Checkout steps") |
 | `log_session` (table `site_sessions`) | Visible seconds per page load, sent every 30 s and when the tab is hidden; the admin dashboard shows time on site from it |
 
 **Attribution.** After sign-in, `set_my_attribution` copies the visitor's first visit (UTM, `fbclid`, in-app browser, location) into `user_accounts.signup_source` and `signup_visitor_id`. It only fills an empty value, so later logins never overwrite it.

@@ -3,17 +3,21 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Settings and helpers shared by the edge functions. Change the price or the
 // AI model here, not in each function.
 
-// Annual Access price in paise (₹999).
-export const ANNUAL_PRICE_PAISE = 99900;
+// Annual Access price in paise (₹499).
+export const ANNUAL_PRICE_PAISE = 49900;
 
 // The plans on sale. create-payment-link charges the chosen plan's price and
 // tags the checkout with its product; razorpay-webhook unlocks access only when
 // the amount paid matches that product. The database function
-// apply_annual_payment sets each price's length (1 year / 3 months).
-// oldPaise: earlier prices still honoured for checkouts opened before a price
-// change (unpaid orders and links expire within an hour).
+// apply_annual_payment sets each price's length (1 year / 1 month; 3 months
+// for the retired ₹399 plan). oldPaise: earlier prices still honoured for
+// checkouts opened before a price change (unpaid orders and links expire
+// within an hour). quarterly is no longer sold (create-payment-link offers
+// annual and monthly only) but stays here so a ₹399 checkout opened before the
+// change still unlocks access.
 export const PLANS: Record<string, { paise: number; product: string; description: string; oldPaise?: number[] }> = {
-  annual: { paise: ANNUAL_PRICE_PAISE, product: "gita_verse_annual", description: "Gita Verse Annual Access", oldPaise: [100000] },
+  annual: { paise: ANNUAL_PRICE_PAISE, product: "gita_verse_annual", description: "Gita Verse Annual Access", oldPaise: [99900, 100000] },
+  monthly: { paise: 14900, product: "gita_verse_monthly", description: "Gita Verse 1-Month Access" },
   quarterly: { paise: 39900, product: "gita_verse_quarterly", description: "Gita Verse 3-Month Access" },
 };
 

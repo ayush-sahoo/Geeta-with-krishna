@@ -8,6 +8,7 @@
 const META_PIXEL_ID = "2178415463100322";
 const META_CONTENT: Record<string, { id: string; name: string }> = {
   gita_verse_annual: { id: "gita_annual", name: "Gita Verse Annual Access" },
+  gita_verse_monthly: { id: "gita_monthly", name: "Gita Verse 1-Month Access" },
   gita_verse_quarterly: { id: "gita_quarterly", name: "Gita Verse 3-Month Access" },
 };
 // Meta takes events up to 7 days old; stop a little before that.

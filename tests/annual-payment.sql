@@ -7,18 +7,20 @@ declare
   second jsonb;
   replay jsonb;
   quarter jsonb;
+  month jsonb;
+  old_annual jsonb;
   expiry timestamptz;
   seed text := 'regression_' || gen_random_uuid()::text;
 begin
   select a.user_id into uid from public.user_accounts a join auth.users u on u.id=a.user_id
     where u.email='xyz@gmail.com' limit 1;
   if uid is null then raise exception 'Test account missing'; end if;
-  first := public.apply_annual_payment(uid,seed||'_a',seed||'_link_a',99900,'INR','{}');
-  second := public.apply_annual_payment(uid,seed||'_b',seed||'_link_b',99900,'INR','{}');
+  first := public.apply_annual_payment(uid,seed||'_a',seed||'_link_a',49900,'INR','{}');
+  second := public.apply_annual_payment(uid,seed||'_b',seed||'_link_b',49900,'INR','{}');
   if (second->>'access_expires_at')::timestamptz <> (first->>'access_expires_at')::timestamptz + interval '1 year' then
     raise exception 'Second renewal did not add a year';
   end if;
-  replay := public.apply_annual_payment(uid,seed||'_a',seed||'_link_a',99900,'INR','{}');
+  replay := public.apply_annual_payment(uid,seed||'_a',seed||'_link_a',49900,'INR','{}');
   if not (replay->>'duplicate')::boolean or replay->>'access_expires_at' <> second->>'access_expires_at' then
     raise exception 'Old duplicate extended or changed entitlement';
   end if;
@@ -29,7 +31,7 @@ begin
     if sqlerrm <> 'Invalid annual payment' then raise; end if;
   end;
   begin
-    perform public.apply_annual_payment(uid,seed||'_different',seed||'_link_a',99900,'INR','{}');
+    perform public.apply_annual_payment(uid,seed||'_different',seed||'_link_a',49900,'INR','{}');
     raise exception 'Conflicting identity accepted';
   exception when others then
     if sqlerrm <> 'Payment identity mismatch' then raise; end if;
@@ -38,6 +40,14 @@ begin
   if (quarter->>'access_expires_at')::timestamptz <> (second->>'access_expires_at')::timestamptz + interval '3 months' then
     raise exception '3-month plan did not add 3 months';
   end if;
+  month := public.apply_annual_payment(uid,seed||'_m',seed||'_link_m',14900,'INR','{}');
+  if (month->>'access_expires_at')::timestamptz <> (quarter->>'access_expires_at')::timestamptz + interval '1 month' then
+    raise exception '1-month plan did not add 1 month';
+  end if;
+  old_annual := public.apply_annual_payment(uid,seed||'_old',seed||'_link_old',99900,'INR','{}');
+  if (old_annual->>'access_expires_at')::timestamptz <> (month->>'access_expires_at')::timestamptz + interval '1 year' then
+    raise exception 'Old ₹999 checkout did not add a year';
+  end if;
   begin
     perform public.apply_annual_payment(uid,seed||'_odd',seed||'_link_odd',50000,'INR','{}');
     raise exception 'Unknown amount accepted';
@@ -45,8 +55,8 @@ begin
     if sqlerrm <> 'Invalid annual payment' then raise; end if;
   end;
   select access_expires_at into expiry from public.user_accounts where user_id=uid;
-  if expiry <> (quarter->>'access_expires_at')::timestamptz then raise exception 'Failed request changed entitlement'; end if;
+  if expiry <> (old_annual->>'access_expires_at')::timestamptz then raise exception 'Failed request changed entitlement'; end if;
 end;
 $$;
-select 'renewal, 3-month plan, unknown amount, old duplicate, currency rejection and identity rejection passed' as result;
+select 'renewal, 3-month and 1-month plans, old ₹999 price, unknown amount, old duplicate, currency rejection and identity rejection passed' as result;
 rollback;
