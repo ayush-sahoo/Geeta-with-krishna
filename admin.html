@@ -333,11 +333,11 @@ footer{color:var(--muted);font-size:12px}
     const ev = data.events || {}, f = data.funnel || {};
     const rows = [
       ['Saw the plans', 'offer screen shown', ev.paywall_view],
-      ['Tapped 3 months', 'plan card', ev.plan_quarterly],
+      ['Tapped 1 month', 'plan card', ev.plan_monthly],
       ['Tapped 1 year', 'plan card', ev.plan_annual],
       ['Tapped Continue', 'any buy button', ev.checkout_click],
       ['… for 1 year', 'plan being bought', ev.checkout_annual],
-      ['… for 3 months', 'plan being bought', ev.checkout_quarterly],
+      ['… for 1 month', 'plan being bought', ev.checkout_monthly],
       ['Payment window opened', 'Razorpay on the site', ev.checkout_open],
       ['Sent to payment page', 'fallback when the window can\'t load', ev.checkout_redirect],
       ['Closed without paying', 'dismissed the window', ev.checkout_dismiss],

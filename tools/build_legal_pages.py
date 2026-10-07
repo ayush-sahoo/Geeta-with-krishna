@@ -70,7 +70,7 @@ PAGES = {
 <p>These Terms govern your use of Gita Verse (<a href="https://gitaverse.co.in">gitaverse.co.in</a>). By creating an account or using the service, you agree to them.</p>
 
 <h2>The service</h2>
-<p>Gita Verse offers Bhagavad Gita verses with translations and explanations, life-topic guidance, verse narration and "Ask Krishna", an AI-generated devotional reflection based on the Gita. Some content is free; full access requires a paid plan (Annual Access or 3-Month Access).</p>
+<p>Gita Verse offers Bhagavad Gita verses with translations and explanations, life-topic guidance, verse narration and "Ask Krishna", an AI-generated devotional reflection based on the Gita. Some content is free; full access requires a paid plan (Annual Access or 1-Month Access).</p>
 
 <h2>Your account</h2>
 <ul>
@@ -81,8 +81,9 @@ PAGES = {
 
 <h2>Plans and payment</h2>
 <ul>
-<li>Annual Access costs <strong>₹999</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
-<li>3-Month Access costs <strong>₹399</strong> (inclusive of applicable taxes) and gives full access for <strong>3 months</strong> from the date of payment.</li>
+<li>Annual Access costs <strong>₹499</strong> (inclusive of applicable taxes) and gives full access for <strong>12 months</strong> from the date of payment.</li>
+<li>1-Month Access costs <strong>₹149</strong> (inclusive of applicable taxes) and gives full access for <strong>1 month</strong> from the date of payment.</li>
+<li>3-Month Access bought earlier (₹399) keeps its full 3 months.</li>
 <li>Each plan is a one-time payment. It does <strong>not</strong> renew automatically, and you will never be charged again unless you choose to buy again. A purchase made while access is active is added on after the current access ends.</li>
 <li>Payments are processed securely by Razorpay. All purchases are final and non-refundable, except for billing errors described in our <a href="refund.html">Refund Policy</a>.</li>
 <li>We may change prices for future purchases; this never affects access you have already paid for.</li>
@@ -111,10 +112,10 @@ PAGES = {
 """),
 
 "refund.html": ("Refund Policy", "Refunds", f"""
-<p>This policy applies to Annual Access (₹999 for 12 months) and 3-Month Access (₹399 for 3 months) on Gita Verse.</p>
+<p>This policy applies to Annual Access (₹499 for 12 months), 1-Month Access (₹149 for 1 month) and 3-Month Access bought earlier (₹399 for 3 months) on Gita Verse.</p>
 
 <h2>No refunds</h2>
-<p>All purchases of Annual Access and 3-Month Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>
+<p>All purchases of Annual Access, 1-Month Access and 3-Month Access are <strong>final and non-refundable</strong>. Once your payment is successful and access is activated, we do not offer refunds or partial refunds, including for unused time.</p>
 <p>You can explore today's verse and the free parts of Gita Verse before you buy.</p>
 
 <h2>Billing errors</h2>
