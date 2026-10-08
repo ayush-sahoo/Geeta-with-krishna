@@ -993,7 +993,10 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
 
 function showScreen(id){
   const next=$(id);if(!next)return;
-  if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
+  if(!next.classList.contains('active')){
+    trackMeta('ScreenView',{screen_name:id},true);
+    if(id==='offerScreen')logEvent('plan_view');
+  }
   if(id!=='detail')stopSpeech();
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
