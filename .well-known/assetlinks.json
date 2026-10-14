@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ayushsahoo.gitawithkrishna",
+      "sha256_cert_fingerprints": [
+        "8F:5A:E2:FD:0A:73:17:D7:0A:06:E0:7A:ED:AA:11:0A:89:7F:97:A2:36:5F:EE:8C:EB:85:15:83:64:C0:C2:A3"
+      ]
+    }
+  }
+]

@@ -63,6 +63,14 @@ select * from public.translation_missing(array['hi','bn','mr','ta','te','gu','kn
 
 There is no automatic schedule; runs are started by hand. The 13 Indian languages are fully translated. Other languages are translated on first use and saved.
 
+## Android app (Google Play)
+
+The Play Store app is a Trusted Web Activity: it opens https://gitaverse.co.in in Chrome, full-screen, so it always shows the live site (payments, Ask Krishna, languages) and needs no update when the site changes. Package `com.ayushsahoo.gitawithkrishna`; project in `android/` (generated with Bubblewrap; settings in `android/twa-manifest.json`). It opens `/?utm_source=android_app`, so app visits show up as their own source in the admin dashboard.
+
+- **Full-screen check.** Android hides the browser bar only if `/.well-known/assetlinks.json` lists the SHA-256 fingerprint of the key that signs the installed app: the upload key (in the file now) and, once Play Console has created it, the **app signing key** (Play Console → Test and release → App integrity → App signing). Add that fingerprint to the same list and deploy the site; without it, Play installs show a URL bar.
+- **Upload key.** `gitaverse-upload.jks` (alias `upload`) is kept by the owner, never in this repo. Play App Signing holds the real signing key, so a lost upload key can be reset from Play Console.
+- **New version.** Raise `versionCode` (and `versionName`) in `android/app/build.gradle`, then with the Android SDK installed (`sdk.dir` in `android/local.properties`): `cd android && ./gradlew bundleRelease`, sign `app/build/outputs/bundle/release/app-release.aab` with `jarsigner -keystore gitaverse-upload.jks … upload`, and upload it. A new version is only needed for app-level changes (name, icon, colours, Android settings), not for website changes.
+
 ## Common tasks
 
 | Task | How |
