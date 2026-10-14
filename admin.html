@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="only light">
 <meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" href="/assets/app/favicon-48.png">
 <title>Gita Verse Admin</title>
 <style>
 :root{--bg:#fbf6ec;--card:#fffdf8;--ink:#3a1c0b;--ink2:#6b4a33;--muted:#977a63;--line:#ecdcc3;--gold:#e9a63a;--bar:#dc8a3a;--bar-dim:#f1dcc1;--good:#2e7d4f;--good-bg:#e3f2e8;--warn:#9a6412;--warn-bg:#fbefd9;--bad:#b3402a;--bad-bg:#f9e1db}
@@ -14,7 +15,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-
 .num{font-variant-numeric:tabular-nums}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:10px}
-.om{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f6c453,#e9a63a);font-size:21px;color:#5a260e}
+.om{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fffcf5;box-shadow:0 3px 10px #a4591c26}.om img{width:84%;height:84%;object-fit:contain;display:block}
 h1{font:400 26px/1.1 Georgia,serif;margin:0}
 .sub{color:var(--muted);font-size:12px}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -82,7 +83,7 @@ footer{color:var(--muted);font-size:12px}
 <body>
 <div class="wrap">
   <div id="gate" class="gate card" hidden>
-    <div class="om" style="margin:0 auto 10px">ॐ</div>
+    <div class="om" style="margin:0 auto 10px"><img src="/assets/brand/logo.png" alt=""></div>
     <h1>Gita Verse Admin</h1>
     <p class="sub" style="margin:0 0 14px">Admin sign-in. Separate from your account on the main site.</p>
     <form id="loginForm" class="login" novalidate>
@@ -97,7 +98,7 @@ footer{color:var(--muted);font-size:12px}
 
   <div id="app" hidden>
     <header>
-      <div class="brand"><div class="om">ॐ</div><div><h1>Gita Verse Admin</h1><div class="sub" id="who">–</div></div></div>
+      <div class="brand"><div class="om"><img src="/assets/brand/logo.png" alt=""></div><div><h1>Gita Verse Admin</h1><div class="sub" id="who">–</div></div></div>
       <div class="controls">
         <div class="seg" role="group" aria-label="Date range">
           <button id="r-today" data-r="today" aria-pressed="false">Today</button>
