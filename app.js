@@ -1017,6 +1017,10 @@ if(APP_MODE){
   window.addEventListener('popstate',e=>{if(e.state?.screen)showScreen(e.state.screen,true);});
   // The top menu is hidden in the app; its language button moves into the header.
   document.querySelector('.toprow')?.insertBefore($('langButton'),$('welcomeUser'));
+  // Hide the tabs only while the on-screen keyboard is up (the visible area
+  // shrinks well below its full height), not merely because a field has focus.
+  const vv=window.visualViewport;
+  if(vv){let full=vv.height;const keyboard=()=>{full=Math.max(full,vv.height);document.documentElement.classList.toggle('kb-open',vv.height<full*0.75);};vv.addEventListener('resize',keyboard);}
 }
 function openFreeQuestionSignup(){
   if(!authSession?.user?.id){saveAnonymousConversation();askAfterSignIn();}
@@ -1053,7 +1057,8 @@ function renderAccessState(){
   $('offerKicker').hidden=!offer[1];
   $('offer').dataset.mode=freeLeft?'free':'buy';
 }
-function openAskKrishna(){showScreen('ask');setTimeout(()=>$('askInput').focus({preventScroll:true}),150);}
+// In the app the keyboard stays down until the chat box is tapped.
+function openAskKrishna(){showScreen('ask');if(!APP_MODE)setTimeout(()=>$('askInput').focus({preventScroll:true}),150);}
 function offerAction(){$('offer').dataset.mode==='free'?openAskKrishna():showPaywall();}
 function updateAccountUI(){
   const logged=!!authSession?.access_token,paid=hasLifetimeAccess();
