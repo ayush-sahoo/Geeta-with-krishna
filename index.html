@@ -12,6 +12,13 @@ if(/^geeta-with-krishna(-ayushsahoo2000-5300)?\.vercel\.app$/.test(location.host
 <meta name="color-scheme" content="only light">
 <title>Gita Verse</title>
 <link rel="manifest" href="/manifest.webmanifest">
+<script>
+// Inside the Android app (Play Store, a Trusted Web Activity) the site uses an
+// app layout: bottom tabs instead of the top menu. The app opens with
+// utm_source=android_app; ?app=1 previews it in a browser. Kept for the tab
+// only (sessionStorage), because the app shares Chrome's storage.
+(function(){try{var q=new URLSearchParams(location.search),a=q.get('utm_source')==='android_app'||q.get('app')==='1'||document.referrer.indexOf('android-app://com.ayushsahoo.gitawithkrishna')===0;if(a)sessionStorage.setItem('gitaAppMode','1');if(a||sessionStorage.getItem('gitaAppMode')==='1')document.documentElement.classList.add('app-mode');}catch(e){}})();
+</script>
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/app/icon-192.png">
 <link rel="apple-touch-icon" href="/assets/app/icon-192.png">
 <style>
@@ -396,6 +403,26 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
   src="https://www.facebook.com/tr?id=2178415463100322&ev=PageView&noscript=1"
   /></noscript>
   <!-- End Meta Pixel Code -->
+<style>
+/* App layout (Android app only, html.app-mode) */
+.tabbar{display:none}
+html.app-mode .topbar .nav{display:none}
+html.app-mode .topbar{padding:10px 14px 9px;border-radius:0 0 20px 20px}
+html.app-mode .toprow{gap:8px}
+html.app-mode .toprow #langButton{flex:0 0 40px;height:40px;border:1px solid #ffffff99;background:#fff7e6b8;border-radius:50%;font-size:18px;padding:0}
+html.app-mode .app{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+html.app-mode .tabbar{display:flex;position:fixed;z-index:70;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:#fffaf0f5;border-top:1px solid #ecd6ae;box-shadow:0 -6px 22px #7a48171a;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+html.app-mode .tabbar button{flex:1;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 2px 2px;color:#8b6a52;font-size:11px;font-weight:700;line-height:1.1;white-space:nowrap}
+html.app-mode .tabbar .ti{display:grid;place-items:center;width:58px;height:32px;border-radius:16px;transition:background .2s}
+html.app-mode .tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+html.app-mode .tabbar button.active{color:#5a280c}
+html.app-mode .tabbar button.active .ti{background:linear-gradient(180deg,#ffd968,#f6bf42);box-shadow:0 3px 8px #7a481726}
+html.app-mode .floating-offer{bottom:calc(80px + env(safe-area-inset-bottom))}
+html.app-mode .home{padding-bottom:150px}
+html.app-mode .toast{bottom:calc(150px + env(safe-area-inset-bottom))}
+/* The keyboard is up: give the chat box the room. */
+html.app-mode:has(input:focus,textarea:focus) .tabbar{display:none}
+</style>
 </head>
 <body>
 <div class="app">
@@ -546,6 +573,12 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
     </section><section id="topicScreen" class="screen explore"><button class="back" onclick="showScreen('home')">← Life topics</button><div class="explore-hero"><div class="eyebrow">GUIDANCE FOR YOUR JOURNEY</div><h1 id="topicTitle"></h1><p id="topicIntro"></p></div><div class="meaning-card"><h3>WHAT TO DO</h3><ul id="topicDos"></ul><h3>WHAT TO AVOID</h3><ul id="topicDonts"></ul><div id="topicPractice" class="reflection"></div><h3 class="topic-verses-title">VERSES TO REFLECT ON</h3><div id="topicVerses"></div></div></section>
 <div id="offer" class="floating-offer"><div class="offer-icon" id="offerIcon"><svg viewBox="0 0 32 32" width="25" height="25" fill="none" aria-hidden="true"><path d="M16 25C9 22 6 16 8 10c5 1 8 5 8 15Zm0 0c7-3 10-9 8-15-5 1-8 5-8 15Z" fill="#a65c20" opacity=".55"/><path d="M16 5c-5 5-6 12 0 20 6-8 5-15 0-20Z" fill="#7b3c16"/><path d="M16 25C8 25 4 21 3 16c6-1 11 2 13 9Zm0 0c8 0 12-4 13-9-6-1-11 2-13 9Z" fill="#a65c20"/><path d="M10 28h12" stroke="#7b3c16" stroke-width="2" stroke-linecap="round"/></svg></div><div class="offer-copy"><small id="offerKicker">FULL ACCESS</small><b id="offerTitle">Plans from ₹149</b><span id="offerText">1 month or 1 year · One-time payment, no autopay</span></div><button id="buyLifetime" class="offer-btn" onclick="offerAction()">See plans →</button></div>
 <div id="toast" class="toast"></div>
+<nav class="tabbar" aria-label="Main">
+<button id="tabHome" class="active" onclick="showScreen('home')"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg></span>Home</button>
+<button id="tabAsk" onclick="openAskKrishna()"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12.5a7.5 7.5 0 0 1-11.2 6.5L4 20l1.1-4.3A7.5 7.5 0 1 1 20 12.5z"/><path d="M9 11h6M9 14h4"/></svg></span>Ask Krishna</button>
+<button id="tabExplore" onclick="showScreen('explore')"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5c3-1.2 6-1.2 9 .8 3-2 6-2 9-.8V19c-3-1.2-6-1.2-9 .8-3-2-6-2-9-.8z"/><path d="M12 6.3v13.5"/></svg></span>Explore Gita</button>
+<button id="tabMe" onclick="openAccount()"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.3-3.8 4.2-5.5 7.5-5.5s6.2 1.7 7.5 5.5"/></svg></span>Account</button>
+</nav>
 </div>
 <script src="languages.js"></script>
 <script src="chat-history.js"></script>

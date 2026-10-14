@@ -991,16 +991,32 @@ renderChapters();document.querySelectorAll('[data-chapter-art]').forEach(img=>im
         .trim();
     }
 
-function showScreen(id){
+// Android app (html.app-mode): bottom tabs, and the phone's back button walks
+// back through screens instead of closing the app.
+const APP_MODE=document.documentElement.classList.contains('app-mode');
+const TAB_FOR={home:'tabHome',topicScreen:'tabHome',ask:'tabAsk',explore:'tabExplore',chapter:'tabExplore',detail:'tabExplore',accountScreen:'tabMe',authScreen:'tabMe'};
+let screenHistoryReady=false;
+function showScreen(id,fromHistory=false){
   const next=$(id);if(!next)return;
+  if(APP_MODE&&!fromHistory){
+    const state={screen:id};
+    if(!screenHistoryReady){history.replaceState(state,'');screenHistoryReady=true;}
+    else if(history.state?.screen!==id)history.pushState(state,'');
+  }
   if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
   if(id!=='detail')stopSpeech();
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   const nav=id==='home'?'homeNav':id==='ask'?'askNav':['explore','chapter','detail'].includes(id)?'exploreNav':null;
   if(nav)$(nav).classList.add('active');
+  document.querySelectorAll('.tabbar button').forEach(x=>x.classList.toggle('active',x.id===TAB_FOR[id]));
   $('offer').style.display=id==='home'&&!hasLifetimeAccess()?'flex':'none';
   window.scrollTo({top:0,behavior:'instant'});
+}
+if(APP_MODE){
+  window.addEventListener('popstate',e=>{if(e.state?.screen)showScreen(e.state.screen,true);});
+  // The top menu is hidden in the app; its language button moves into the header.
+  document.querySelector('.toprow')?.insertBefore($('langButton'),$('welcomeUser'));
 }
 function openFreeQuestionSignup(){
   if(!authSession?.user?.id){saveAnonymousConversation();askAfterSignIn();}
