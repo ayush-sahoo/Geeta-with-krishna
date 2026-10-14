@@ -154,6 +154,7 @@ TEMPLATE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="only light">
+<link rel="icon" type="image/png" href="/assets/app/favicon-48.png">
 <title>{title} · Gita Verse</title>
 <meta name="description" content="{title} for Gita Verse (gitaverse.co.in).">
 <link rel="stylesheet" href="legal.css">
@@ -161,7 +162,7 @@ TEMPLATE = """<!doctype html>
 <body>
 <div class="legal-app">
 <header class="legal-top">
-<a class="legal-brand" href="/"><span class="om">ॐ</span><span><b>Gita Verse</b><small>Read · Reflect · Ask</small></span></a>
+<a class="legal-brand" href="/"><span class="om"><img src="/assets/brand/logo.png" alt=""></span><span><b>Gita Verse</b><small>Read · Reflect · Ask</small></span></a>
 <a class="legal-home" href="/">← Home</a>
 </header>
 <main class="legal-card">

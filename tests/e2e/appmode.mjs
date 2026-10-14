@@ -37,9 +37,13 @@ console.log('\n# Android app');
   ok(await p.evaluate(() => sessionStorage.getItem('gitaAppMode')) === '1', 'app layout is remembered for this app session');
   const box = await p.locator('.tabbar').boundingBox();
   ok(box && Math.abs(box.y + box.height - 844) < 2, 'tabs sit at the bottom of the screen', JSON.stringify(box));
-  await p.evaluate(() => showScreen('ask')); await p.focus('#askInput'); await p.waitForTimeout(150);
-  ok(!(await p.isVisible('.tabbar')), 'tabs hide while typing, so the keyboard has room');
-  await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(150);
-  ok(await p.isVisible('.tabbar'), 'tabs come back after typing');
+  await p.click('#tabAsk'); await p.waitForTimeout(300);
+  ok(await p.isVisible('.tabbar') && !(await p.evaluate(() => document.activeElement?.id === 'askInput')), 'opening Ask keeps the tabs and does not pop the keyboard up');
+  await p.focus('#askInput'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.tabbar'), 'tabs stay while the chat box is selected but no keyboard covers the screen');
+  await p.setViewportSize({ width: 390, height: 420 }); await p.waitForTimeout(300);
+  ok(!(await p.isVisible('.tabbar')), 'tabs hide while the on-screen keyboard is up, so the chat box has room');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok(await p.isVisible('.tabbar'), 'tabs come back when the keyboard closes');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 await b.close();

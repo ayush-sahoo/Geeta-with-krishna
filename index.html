@@ -19,6 +19,7 @@ if(/^geeta-with-krishna(-ayushsahoo2000-5300)?\.vercel\.app$/.test(location.host
 // only (sessionStorage), because the app shares Chrome's storage.
 (function(){try{var q=new URLSearchParams(location.search),a=q.get('utm_source')==='android_app'||q.get('app')==='1'||document.referrer.indexOf('android-app://com.ayushsahoo.gitawithkrishna')===0;if(a)sessionStorage.setItem('gitaAppMode','1');if(a||sessionStorage.getItem('gitaAppMode')==='1')document.documentElement.classList.add('app-mode');}catch(e){}})();
 </script>
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/app/favicon-48.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/app/icon-192.png">
 <link rel="apple-touch-icon" href="/assets/app/icon-192.png">
 <style>
@@ -404,6 +405,9 @@ button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:default}i
   /></noscript>
   <!-- End Meta Pixel Code -->
 <style>
+/* Logo: the Gita Verse mark on a cream tile */
+.om{background:#fffcf5;border-radius:13px;box-shadow:0 4px 12px #7d4a1726}.om img{width:84%;height:84%;object-fit:contain;display:block}
+.auth-brand-mark{background:#fffcf5;box-shadow:0 4px 12px #7d4a1726}.auth-brand-mark img{width:82%;height:82%;object-fit:contain;display:block}
 /* App layout (Android app only, html.app-mode) */
 .tabbar{display:none}
 html.app-mode .topbar .nav{display:none}
@@ -421,13 +425,13 @@ html.app-mode .floating-offer{bottom:calc(80px + env(safe-area-inset-bottom))}
 html.app-mode .home{padding-bottom:150px}
 html.app-mode .toast{bottom:calc(150px + env(safe-area-inset-bottom))}
 /* The keyboard is up: give the chat box the room. */
-html.app-mode:has(input:focus,textarea:focus) .tabbar{display:none}
+html.app-mode.kb-open .tabbar{display:none}
 </style>
 </head>
 <body>
 <div class="app">
 <header class="topbar">
-  <div class="toprow"><div class="brand"><div class="om">ॐ</div><div class="brandcopy"><b>Gita Verse</b><small>Read · Reflect · Ask</small></div></div><button class="welcome" id="welcomeUser" onclick="openAccount()">Sign in 🙏</button></div>
+  <div class="toprow"><div class="brand"><div class="om"><img src="/assets/brand/logo.png" alt="" width="34" height="34"></div><div class="brandcopy"><b>Gita Verse</b><small>Read · Reflect · Ask</small></div></div><button class="welcome" id="welcomeUser" onclick="openAccount()">Sign in 🙏</button></div>
   <nav class="nav"><button id="homeNav" class="active" onclick="showScreen('home')">Home</button><button id="askNav" onclick="showScreen('ask')">Ask Krishna</button><button id="exploreNav" onclick="showScreen('explore')">Explore Gita</button><button id="langButton" aria-label="Choose language" aria-expanded="false" aria-controls="langMenu" onclick="toggleLanguageMenu()">🌐</button></nav>
   <div id="langMenu" class="lang-menu" hidden><label for="appLanguage">Website language</label><select id="appLanguage"></select><small id="websiteLanguageStatus" role="status"></small><small>Changes website menus, buttons and screen text. Choose chat replies and verse meanings separately on their screens.</small></div>
 </header>
@@ -453,7 +457,7 @@ html.app-mode:has(input:focus,textarea:focus) .tabbar{display:none}
       <div class="auth-page">
         <button id="authBack" class="back">← Back</button>
         <div class="auth-page-card">
-          <div class="auth-brand-mark">ॐ</div>
+          <div class="auth-brand-mark"><img src="/assets/brand/logo.png" alt="" width="44" height="44"></div>
           <div class="daily-label">Welcome to Gita Verse</div>
           <h2 id="authModeTitle">Login</h2>
           <p id="authModeLead" class="auth-lead">Welcome back. Sign in to access your account and plan.</p>
