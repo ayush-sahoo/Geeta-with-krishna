@@ -332,7 +332,7 @@ footer{color:var(--muted);font-size:12px}
   function renderCheckoutSteps() {
     const ev = data.events || {}, f = data.funnel || {};
     const rows = [
-      ['Saw the plans', 'offer screen shown', ev.paywall_view],
+      ['Saw the plans', 'offer screen shown', ev.plan_view],
       ['Tapped 1 month', 'plan card', ev.plan_monthly],
       ['Tapped 1 year', 'plan card', ev.plan_annual],
       ['Tapped Continue', 'any buy button', ev.checkout_click],
