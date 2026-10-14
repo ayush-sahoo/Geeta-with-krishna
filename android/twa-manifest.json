@@ -1,0 +1,41 @@
+{
+  "packageId": "com.ayushsahoo.gitawithkrishna",
+  "host": "gitaverse.co.in",
+  "name": "Gita Verse",
+  "launcherName": "Gita Verse",
+  "display": "standalone",
+  "themeColor": "#F9BD51",
+  "themeColorDark": "#F9BD51",
+  "navigationColor": "#FFF7E8",
+  "navigationColorDark": "#27221E",
+  "navigationDividerColor": "#FFF7E8",
+  "navigationDividerColorDark": "#27221E",
+  "backgroundColor": "#FFF7E8",
+  "enableNotifications": false,
+  "startUrl": "/?utm_source=android_app",
+  "iconUrl": "https://gitaverse.co.in/assets/app/icon-512.png",
+  "maskableIconUrl": "https://gitaverse.co.in/assets/app/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "../gitaverse-upload.jks (keep outside the repo)",
+    "alias": "upload"
+  },
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-core",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": [],
+  "appVersionName": "1.0.0"
+}
