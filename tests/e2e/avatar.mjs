@@ -1,6 +1,7 @@
 // Talking Krishna: paid members can hear an Ask Krishna answer spoken by the
 // animated portrait, and talk to Krishna voice to voice in the Talk tab. The
-// voice, letter timings and speech-to-text come from tts-krishna.
+// voice and letter timings come from tts-krishna; a Talk turn is one
+// ask-krishna call (speech-to-text, answer, first sentence voiced).
 import { chromium } from 'playwright';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8768';
 const ok = (c, m, d = '') => console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' : ' -> ' + d));
@@ -19,6 +20,13 @@ function voiceFor(text) {
   const chars = [...text], step = 0.05;
   return { audio_base64: wav(chars.length * step + 0.3), alignment: { characters: chars, character_start_times_seconds: chars.map((_, i) => i * step), character_end_times_seconds: chars.map((_, i) => (i + 1) * step) } };
 }
+
+// The app's own sentence splitting, so the simulated server splits replies the same way.
+import { readFileSync } from 'node:fs';
+const APP = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+const speechChunks = new Function(APP.slice(APP.indexOf('function speechChunks('), APP.indexOf('async function fetchVoice(')) + 'return speechChunks')();
+const spokenAnswer = new Function(APP.slice(APP.indexOf('function spokenAnswer('), APP.indexOf('// "Auto" replies')) + 'return spokenAnswer')();
+const HEARD = 'मुझे अपने भविष्य की चिंता है';
 
 const HINDI = { style: 'krishna_inspired', title: 'भविष्य की चिंता से मुक्ति', paragraphs: ['मेरे प्रिय, मैं तुम्हारी दुविधा समझता हूँ।', 'तुम्हारा अधिकार केवल कर्म पर है (BG 2.47)।'], actions: ['गहरी साँस लें।'], follow_up: 'क्या चिंता है?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] };
 const ENGLISH = { style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear your worry.', 'Act without clinging to results (BG 2.47).'], actions: [], follow_up: 'What worries you most?', verses: [] };
@@ -39,10 +47,18 @@ async function open({ paid, reply, ttsStatus = 200, ask = true }) {
     if (p === '/functions/v1/get-my-access') return json(paid
       ? { email: user.email, plan_status: 'annual', payment_status: 'paid', access_active: true, access_expires_at: new Date(Date.now() + 864e5 * 30).toISOString(), user_id: 'u1' }
       : { email: user.email, plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: true, user_id: 'u1' });
-    if (p === '/functions/v1/ask-krishna') return json(paid ? reply : { ...reply, free_question: true });
+    if (p === '/functions/v1/ask-krishna') {
+      const body = JSON.parse(req.postData() || '{}');
+      if (body.warm) return json({ ok: true });
+      if (body.audio_base64) {
+        const chunks = speechChunks(spokenAnswer(reply));
+        return json({ ...reply, heard: { text: HEARD, language: 'hi' }, speech: { language: 'hi', chunks, first: voiceFor(chunks[0]) } });
+      }
+      return json(paid ? reply : { ...reply, free_question: true });
+    }
     if (p === '/functions/v1/tts-krishna') {
       const body = JSON.parse(req.postData() || '{}');
-      if (body.operation === 'transcribe') return json({ text: 'मुझे अपने भविष्य की चिंता है', language: 'hi' });
+      if (body.warm) return json({ ok: true });
       if (ttsStatus !== 200) return json({ error: 'Narration failed. Please try again.' }, ttsStatus);
       return json(voiceFor(body.text));
     }
@@ -59,7 +75,7 @@ async function open({ paid, reply, ttsStatus = 200, ask = true }) {
   await p.waitForSelector('#chat .bubble.assistant h3', { timeout: 5000 });
   return { ctx, p, S, errs };
 }
-const ttsCalls = S => S.calls.filter(c => c.p === '/functions/v1/tts-krishna').map(c => JSON.parse(c.body));
+const ttsCalls = S => S.calls.filter(c => c.p === '/functions/v1/tts-krishna').map(c => JSON.parse(c.body)).filter(b => !b.warm);
 
 console.log('\n# Free member');
 { const { ctx, p, errs } = await open({ paid: false, reply: HINDI });
@@ -73,12 +89,14 @@ console.log('\n# Paid member, Hindi answer');
   await p.waitForSelector('.ka', { timeout: 3000 });
   ok(await p.isVisible('.ka .ka-stage'), 'tapping it opens Krishna\'s portrait');
   await p.waitForFunction(() => document.querySelectorAll('.ka-words span').length > 0, null, { timeout: 8000 }).catch(() => {});
-  const [req] = ttsCalls(S);
-  ok(req && req.timestamps === true && req.translated === true && req.kind === 'meaning', 'asks tts-krishna for the voice with letter timings', JSON.stringify(req));
-  ok(req && req.language === 'hi', 'a Hindi answer is spoken in Hindi', req?.language);
-  ok(req && !/BG|\(|\)/.test(req.text) && req.text.includes('क्या चिंता है?') && !req.text.includes('गहरी साँस'), 'speaks the paragraphs and closing question, without verse references', req?.text);
+  await p.waitForTimeout(800);
+  const reqs = ttsCalls(S), req = { text: reqs.map(r => r.text).join(' ') };
+  ok(reqs.length === 2 && reqs.every(r => r.timestamps === true && r.translated === true && r.kind === 'meaning'), 'asks tts-krishna for the voice with letter timings, sentence by sentence', JSON.stringify(reqs.map(r => r.text)));
+  ok(reqs[0].text === 'मेरे प्रिय, मैं तुम्हारी दुविधा समझता हूँ।', 'the first piece is just the first sentence, so Krishna starts sooner', reqs[0]?.text);
+  ok(reqs.every(r => r.language === 'hi'), 'a Hindi answer is spoken in Hindi', reqs.map(r => r.language).join());
+  ok(!/BG|\(|\)/.test(req.text) && req.text.includes('क्या चिंता है?') && !req.text.includes('गहरी साँस'), 'speaks the paragraphs and closing question, without verse references', req.text);
   const words = await p.locator('.ka-words span').count();
-  ok(words === req.text.split(' ').length, 'every spoken word is shown', `${words} vs ${req.text.split(' ').length}`);
+  ok(words === req.text.split(' ').length, 'every spoken word is shown, across the pieces', `${words} vs ${req.text.split(' ').length}`);
   ok(await p.evaluate(() => !!document.querySelector('.ka .ka-stage canvas')), 'the animated portrait is drawn (WebGL)');
   await p.waitForTimeout(1200);
   const lit = await p.evaluate(() => document.querySelectorAll('.ka-words span.done,.ka-words span.now').length);
@@ -91,7 +109,7 @@ console.log('\n# Paid member, Hindi answer');
   await p.click('.ka-close');
   ok(!(await p.isVisible('.ka')) && await p.isEnabled('.hear-krishna'), 'closing returns to the chat');
   await p.click('.hear-krishna'); await p.waitForSelector('.ka-words span', { timeout: 5000 });
-  ok(ttsCalls(S).length === 1, 'hearing the same answer again reuses the voice (no second charge)', ttsCalls(S).length);
+  ok(ttsCalls(S).length === 2, 'hearing the same answer again reuses the voice (no second charge)', ttsCalls(S).length);
   await p.click('.ka-close');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
@@ -127,10 +145,11 @@ console.log('\n# Talk to Krishna');
   await p.click('#talkMic');
   await p.waitForFunction(() => document.getElementById('talkStatus').textContent.includes('speaking'), null, { timeout: 8000 }).catch(() => {});
   const calls = S.calls.filter(c => /tts-krishna|ask-krishna/.test(c.p)).map(c => ({ p: c.p.split('/').pop(), b: JSON.parse(c.body || '{}') }));
-  const stt = calls.find(c => c.b.operation === 'transcribe'), ask = calls.find(c => c.p === 'ask-krishna'), voice = calls.find(c => c.b.timestamps);
-  ok(stt && stt.b.audio_base64.length > 100 && /^audio\//.test(stt.b.mime_type), 'the recording is sent for speech-to-text', JSON.stringify(stt?.b.mime_type));
-  ok(ask && ask.b.voice === true && ask.b.question === 'मुझे अपने भविष्य की चिंता है' && ask.b.language === 'hi', 'the spoken question goes to Krishna for a short spoken reply, in the language spoken', JSON.stringify(ask?.b));
-  ok(voice && voice.b.language === 'hi' && !/BG/.test(voice.b.text), 'the reply is voiced in that language', JSON.stringify(voice?.b.language));
+  const ask = calls.find(c => c.p === 'ask-krishna' && c.b.audio_base64), voices = calls.filter(c => c.b.timestamps);
+  ok(calls.some(c => c.p === 'ask-krishna' && c.b.warm) && calls.some(c => c.p === 'tts-krishna' && c.b.warm), 'opening Talk wakes the functions up in advance');
+  ok(ask && ask.b.audio_base64.length > 100 && /^audio\//.test(ask.b.mime_type) && ask.b.voice === true && !ask.b.language, 'one call sends the recording for speech-to-text and a short spoken reply', JSON.stringify(ask && { ...ask.b, audio_base64: ask.b.audio_base64.length }));
+  ok(!calls.some(c => c.b.operation === 'transcribe'), 'no separate speech-to-text request');
+  ok(voices.length === 1 && voices[0].b.language === 'hi' && !voices[0].b.text.startsWith('मेरे प्रिय'), 'the first sentence comes voiced with the reply; only the rest is voiced by the app, in the language spoken', JSON.stringify(voices.map(v => v.b.text)));
   ok((await p.textContent('#talkStatus')).includes('speaking'), 'Krishna speaks the reply', await p.textContent('#talkStatus'));
   ok((await p.textContent('#talkYou')).includes('भविष्य') && (await p.locator('#talkWords span').count()) > 3, 'the screen shows what was heard and Krishna\'s words');
   ok((await p.textContent('#chat')).includes('🎙️ मुझे') && (await p.locator('#chat .bubble.assistant h3').count()) === 1, 'the spoken turn is added to the chat as well');

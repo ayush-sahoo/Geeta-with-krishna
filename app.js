@@ -1405,7 +1405,7 @@ function spokenLanguage(text){
 }
 let avatarAudio=null,avatarScript=null;
 function loadAvatar(){
-  avatarScript??=new Promise((ok,fail)=>{const sc=document.createElement('script');sc.src='krishna-avatar.js?v=2';sc.onload=ok;sc.onerror=()=>{avatarScript=null;sc.remove();fail(new Error('Could not load. Please check your connection.'))};document.head.appendChild(sc)});
+  avatarScript??=new Promise((ok,fail)=>{const sc=document.createElement('script');sc.src='krishna-avatar.js?v=3';sc.onload=ok;sc.onerror=()=>{avatarScript=null;sc.remove();fail(new Error('Could not load. Please check your connection.'))};document.head.appendChild(sc)});
   return avatarScript;
 }
 // Shows a reply in the chat and keeps it in the conversation (both modes).
@@ -1427,34 +1427,65 @@ function renderReply(answer,q,d,language,save){
   if(save&&typeof persistChatTurns==='function')persistChatTurns([{role:'user',text:q},{role:'assistant',text:d.style==='krishna_inspired'?replyText(d):d.answer,verses:d.verses||[]}]);
   if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);
 }
+// Spoken text in pieces at sentence ends, so Krishna starts after the first
+// sentence is voiced (about 2 s) instead of the whole reply (about 10 s).
+// Must match speechChunks in supabase/functions/_shared/voice.ts.
+function speechChunks(text){
+  const chunks=[];let current='';
+  for(const sentence of String(text).split(/(?<=[।॥.!?؟۔])\s+/).map(x=>x.trim()).filter(Boolean)){
+    if(current&&current.length+1+sentence.length>160){chunks.push(current);current=sentence}
+    else current=current?current+' '+sentence:sentence;
+    if(!chunks.length&&current.length>=40){chunks.push(current);current=''}
+  }
+  if(current)chunks.push(current);
+  return chunks;
+}
+async function fetchVoice(text,language){
+  await freshSession();
+  const r=await fetch(SUPA+'/functions/v1/tts-krishna',{method:'POST',headers:authHeaders(authSession?.access_token||''),cache:'no-store',
+    body:JSON.stringify({text,kind:'meaning',language,translated:true,timestamps:true})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.audio_base64)throw new Error(j.error||'Could not play Krishna\'s voice. Please try again.');
+  return j;
+}
+// Voices the pieces in order, at most two at a time (ElevenLabs allows only a
+// few requests at once per account). first: a piece already voiced.
+function voiceQueue(chunks,language,first){
+  const clips=[];
+  chunks.forEach((text,i)=>{
+    if(i===0&&first){clips.push(Promise.resolve(first));return}
+    const wait=i>=2?clips[i-2].catch(()=>{}):Promise.resolve();
+    clips.push(wait.then(()=>fetchVoice(text,language)));
+  });
+  return clips;
+}
+// Keeps a reply's voice for replays; a failed piece is fetched again next time.
+function keepVoice(d,clips){
+  d.voice=clips;
+  clips.forEach(c=>c.catch(()=>{if(d.voice===clips)d.voice=null}));
+  return clips;
+}
 function hearKrishna(d,button){
   stopSpeech();logEvent('hear_krishna');
   // The audio context is made during the tap so phones let it play later.
   try{avatarAudio??=new (window.AudioContext||window.webkitAudioContext)();avatarAudio.resume()}catch(e){toast('Audio is not available on this device');return}
   const text=spokenAnswer(d),language=d.lang||spokenLanguage(text);
-  d.voice??=(async()=>{
-    await freshSession();
-    const r=await fetch(SUPA+'/functions/v1/tts-krishna',{method:'POST',headers:authHeaders(authSession?.access_token||''),cache:'no-store',
-      body:JSON.stringify({text,kind:'meaning',language,translated:true,timestamps:true})});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.audio_base64)throw new Error(j.error||'Could not play Krishna\'s voice. Please try again.');
-    return j;
-  })();
-  const voice=d.voice;voice.catch(()=>{if(d.voice===voice)d.voice=null});
+  const clips=d.voice||keepVoice(d,voiceQueue(speechChunks(text),language));
   button.disabled=true;
-  loadAvatar().then(()=>KrishnaAvatar.open({ctx:avatarAudio,title:d.title,load:()=>voice,onClose:()=>{button.disabled=false}}))
+  loadAvatar().then(()=>KrishnaAvatar.open({ctx:avatarAudio,title:d.title,clips,onClose:()=>{button.disabled=false}}))
     .catch(e=>{button.disabled=false;toast(e.message)});
 }
-// Talk to Krishna (paid): voice to voice. The member speaks; ElevenLabs turns
-// the recording into text (tts-krishna, operation "transcribe"), ask-krishna
-// answers briefly (voice: true) and Krishna's portrait says the answer. Each
-// turn is also added to the chat, so both modes show one conversation.
+// Talk to Krishna (paid): voice to voice. The member speaks; one ask-krishna
+// call turns the recording into text (ElevenLabs), answers briefly and voices
+// the first sentence, and Krishna's portrait starts speaking while the rest is
+// voiced. Each turn is also added to the chat, so both modes show one
+// conversation.
 function setAskMode(mode){
   askMode=mode==='talk'?'talk':'chat';
   for(const[id,m]of[['modeChat','chat'],['modeTalk','talk']]){$(id).classList.toggle('active',askMode===m);$(id).setAttribute('aria-selected',String(askMode===m))}
   $('chatMode').hidden=askMode!=='chat';$('talkMode').hidden=askMode!=='talk';
   if(askMode==='talk'){
-    logOnce('talk_open');renderTalkAccess();
+    logOnce('talk_open');renderTalkAccess();if(hasLifetimeAccess())warmTalk();
     loadAvatar().then(()=>{if(askMode!=='talk')return;talkStage??=KrishnaAvatar.stage($('talkStage'));talkStage.setActive(true)}).catch(e=>toast(e.message));
   }else{talkCancel();talkStage?.setActive(false)}
 }
@@ -1477,7 +1508,7 @@ function talkMicTap(){
   if(!hasLifetimeAccess()){showPaywall('Talk to Krishna in your own voice and language, and hear him answer.');return}
   if(talkState==='listening'){talkRec?.finish();return}
   if(talkState==='thinking')return;
-  stopSpeech();talkStage?.stop();
+  stopSpeech();talkStage?.stop();warmTalk();
   // Made during the tap so phones allow the reply to play later.
   try{avatarAudio??=new (window.AudioContext||window.webkitAudioContext)();avatarAudio.resume()}catch(e){setTalk('idle','Audio is not available on this device.');return}
   startListening();
@@ -1520,36 +1551,37 @@ async function startListening(){
   setTalk('listening','Listening… tap the mic when you finish');
 }
 function blobBase64(blob){return new Promise((ok,fail)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=fail;r.readAsDataURL(blob)})}
+// Wakes the Talk functions before they are needed (a sleeping function adds
+// about 2 s to the first request).
+let talkWarmedAt=0;
+function warmTalk(){
+  if(Date.now()-talkWarmedAt<240000)return;talkWarmedAt=Date.now();
+  for(const fn of['ask-krishna','tts-krishna'])fetch(SUPA+'/functions/v1/'+fn,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:'{"warm":true}'}).catch(()=>{});
+}
 async function talkTurn(blob,generation){
   const live=()=>generation===talkGeneration;
   setTalk('thinking','Krishna is listening…');
   try{
     await freshSession();
     if(!authSession?.access_token)throw new Error('Please sign in again to talk to Krishna.');
-    const post=(fn,body)=>fetch(SUPA+'/functions/v1/'+fn,{method:'POST',headers:authHeaders(authSession.access_token),cache:'no-store',body:JSON.stringify(body)});
-    let r=await post('tts-krishna',{operation:'transcribe',audio_base64:await blobBase64(blob),mime_type:blob.type});
-    const heard=await r.json().catch(()=>({}));if(!live())return;
-    if(!r.ok)throw new Error(heard.error||'Could not hear that. Please try again.');
-    const q=String(heard.text||'').trim();
-    if(!q){setTalk('idle',"I couldn't make that out. Tap the mic and try again.");return}
-    $('talkYou').hidden=false;$('talkYou').textContent=q;$('talkWords').replaceChildren();
-    const language=chatLanguage!=='auto'?chatLanguage:Object.hasOwn(GITA_LANGUAGES,heard.language||'')?heard.language:undefined;
-    setTalk('thinking','Krishna is thinking…');logEvent('talk_turn');
-    r=await post('ask-krishna',{question:q,language,history:chatHistory.slice(-8),voice:true});
+    logEvent('talk_turn');
+    const r=await fetch(SUPA+'/functions/v1/ask-krishna',{method:'POST',headers:authHeaders(authSession.access_token),cache:'no-store',
+      body:JSON.stringify({audio_base64:await blobBase64(blob),mime_type:blob.type,voice:true,history:chatHistory.slice(-8),
+        language:chatLanguage!=='auto'?chatLanguage:undefined})});
     const d=await r.json().catch(()=>({}));if(!live())return;
     if(r.status===403&&d.paywall){setTalk('idle',TALK_IDLE);showPaywall('Talk to Krishna in your own voice and language, and hear him answer.');return}
+    const q=String(d.heard?.text||'').trim();
+    if(r.ok&&!q){setTalk('idle',"I couldn't make that out. Tap the mic and try again.");return}
+    if(q){$('talkYou').hidden=false;$('talkYou').textContent=q;$('talkWords').replaceChildren()}
     if(!r.ok||d.error)throw new Error(d.error||'Could not reach Krishna. Please try again.');
     appendText($('chat'),'div','🎙️ '+q,'bubble user');
+    const language=d.speech?.language||(chatLanguage!=='auto'?chatLanguage:d.heard?.language)||undefined;
     renderReply(appendText($('chat'),'div','','bubble assistant'),q,d,language,true);
-    const text=d.style==='krishna_inspired'?spokenAnswer(d):String(d.answer||'');
-    d.lang=language||spokenLanguage(text);
-    r=await post('tts-krishna',{text,kind:'meaning',language:d.lang,translated:true,timestamps:true});
-    const voice=await r.json().catch(()=>({}));if(!live())return;
-    if(!r.ok||!voice.audio_base64)throw new Error(voice.error||'Could not play Krishna\'s voice. Please try again.');
-    d.voice=Promise.resolve(voice);
+    d.lang=language||spokenLanguage(spokenAnswer(d));
+    const clips=keepVoice(d,voiceQueue(d.speech?.chunks||speechChunks(spokenAnswer(d)),d.lang,d.speech?.first));
     await loadAvatar();talkStage??=KrishnaAvatar.stage($('talkStage'));
     setTalk('speaking','Krishna is speaking · tap the mic to reply');
-    const result=await talkStage.speak(voice,{ctx:avatarAudio,wordsBox:$('talkWords')});
+    const result=await talkStage.speak(clips,{ctx:avatarAudio,wordsBox:$('talkWords')});
     if(live()&&result!=='stopped')setTalk('idle','Tap the mic to reply');
   }catch(e){if(live())setTalk('idle',e?.message||'Something went wrong. Please try again.')}
 }
