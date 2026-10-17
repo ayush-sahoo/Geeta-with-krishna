@@ -174,97 +174,115 @@ const at=(arr,t)=>{if(!arr)return 0;const f=t*HZ,i=Math.floor(f);if(i<0||i>=arr.
 function blinkAt(t){const c=t%4.3,phase=Math.floor(t/4.3)%3,b=[1.6,2.9,.8][phase],d=c-b;
   return d<0||d>=.17?0:d<.07?sm(0,.07,d):d<.09?1:1-sm(.09,.17,d)}
 
-// ---- Overlay ----
-const CSS=`.ka{position:fixed;inset:0;z-index:2000;background:#fff8e9;display:flex;flex-direction:column;align-items:center;color:#5a260e}
-.ka-top{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px}
-.ka-top b{font:600 20px Georgia,serif}.ka-close{border:0;background:none;font-size:28px;line-height:1;width:44px;height:44px;color:#5a260e}
-.ka-card{position:relative;width:min(calc(100vw - 28px),452px,48vh);aspect-ratio:1;border-radius:24px;overflow:hidden;box-shadow:0 14px 35px rgba(91,45,12,.2);background:#f3dfb5;flex:none}
-.ka-card canvas,.ka-card img{position:absolute;inset:0;width:100%;height:100%;display:block}
-.ka-card img{object-fit:cover;object-position:50% 50%;transform:scale(1.053)}
+// ---- Stage: the portrait in a container. Idle (blinking, swaying) until it
+// is given speech to say; used by the full-screen view and by Talk to Krishna.
+const CSS=`.ka-stage{position:relative;overflow:hidden;background:#f3dfb5}
+.ka-stage canvas,.ka-stage img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ka-stage img{object-fit:cover;object-position:50% 50%;transform:scale(1.053)}
 .ka-tag{position:absolute;left:0;right:0;bottom:0;padding:36px 16px 12px;background:linear-gradient(transparent,rgba(40,16,4,.6));color:#fff;display:flex;justify-content:space-between;align-items:center}
 .ka-tag b{font-size:18px}.ka-bars{display:flex;gap:4px;align-items:center;height:24px}.ka-bars i{width:4px;height:4px;border-radius:2px;background:#f6c453}
+.ka-words span{color:#c9b39f}.ka-words span.done{color:#5a260e}.ka-words span.now{color:#f47b17}
+.ka{position:fixed;inset:0;z-index:2000;background:#fff8e9;display:flex;flex-direction:column;align-items:center;color:#5a260e}
+.ka-top{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px}
+.ka-top b{font:600 20px Georgia,serif}.ka-close{border:0;background:none;font-size:28px;line-height:1;width:44px;height:44px;color:#5a260e}
+.ka .ka-stage{width:min(calc(100vw - 28px),452px,48vh);aspect-ratio:1;border-radius:24px;box-shadow:0 14px 35px rgba(91,45,12,.2);flex:none}
 .ka-status{margin:12px 16px 0;font-size:14px;color:#8a6955;text-align:center;min-height:20px}
 .ka-text{flex:1;width:100%;max-width:480px;padding:4px 20px;overflow:hidden;position:relative}
-.ka-words{font-size:19px;line-height:1.6;will-change:transform}.ka-words span{color:#c9b39f}.ka-words span.done{color:#5a260e}.ka-words span.now{color:#f47b17}
+.ka-words{font-size:19px;line-height:1.6;will-change:transform}
 .ka-actions{display:flex;gap:10px;padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 .ka-actions button{border:0;border-radius:18px;padding:12px 22px;font-weight:800;background:linear-gradient(180deg,#ffd65f,#f2b93b);color:#4a220c}`;
-let state=null,renderer=null,canvasEl=null,imgEl=null,imgReady=null;
+let imgReady=null;
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+function addStyle(){if(!document.getElementById('kaStyle')){const st=el('style');st.id='kaStyle';st.textContent=CSS;document.head.appendChild(st)}}
 function ensureImage(){
-  if(!imgReady){imgEl=new Image();imgEl.alt='Sri Krishna';imgEl.src='assets/krishna-avatar.webp';imgReady=imgEl.decode().then(()=>imgEl)}
+  if(!imgReady){const img=new Image();img.alt='Sri Krishna';img.src='assets/krishna-avatar.webp';imgReady=img.decode().then(()=>img)}
   return imgReady;
 }
-function close(){
-  if(!state)return;const s=state;state=null;
-  cancelAnimationFrame(s.raf);try{s.source?.stop()}catch(e){}
-  s.root.remove();document.documentElement.style.overflow=s.overflow;
-  removeEventListener('keydown',s.onKey);s.onClose?.();
-}
-function frame(){
-  const s=state;if(!s)return;
-  const now=s.ctx.currentTime,t=s.started==null?0:now-s.started,clock=now-s.opened;
-  const e=at(s.env,t),gate=sm(.05,.2,e),lead=t+.02;
-  const O=Math.min(1,at(s.curve?.O,lead)*gate*(.75+.35*Math.min(e,1))),W=at(s.curve?.W,lead)*gate,P=2*Math.PI;
-  if(renderer)renderer({O,W,B:blinkAt(clock),rot:.011*Math.sin(P*.17*clock)+.005*Math.sin(P*.41*clock+1.1),
-    tx:2.5*Math.sin(P*.13*clock+.5),ty:1.5*Math.sin(P*.23*clock)+3*at(s.slow,t),scale:1+.004*Math.sin(P*clock/4.2)});
-  s.bars.forEach((b,i)=>{b.style.height=(4+20*Math.min(1,at(s.env,t-i*.04)*(.6+.4*Math.sin(i*1.7+2))))+'px'});
-  if(s.words){
-    let cur=-1;
-    s.words.forEach((w,i)=>{const c=t>=w.end?'done':t>=w.start?'now':'';if(w.el.className!==c)w.el.className=c;if(t>=w.start)cur=i});
-    const target=cur<0?0:Math.max(0,s.words[cur].el.offsetTop-s.textBox.clientHeight*.3);
-    s.scroll+=(target-s.scroll)*.12;s.wordsBox.style.transform=`translateY(${-s.scroll}px)`;
-    if(s.started!=null&&t>s.duration+.3&&!s.ended){s.ended=true;s.status.textContent='';s.replay.hidden=false}
-  }
-  s.raf=requestAnimationFrame(frame);
-}
-function play(){
-  const s=state;if(!s?.buffer)return;
-  try{s.source?.stop()}catch(e){}
-  s.source=s.ctx.createBufferSource();s.source.buffer=s.buffer;s.source.connect(s.ctx.destination);
-  s.started=s.ctx.currentTime+.15;s.source.start(s.started);s.ended=false;s.replay.hidden=true;s.scroll=0;
-}
-// opts: {ctx: AudioContext created during the tap, load: async () => ({audio_base64, alignment}),
-//        title, onError(message), onClose()}
-async function open(opts){
-  close();
-  if(!document.getElementById('kaStyle')){const st=el('style');st.id='kaStyle';st.textContent=CSS;document.head.appendChild(st)}
-  const root=el('div','ka'),top=el('div','ka-top'),x=el('button','ka-close','×'),card=el('div','ka-card');
-  root.setAttribute('role','dialog');root.setAttribute('aria-label','Krishna speaking');x.type='button';x.setAttribute('aria-label','Close');
-  top.append(el('b',null,opts.title||'Sri Krishna'),x);
-  const tag=el('div','ka-tag'),bars=el('div','ka-bars');for(let i=0;i<5;i++)bars.append(el('i'));tag.append(el('b',null,'श्रीकृष्ण'),bars);
-  const status=el('div','ka-status','Krishna is getting ready to speak…'),textBox=el('div','ka-text'),wordsBox=el('div','ka-words');textBox.append(wordsBox);
-  const actions=el('div','ka-actions'),replay=el('button',null,'↻ Hear again');replay.type='button';replay.hidden=true;actions.append(replay);
-  root.append(top,card,status,textBox,actions);document.body.appendChild(root);
-  state={root,ctx:opts.ctx,opened:opts.ctx.currentTime,bars:[...bars.children],status,textBox,wordsBox,replay,scroll:0,
-    overflow:document.documentElement.style.overflow,onClose:opts.onClose,onKey:e=>{if(e.key==='Escape')close()}};
-  const s=state;document.documentElement.style.overflow='hidden';
-  x.onclick=close;replay.onclick=play;addEventListener('keydown',s.onKey);
-  try{
-    const img=await ensureImage();if(state!==s)return;
-    if(!canvasEl){
-      canvasEl=el('canvas');canvasEl.width=canvasEl.height=Math.round(452*Math.min(2,devicePixelRatio||1));
-      try{renderer=makeRenderer(canvasEl,img)}catch(e){console.error(e);renderer=null}
+// container: an element sized by the page. Returns {speak, stop, setActive, destroy, ready}.
+function stage(container){
+  addStyle();container.classList.add('ka-stage');
+  const tag=el('div','ka-tag'),bars=el('div','ka-bars');for(let i=0;i<5;i++)bars.append(el('i'));
+  tag.append(el('b',null,'श्रीकृष्ण'),bars);container.append(tag);
+  let renderer=null,canvas=null,raf=0,active=true,speech=null,dead=false;
+  const barEls=[...bars.children],t0=performance.now();
+  function frame(){
+    raf=0;if(!active||dead)return;
+    const clock=(performance.now()-t0)/1000,s=speech,t=s&&s.started!=null?s.ctx.currentTime-s.started:-1;
+    const e=s?at(s.env,t):0,gate=sm(.05,.2,e),lead=t+.02,P=2*Math.PI;
+    const O=s?Math.min(1,at(s.curve.O,lead)*gate*(.75+.35*Math.min(e,1))):0,W=s?at(s.curve.W,lead)*gate:0;
+    if(renderer)renderer({O,W,B:blinkAt(clock),rot:.011*Math.sin(P*.17*clock)+.005*Math.sin(P*.41*clock+1.1),
+      tx:2.5*Math.sin(P*.13*clock+.5),ty:1.5*Math.sin(P*.23*clock)+3*(s?at(s.slow,t):0),scale:1+.004*Math.sin(P*clock/4.2)});
+    barEls.forEach((b,i)=>{b.style.height=(4+20*Math.min(1,(s?at(s.env,t-i*.04):0)*(.6+.4*Math.sin(i*1.7+2))))+'px'});
+    if(s?.words){
+      let cur=-1;
+      s.words.forEach((w,i)=>{const c=t>=w.end?'done':t>=w.start?'now':'';if(w.el.className!==c)w.el.className=c;if(t>=w.start)cur=i});
+      const box=s.wordsBox.parentElement,target=cur<0?0:Math.max(0,s.words[cur].el.offsetTop-s.wordsBox.offsetTop-box.clientHeight*.3);
+      s.scroll+=(target-s.scroll)*.12;s.wordsBox.style.transform=`translateY(${-s.scroll}px)`;
+      if(t>s.duration+.3){speech=null;s.done()}
     }
-    card.prepend(renderer?canvasEl:img);card.append(tag);
-    s.raf=requestAnimationFrame(frame);
-    const d=await opts.load();if(state!==s)return;
+    raf=requestAnimationFrame(frame);
+  }
+  const ready=ensureImage().then(img=>{
+    if(dead)return;
+    canvas=el('canvas');canvas.width=canvas.height=Math.round(Math.max(300,Math.min(480,container.clientWidth||452))*Math.min(2,devicePixelRatio||1));
+    try{renderer=makeRenderer(canvas,img)}catch(e){console.error(e);renderer=null}
+    container.prepend(renderer?canvas:img.cloneNode());
+    if(active&&!raf)raf=requestAnimationFrame(frame);
+  });
+  function stop(){const s=speech;speech=null;if(s){try{s.source.stop()}catch(e){}s.done('stopped')}}
+  // d: {audio_base64, alignment} from tts-krishna; wordsBox gets the spoken words.
+  // Resolves when Krishna finishes (or 'stopped' if interrupted).
+  async function speak(d,{ctx,wordsBox}){
+    stop();await ready;
     const bytes=Uint8Array.from(atob(d.audio_base64),c=>c.charCodeAt(0));
-    const buffer=await s.ctx.decodeAudioData(bytes.buffer);if(state!==s)return;
-    const a=d.alignment,chars=a.characters,start=a.character_start_times_seconds,end=a.character_end_times_seconds;
-    const loud=loudness(buffer);
-    Object.assign(s,{buffer,duration:buffer.duration,env:loud.env,slow:loud.slow,curve:curves(mouthKeys(chars,start,end),buffer.duration)});
-    const words=[];let w=null;
+    const buffer=await ctx.decodeAudioData(bytes.buffer);
+    const a=d.alignment,chars=a.characters,start=a.character_start_times_seconds,end=a.character_end_times_seconds,loud=loudness(buffer);
+    const words=[];let w=null;wordsBox.replaceChildren();wordsBox.style.transform='';
     for(let i=0;i<chars.length;i++){
       if(/\s/.test(chars[i])){w=null;wordsBox.append(' ');continue}
       if(!w){w={start:start[i],end:end[i],text:'',el:el('span')};words.push(w);wordsBox.append(w.el)}
       w.text+=chars[i];w.end=end[i];w.el.textContent=w.text;
     }
-    s.words=words;status.textContent='';
-    await s.ctx.resume();play();
+    await ctx.resume();stop();
+    return new Promise(done=>{
+      const source=ctx.createBufferSource();source.buffer=buffer;source.connect(ctx.destination);
+      const started=ctx.currentTime+.15;source.start(started);
+      speech={ctx,source,started,duration:buffer.duration,env:loud.env,slow:loud.slow,curve:curves(mouthKeys(chars,start,end),buffer.duration),words,wordsBox,scroll:0,done};
+      if(active&&!raf)raf=requestAnimationFrame(frame);
+    });
+  }
+  function setActive(on){active=on;if(!on){stop();cancelAnimationFrame(raf);raf=0}else if(!raf)raf=requestAnimationFrame(frame)}
+  function destroy(){setActive(false);dead=true;canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();container.replaceChildren()}
+  return{speak,stop,setActive,destroy,ready,get speaking(){return !!speech}};
+}
+
+// ---- Full-screen view for "Hear Krishna say this" ----
+let view=null;
+function close(){
+  if(!view)return;const v=view;view=null;
+  v.stage.destroy();v.root.remove();document.documentElement.style.overflow=v.overflow;
+  removeEventListener('keydown',v.onKey);v.onClose?.();
+}
+// opts: {ctx: AudioContext created during the tap, load: async () => ({audio_base64, alignment}),
+//        title, onError(message), onClose()}
+async function open(opts){
+  close();addStyle();
+  const root=el('div','ka'),top=el('div','ka-top'),x=el('button','ka-close','×'),card=el('div');
+  root.setAttribute('role','dialog');root.setAttribute('aria-label','Krishna speaking');x.type='button';x.setAttribute('aria-label','Close');
+  top.append(el('b',null,opts.title||'Sri Krishna'),x);
+  const status=el('div','ka-status','Krishna is getting ready to speak…'),textBox=el('div','ka-text'),wordsBox=el('div','ka-words');textBox.append(wordsBox);
+  const actions=el('div','ka-actions'),replay=el('button',null,'↻ Hear again');replay.type='button';replay.hidden=true;actions.append(replay);
+  root.append(top,card,status,textBox,actions);document.body.appendChild(root);
+  const v=view={root,stage:stage(card),overflow:document.documentElement.style.overflow,onClose:opts.onClose,onKey:e=>{if(e.key==='Escape')close()}};
+  document.documentElement.style.overflow='hidden';x.onclick=close;addEventListener('keydown',v.onKey);
+  try{
+    const d=await opts.load();if(view!==v)return;
+    const play=async()=>{replay.hidden=true;status.textContent='';const r=await v.stage.speak(d,{ctx:opts.ctx,wordsBox});if(view===v&&r!=='stopped')replay.hidden=false};
+    replay.onclick=play;await play();
   }catch(e){
-    if(state!==s)return;console.error(e);
+    if(view!==v)return;console.error(e);
     status.textContent=e?.message||'Could not play Krishna\'s voice. Please try again.';opts.onError?.(status.textContent);
   }
 }
-window.KrishnaAvatar={open,close,_test:{mouthKeys,devanagari}};
+window.KrishnaAvatar={open,close,stage,_test:{mouthKeys,devanagari}};
 })();
