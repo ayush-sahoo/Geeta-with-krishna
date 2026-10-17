@@ -63,6 +63,12 @@ select * from public.translation_missing(array['hi','bn','mr','ta','te','gu','kn
 
 There is no automatic schedule; runs are started by hand. The 13 Indian languages are fully translated. Other languages are translated on first use and saved.
 
+## Talking Krishna
+
+Paid members see **▶ Hear Krishna say this** on each new Ask Krishna answer. It opens Krishna's portrait (`assets/krishna-avatar.webp`, cut from the original 1254 px painting at x 250, y 120, 800 px square), which speaks the answer's paragraphs and closing question (verse references are not read out). `tts-krishna` makes the voice with `timestamps: true`, using the same ElevenLabs voice as verse meanings, so each tap of a new answer costs one ElevenLabs request; hearing the same answer again reuses it. Language: the chat language if one is chosen; for "Auto", Devanagari → Hindi, Hinglish → Hindi voice, otherwise English.
+
+The mouth follows the letters (Devanagari rules, which also cover Bengali, Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada and Malayalam; simple rules for English and Urdu) and the loudness of the voice for everything else. The face landmarks (lip line, mouth corners, eyelids) in `krishna-avatar.js` are pixel positions in the original painting, so a different portrait needs new landmarks. Taps are counted as the `hear_krishna` event.
+
 ## Android app (Google Play)
 
 The Play Store app is a Trusted Web Activity: it opens https://gitaverse.co.in in Chrome, full-screen, so it always shows the live site (payments, Ask Krishna, languages) and needs no update when the site changes. Package `com.ayushsahoo.gitawithkrishna`; project in `android/` (generated with Bubblewrap; settings in `android/twa-manifest.json`). It opens `/?utm_source=android_app`, so app visits show up as their own source in the admin dashboard. That parameter also switches the site to an **app layout** (`html.app-mode`, set by a small script in `index.html`): bottom tabs (Home, Ask Krishna, Explore Gita, Account) instead of the top menu, and the phone's back button steps back through screens. The website itself is unchanged; add `?app=1` to any URL to preview the app layout in a browser.

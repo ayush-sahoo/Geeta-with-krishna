@@ -155,19 +155,22 @@ Deno.serve(async (req: Request) => {
     if (!apiKey) throw new Error("Voice provider unavailable");
 
     const voiceId = kind === "verse" ? CHANT_VOICE_ID : FALLBACK_EXPLAIN_VOICE_ID;
+    // Talking Krishna: the same voice, plus when each letter is spoken, so the
+    // portrait's mouth and the highlighted words follow the audio.
+    const timestamps = body?.timestamps === true && kind !== "verse";
     const voiceSettings = kind === "verse"
       ? { stability: 0.62, similarity_boost: 0.78, style: 0.20, use_speaker_boost: true, speed: 0.94 }
       : { stability: 0.5, similarity_boost: 0.82, speed: 1.05 };
 
     const upstream = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}${timestamps ? "/with-timestamps" : ""}?output_format=mp3_44100_128`,
       {
         method: "POST",
         signal:AbortSignal.timeout(45000),
         headers: {
           "xi-api-key": apiKey,
           "Content-Type": "application/json",
-          Accept: "audio/mpeg",
+          Accept: timestamps ? "application/json" : "audio/mpeg",
         },
         body: JSON.stringify({
           text,
@@ -184,6 +187,13 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Voice provider returned an error" }, 502);
     }
 
+    if (timestamps) {
+      const d = await upstream.json();
+      if (typeof d?.audio_base64 !== "string" || !Array.isArray(d?.alignment?.characters)) {
+        return json({ error: "Voice provider returned an error" }, 502);
+      }
+      return json({ audio_base64: d.audio_base64, alignment: d.alignment }, 200);
+    }
     const audio = await upstream.arrayBuffer();
     return new Response(audio, {
       status: 200,
