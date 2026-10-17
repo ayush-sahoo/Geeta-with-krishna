@@ -1,5 +1,6 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import { adminClient, GEMINI_URL } from "../_shared/server.ts";
+import { MEANING_VOICE_ID, transcribe, voiceWithTimestamps, VoiceError } from "../_shared/voice.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -10,7 +11,6 @@ const corsHeaders = {
 };
 
 const CHANT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
-const FALLBACK_EXPLAIN_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
 async function translateMeaning(text:string, language:string){
   if(language==="en")return text;
   const apiKey=Deno.env.get("GEMINI_API_KEY");
@@ -99,37 +99,6 @@ function chantText(input:string){
   return phrases.map((p,i)=>p.text+' <break time="'+(i===phrases.length-1?'1.2':p.pause)+'s" />').join(' ');
 }
 
-// Talk to Krishna: speech to text with ElevenLabs Scribe. It names the spoken
-// language in ISO 639-3; map the ones the site supports to its codes.
-const SPOKEN_LANGUAGE: Record<string, string> = {
-  eng: "en", hin: "hi", asm: "as", ben: "bn", guj: "gu", kan: "kn", mal: "ml", mar: "mr", nep: "ne", pan: "pa", snd: "sd",
-  tam: "ta", tel: "te", urd: "ur", ara: "ar", fra: "fr", deu: "de", spa: "es", por: "pt", rus: "ru", jpn: "ja", kor: "ko",
-  cmn: "zh", zho: "zh", ita: "it", nld: "nl", tur: "tr", pol: "pl", ind: "id", tha: "th", vie: "vi", fil: "fil", tgl: "fil",
-  swe: "sv", ukr: "uk", fas: "fa", heb: "he", ell: "el", msa: "ms", zsm: "ms",
-};
-async function transcribe(body: any) {
-  const audio = String(body?.audio_base64 ?? "");
-  if (!audio || audio.length > 3_000_000) return json({ error: "Recording is missing or too long" }, 400);
-  const type = /^audio\/[a-z0-9.+-]+/i.exec(String(body?.mime_type ?? ""))?.[0] ?? "audio/webm";
-  const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
-  const form = new FormData();
-  form.append("model_id", "scribe_v1");
-  form.append("tag_audio_events", "false");
-  form.append("file", new Blob([bytes], { type }), "speech." + (type.includes("mp4") ? "m4a" : type.split("/")[1].split(";")[0]));
-  const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
-    method: "POST", signal: AbortSignal.timeout(30000),
-    headers: { "xi-api-key": Deno.env.get("ELEVENLABS_API_KEY") ?? "" }, body: form,
-  });
-  if (!r.ok) {
-    console.error("ElevenLabs speech-to-text error", r.status, (await r.text()).slice(0, 300));
-    return json({ error: "Could not hear that. Please try again." }, 502);
-  }
-  const d = await r.json();
-  const code = String(d?.language_code ?? "").toLowerCase();
-  const language = Object.hasOwn(GITA_LANGUAGES, code) ? code : SPOKEN_LANGUAGE[code] ?? "";
-  return json({ text: String(d?.text ?? "").trim().slice(0, 1000), language }, 200);
-}
-
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -167,12 +136,17 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
+    const body = await req.json();
+    // Talk to Krishna wakes the function up before it is needed.
+    if (body?.warm === true) return json({ ok: true }, 200);
     if (!(await hasActiveAccess(req.headers.get("Authorization") ?? ""))) {
       return json({ error: "Annual Access required" }, 403);
     }
 
-    const body = await req.json();
-    if (body?.operation === "transcribe") return await transcribe(body);
+    if (body?.operation === "transcribe") {
+      try { return json(await transcribe(String(body?.audio_base64 ?? ""), String(body?.mime_type ?? "")), 200); }
+      catch (e) { if (e instanceof VoiceError) return json({ error: e.message }, 502); throw e; }
+    }
     const kind = body?.kind === "verse" ? "verse" : "meaning";
     const language = body?.language ?? "hi";
     if(typeof language!=="string"||!Object.hasOwn(GITA_LANGUAGES,language))return json({error:"Unsupported language"},400);
@@ -186,23 +160,26 @@ Deno.serve(async (req: Request) => {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
     if (!apiKey) throw new Error("Voice provider unavailable");
 
-    const voiceId = kind === "verse" ? CHANT_VOICE_ID : FALLBACK_EXPLAIN_VOICE_ID;
     // Talking Krishna: the same voice, plus when each letter is spoken, so the
     // portrait's mouth and the highlighted words follow the audio.
-    const timestamps = body?.timestamps === true && kind !== "verse";
+    if (body?.timestamps === true && kind !== "verse") {
+      try { return json(await voiceWithTimestamps(text, language), 200); }
+      catch (e) { if (e instanceof VoiceError) return json({ error: e.message }, 502); throw e; }
+    }
+    const voiceId = kind === "verse" ? CHANT_VOICE_ID : MEANING_VOICE_ID;
     const voiceSettings = kind === "verse"
       ? { stability: 0.62, similarity_boost: 0.78, style: 0.20, use_speaker_boost: true, speed: 0.94 }
       : { stability: 0.5, similarity_boost: 0.82, speed: 1.05 };
 
     const upstream = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}${timestamps ? "/with-timestamps" : ""}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
         method: "POST",
         signal:AbortSignal.timeout(45000),
         headers: {
           "xi-api-key": apiKey,
           "Content-Type": "application/json",
-          Accept: timestamps ? "application/json" : "audio/mpeg",
+          Accept: "audio/mpeg",
         },
         body: JSON.stringify({
           text,
@@ -219,13 +196,6 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Voice provider returned an error" }, 502);
     }
 
-    if (timestamps) {
-      const d = await upstream.json();
-      if (typeof d?.audio_base64 !== "string" || !Array.isArray(d?.alignment?.characters)) {
-        return json({ error: "Voice provider returned an error" }, 502);
-      }
-      return json({ audio_base64: d.audio_base64, alignment: d.alignment }, 200);
-    }
     const audio = await upstream.arrayBuffer();
     return new Response(audio, {
       status: 200,

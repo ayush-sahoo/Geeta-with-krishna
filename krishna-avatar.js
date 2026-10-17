@@ -207,18 +207,20 @@ function stage(container){
   const barEls=[...bars.children],t0=performance.now();
   function frame(){
     raf=0;if(!active||dead)return;
-    const clock=(performance.now()-t0)/1000,s=speech,t=s&&s.started!=null?s.ctx.currentTime-s.started:-1;
-    const e=s?at(s.env,t):0,gate=sm(.05,.2,e),lead=t+.02,P=2*Math.PI;
-    const O=s?Math.min(1,at(s.curve.O,lead)*gate*(.75+.35*Math.min(e,1))):0,W=s?at(s.curve.W,lead)*gate:0;
+    const clock=(performance.now()-t0)/1000,s=speech,now=s?s.ctx.currentTime:0;
+    // The clip playing now (a reply is a queue of sentence clips).
+    const seg=s?.segs.find(g=>now>=g.start&&now<g.start+g.duration),t=seg?now-seg.start:-1;
+    const e=seg?at(seg.env,t):0,gate=sm(.05,.2,e),lead=t+.02,P=2*Math.PI;
+    const O=seg?Math.min(1,at(seg.curve.O,lead)*gate*(.75+.35*Math.min(e,1))):0,W=seg?at(seg.curve.W,lead)*gate:0;
     if(renderer)renderer({O,W,B:blinkAt(clock),rot:.011*Math.sin(P*.17*clock)+.005*Math.sin(P*.41*clock+1.1),
-      tx:2.5*Math.sin(P*.13*clock+.5),ty:1.5*Math.sin(P*.23*clock)+3*(s?at(s.slow,t):0),scale:1+.004*Math.sin(P*clock/4.2)});
-    barEls.forEach((b,i)=>{b.style.height=(4+20*Math.min(1,(s?at(s.env,t-i*.04):0)*(.6+.4*Math.sin(i*1.7+2))))+'px'});
-    if(s?.words){
+      tx:2.5*Math.sin(P*.13*clock+.5),ty:1.5*Math.sin(P*.23*clock)+3*(seg?at(seg.slow,t):0),scale:1+.004*Math.sin(P*clock/4.2)});
+    barEls.forEach((b,i)=>{b.style.height=(4+20*Math.min(1,(seg?at(seg.env,t-i*.04):0)*(.6+.4*Math.sin(i*1.7+2))))+'px'});
+    if(s){
       let cur=-1;
-      s.words.forEach((w,i)=>{const c=t>=w.end?'done':t>=w.start?'now':'';if(w.el.className!==c)w.el.className=c;if(t>=w.start)cur=i});
+      s.words.forEach((w,i)=>{const c=now>=w.end?'done':now>=w.start?'now':'';if(w.el.className!==c)w.el.className=c;if(now>=w.start)cur=i});
       const box=s.wordsBox.parentElement,target=cur<0?0:Math.max(0,s.words[cur].el.offsetTop-s.wordsBox.offsetTop-box.clientHeight*.3);
       s.scroll+=(target-s.scroll)*.12;s.wordsBox.style.transform=`translateY(${-s.scroll}px)`;
-      if(t>s.duration+.3){speech=null;s.done()}
+      if(!s.pending&&now>s.end+.3){speech=null;s.done()}
     }
     raf=requestAnimationFrame(frame);
   }
@@ -229,27 +231,41 @@ function stage(container){
     container.prepend(renderer?canvas:img.cloneNode());
     if(active&&!raf)raf=requestAnimationFrame(frame);
   });
-  function stop(){const s=speech;speech=null;if(s){try{s.source.stop()}catch(e){}s.done('stopped')}}
-  // d: {audio_base64, alignment} from tts-krishna; wordsBox gets the spoken words.
-  // Resolves when Krishna finishes (or 'stopped' if interrupted).
-  async function speak(d,{ctx,wordsBox}){
+  function stop(){const s=speech;speech=null;if(s){for(const g of s.segs)try{g.source.stop()}catch(e){}s.done('stopped')}}
+  // clips: one or more {audio_base64, alignment} (or promises of them, in
+  // order) from tts-krishna. Each clip plays as soon as it is ready, right
+  // after the one before; wordsBox gets the spoken words. Resolves when
+  // Krishna finishes, or 'stopped' if interrupted.
+  async function speak(clips,{ctx,wordsBox}){
     stop();await ready;
-    const bytes=Uint8Array.from(atob(d.audio_base64),c=>c.charCodeAt(0));
-    const buffer=await ctx.decodeAudioData(bytes.buffer);
-    const a=d.alignment,chars=a.characters,start=a.character_start_times_seconds,end=a.character_end_times_seconds,loud=loudness(buffer);
-    const words=[];let w=null;wordsBox.replaceChildren();wordsBox.style.transform='';
-    for(let i=0;i<chars.length;i++){
-      if(/\s/.test(chars[i])){w=null;wordsBox.append(' ');continue}
-      if(!w){w={start:start[i],end:end[i],text:'',el:el('span')};words.push(w);wordsBox.append(w.el)}
-      w.text+=chars[i];w.end=end[i];w.el.textContent=w.text;
+    let done;const finished=new Promise(r=>done=r);
+    const s=speech={ctx,segs:[],words:[],wordsBox,scroll:0,end:0,pending:true,done};
+    wordsBox.replaceChildren();wordsBox.style.transform='';
+    if(active&&!raf)raf=requestAnimationFrame(frame);
+    await ctx.resume();
+    let next=ctx.currentTime+.15;
+    for(const clip of [].concat(clips)){
+      let d,buffer;
+      try{
+        d=await clip;if(speech!==s)return'stopped';
+        buffer=await ctx.decodeAudioData(Uint8Array.from(atob(d.audio_base64),c=>c.charCodeAt(0)).buffer);
+      }catch(e){if(speech!==s)return'stopped';if(!s.segs.length){speech=null;throw e}break}
+      if(speech!==s)return'stopped';
+      const start=Math.max(next,ctx.currentTime+.05),source=ctx.createBufferSource();
+      source.buffer=buffer;source.connect(ctx.destination);source.start(start);
+      const a=d.alignment,chars=a.characters,cs=a.character_start_times_seconds,ce=a.character_end_times_seconds,loud=loudness(buffer);
+      s.segs.push({start,duration:buffer.duration,source,env:loud.env,slow:loud.slow,curve:curves(mouthKeys(chars,cs,ce),buffer.duration)});
+      if(s.words.length)wordsBox.append(' ');
+      let w=null;
+      for(let i=0;i<chars.length;i++){
+        if(/\s/.test(chars[i])){w=null;wordsBox.append(' ');continue}
+        if(!w){w={start:start+cs[i],end:start+ce[i],text:'',el:el('span')};s.words.push(w);wordsBox.append(w.el)}
+        w.text+=chars[i];w.end=start+ce[i];w.el.textContent=w.text;
+      }
+      next=start+buffer.duration;s.end=next;
     }
-    await ctx.resume();stop();
-    return new Promise(done=>{
-      const source=ctx.createBufferSource();source.buffer=buffer;source.connect(ctx.destination);
-      const started=ctx.currentTime+.15;source.start(started);
-      speech={ctx,source,started,duration:buffer.duration,env:loud.env,slow:loud.slow,curve:curves(mouthKeys(chars,start,end),buffer.duration),words,wordsBox,scroll:0,done};
-      if(active&&!raf)raf=requestAnimationFrame(frame);
-    });
+    s.pending=false;
+    return finished;
   }
   function setActive(on){active=on;if(!on){stop();cancelAnimationFrame(raf);raf=0}else if(!raf)raf=requestAnimationFrame(frame)}
   function destroy(){setActive(false);dead=true;canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();container.replaceChildren()}
@@ -263,8 +279,8 @@ function close(){
   v.stage.destroy();v.root.remove();document.documentElement.style.overflow=v.overflow;
   removeEventListener('keydown',v.onKey);v.onClose?.();
 }
-// opts: {ctx: AudioContext created during the tap, load: async () => ({audio_base64, alignment}),
-//        title, onError(message), onClose()}
+// opts: {ctx: AudioContext created during the tap, clips: [promise of {audio_base64, alignment}, …]
+//        (sentence by sentence, in order), title, onError(message), onClose()}
 async function open(opts){
   close();addStyle();
   const root=el('div','ka'),top=el('div','ka-top'),x=el('button','ka-close','×'),card=el('div');
@@ -275,14 +291,19 @@ async function open(opts){
   root.append(top,card,status,textBox,actions);document.body.appendChild(root);
   const v=view={root,stage:stage(card),overflow:document.documentElement.style.overflow,onClose:opts.onClose,onKey:e=>{if(e.key==='Escape')close()}};
   document.documentElement.style.overflow='hidden';x.onclick=close;addEventListener('keydown',v.onKey);
-  try{
-    const d=await opts.load();if(view!==v)return;
-    const play=async()=>{replay.hidden=true;status.textContent='';const r=await v.stage.speak(d,{ctx:opts.ctx,wordsBox});if(view===v&&r!=='stopped')replay.hidden=false};
-    replay.onclick=play;await play();
-  }catch(e){
-    if(view!==v)return;console.error(e);
-    status.textContent=e?.message||'Could not play Krishna\'s voice. Please try again.';opts.onError?.(status.textContent);
-  }
+  const play=async()=>{
+    replay.hidden=true;
+    try{
+      const r=await v.stage.speak(opts.clips,{ctx:opts.ctx,wordsBox});
+      if(view===v&&r!=='stopped'){status.textContent='';replay.hidden=false}
+    }catch(e){
+      if(view!==v)return;console.error(e);
+      status.textContent=e?.message||'Could not play Krishna\'s voice. Please try again.';opts.onError?.(status.textContent);
+    }
+  };
+  replay.onclick=play;
+  Promise.resolve(opts.clips[0]).then(()=>{if(view===v)status.textContent=''},()=>{});
+  await play();
 }
 window.KrishnaAvatar={open,close,stage,_test:{mouthKeys,devanagari}};
 })();

@@ -47,7 +47,7 @@ The app is a single page. `showScreen(id)` switches between `<section class="scr
 | Narration (verse page) | `speak`, `playText`, `textClips`, `fetchTTS`, `playBlob`, `unlockVoice`, `stopSpeech` |
 | Ask Krishna chat | `sendAsk`, `appendWithRefs`, `replyText`, `savePendingQuestion` / `takePendingQuestion` |
 | Talking Krishna | `hearKrishna` ("Hear Krishna say this" on answers, paid only), `spokenAnswer`, `spokenLanguage`, `renderReply` (shared by both modes) |
-| Talk to Krishna | `setAskMode` (Chat / Talk sections), `talkMicTap`, `startListening` (recording, stops on silence), `talkTurn` (speech-to-text → answer → voice), `talkCancel` |
+| Talk to Krishna | `setAskMode` (Chat / Talk sections), `talkMicTap`, `startListening` (recording, stops on silence), `talkTurn` (one ask-krishna call, then the rest voiced sentence by sentence), `speechChunks` / `voiceQueue` (sentence pieces, two requests at a time), `warmTalk`, `talkCancel` |
 
 ### Browser storage
 
@@ -69,7 +69,7 @@ JWT verification at the gateway is **off** for every function (see `supabase/con
 | Function | Caller and check | What it does |
 | --- | --- | --- |
 | `ask-krishna` | Signed-in user, or a signed-out visitor's one free question | Retrieves relevant verses (curated topics + `search_gita`), asks Gemini for a reply that cites only those verses, validates every citation. Without Annual Access it claims the account's one free question (`claim_free_question`), or for a signed-out visitor the one answer before sign-up (`claim_anon_question`: one per visitor id, at most 10 a day per network and 300 a day in total), and refunds it if no answer comes back. |
-| `tts-krishna` | Signed-in user with Annual Access | `operation: "translate"` returns a translated meaning (stored translation first, Gemini otherwise). Otherwise narrates text with ElevenLabs (Sanskrit chant voice for verses, v3 voice for meanings). With `timestamps: true` it returns JSON `{audio_base64, alignment}` (the time each letter is spoken) for Talking Krishna. `operation: "transcribe"` turns a recording (`audio_base64`, `mime_type`) into `{text, language}` with ElevenLabs Scribe, for Talk to Krishna. |
+| `tts-krishna` | Signed-in user with Annual Access | `operation: "translate"` returns a translated meaning (stored translation first, Gemini otherwise). Otherwise narrates text with ElevenLabs (Sanskrit chant voice for verses, v3 voice for meanings). With `timestamps: true` it returns JSON `{audio_base64, alignment}` (the time each letter is spoken) for Talking Krishna. `operation: "transcribe"` turns a recording (`audio_base64`, `mime_type`) into `{text, language}` with ElevenLabs Scribe. `{warm:true}` only wakes the function. |
 | `get-my-access` | Signed-in user | Plan, expiry, `access_active`, `free_question_available`. |
 | `create-payment-link` | Signed-in user | Body `plan`: `"annual"` (₹499, default) or `"monthly"` (₹149). With `{mode:"popup"}`: creates a Razorpay order for that price (notes `checkout: "popup"`, `product: "gita_verse_annual"` or `"gita_verse_monthly"`, `user_id`) and returns `order_id`, the public `key_id` and `prefill` (the user's phone or email) for the on-site checkout. Otherwise: a payment link for that price (same `product` note) (expires in 1 hour) that returns to `/?payment=success`. Either way the Razorpay reference is stored in `payment_transactions.payment_link_id`. |
 | `razorpay-webhook` | Razorpay (HMAC signature) | On `payment_link.paid`, or `order.paid` for an order marked `checkout: "popup"` with a known `product`, checks that the amount is that product's price (₹499 annual, also the old ₹999 and ₹1,000 for checkouts opened before a price change; ₹149 monthly; ₹399 for the retired 3-month plan, still honoured for checkouts opened before it was withdrawn; links without a product are annual) and unlocks 1 year, 1 month or 3 months (stacked on top of any remaining access; `apply_annual_payment` sets the length from the amount, and every plan keeps `plan_status = 'annual'`). Orders from other products on the same Razorpay account are ignored. Idempotent. Every verified event is logged to `payment_events`. Then sends the server-side Meta Purchase (`_shared/meta.ts`) if Meta hasn't accepted it yet. |
@@ -79,7 +79,9 @@ JWT verification at the gateway is **off** for every function (see `supabase/con
 | `send-sms` | Supabase Auth "Send SMS" hook (Standard Webhooks signature) | Delivers the OTP through MSG91's DLT template. Indian numbers only. |
 | `raga-music`, `gemini-health`, `razorpay-health` | – | Retired stubs (404/410). |
 
-Shared code lives in `supabase/functions/_shared/`: `server.ts` (plans and prices `PLANS`, Gemini model and URL, server-key lookup, `adminClient()`) and `languages.ts`.
+Shared code lives in `supabase/functions/_shared/`: `server.ts` (plans and prices `PLANS`, Gemini model and URL, server-key lookup, `adminClient()`), `languages.ts` and `voice.ts` (Krishna's ElevenLabs voice with letter timings, speech to text, retry on 429, the spoken text and its sentence pieces).
+
+`ask-krishna` also takes a whole Talk to Krishna turn: with `audio_base64` (paid members only) it transcribes the recording, answers with `voice: true` and returns `{...reply, heard:{text,language}, speech:{language, chunks, first}}`, where `first` is the first sentence already voiced. `{warm:true}` only wakes the function.
 
 ### Database
 

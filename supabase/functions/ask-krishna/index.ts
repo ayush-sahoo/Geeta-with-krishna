@@ -1,5 +1,6 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import { adminClient, GEMINI_URL } from "../_shared/server.ts";
+import { speechChunks, spokenText, transcribe, voiceWithTimestamps, VoiceError } from "../_shared/voice.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -347,19 +348,22 @@ Deno.serve(async (req:Request)=>{
 
   try{
     const body=await req.json();
-    const question=String(body?.question ?? "").trim().slice(0,MAX_QUESTION);
+    // Talk to Krishna wakes the function up before it is needed.
+    if(body?.warm===true) return json({ok:true});
+    const talk=typeof body?.audio_base64==="string";
+    let question=String(body?.question ?? "").trim().slice(0,MAX_QUESTION);
     const history=sanitizeHistory(body?.history);
-    const language=typeof body?.language==="string"?body.language:"";
+    let language=typeof body?.language==="string"?body.language:"";
     if(language&&!Object.hasOwn(GITA_LANGUAGES,language))return json({error:"Unsupported language"},400);
 
-    if(!question) return json({error:"Question is required"},400);
+    if(!question&&!talk) return json({error:"Question is required"},400);
 
     const supabaseUrl=Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey=Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const authHeader=req.headers.get("Authorization") ?? "";
 
     if(!supabaseUrl||!supabaseAnonKey) throw new Error("Supabase runtime credentials are unavailable.");
-    if(!authHeader.startsWith("Bearer ")) return await askAnonymously(req,body,question,language);
+    if(!authHeader.startsWith("Bearer ")) return talk ? json({error:"Annual Access required",paywall:true},403) : await askAnonymously(req,body,question,language);
 
     const supabase=createClient(supabaseUrl,supabaseAnonKey,{
       global:{headers:{Authorization:authHeader}},
@@ -379,6 +383,26 @@ Deno.serve(async (req:Request)=>{
       && account?.payment_status==="paid"
       && account?.access_expires_at
       && new Date(account.access_expires_at).getTime()>Date.now();
+
+    // Talk to Krishna, one turn in one call: the recording becomes text, Krishna
+    // answers briefly, and the first sentence of the answer is voiced here so
+    // it can play straight away; the app voices the rest while it plays.
+    if(talk){
+      if(!annualActive) return json({error:"Annual Access required",paywall:true},403);
+      let heard;
+      try{heard=await transcribe(body.audio_base64,String(body?.mime_type ?? ""));}
+      catch(e){if(e instanceof VoiceError) return json({error:e.message},502);throw e;}
+      if(!heard.text) return json({heard});
+      question=heard.text.slice(0,MAX_QUESTION);
+      if(!language&&heard.language) language=heard.language;
+      const verses=await retrieveVerses(supabase,question,history);
+      const ai=await callGemini(question,history,verses,language,true);
+      if(!ai) return json({heard,error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
+      const chunks=speechChunks(spokenText(ai)),speechLanguage=language||(/[\u0900-\u097F]/.test(chunks.join(""))?"hi":"en");
+      let first=null;
+      if(chunks.length) try{first=await voiceWithTimestamps(chunks[0],speechLanguage);}catch(e){console.error("first sentence voice failed",String(e));}
+      return json({...ai,heard,speech:{language:speechLanguage,chunks,first}});
+    }
 
     // Without Annual Access, each account gets one free question. It is
     // claimed before the AI call and refunded if no answer comes back.
