@@ -36,6 +36,7 @@ Anonymous visitor id: `gitaVisitorId` in localStorage.
 | `ask_typing` | Started typing a question |
 | `scroll_half`, `scroll_end` | Home page scroll depth |
 | `stay_15s`, `stay_45s` | Visible time on page |
+| `hear_krishna` | A paid member taps "Hear Krishna say this" on an answer (Talking Krishna) |
 | `plan_annual`, `plan_monthly`; `checkout_annual`, `checkout_monthly` (`plan_quarterly`/`checkout_quarterly` until 7 Oct 2026, the retired ₹399 plan); `checkout_open`, `checkout_dismiss`, `checkout_redirect`, `checkout_payment_failed`, `checkout_open_failed`, `checkout_create_failed` | Checkout steps: plan card tapped, plan being bought, Razorpay window opened / closed unpaid / fallback page, a failed attempt, window blocked, server could not create the checkout (admin "Checkout steps") |
 | `log_session` (table `site_sessions`) | Visible seconds per page load, sent every 30 s and when the tab is hidden; the admin dashboard shows time on site from it |
 
