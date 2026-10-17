@@ -20,12 +20,14 @@ const tab = p => p.evaluate(() => document.querySelector('.tabbar button.active'
 console.log('\n# Website (not the app)');
 { const { ctx, p, errs } = await open('/');
   ok(!(await p.isVisible('.tabbar')) && await p.isVisible('.topbar .nav'), 'the website keeps its top menu and shows no bottom tabs');
+  ok(await p.isVisible('#welcomeUser'), 'the website keeps its Sign in button');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# Android app');
 { const { ctx, p, errs } = await open('/?utm_source=android_app');
   ok(await p.isVisible('.tabbar') && !(await p.isVisible('.topbar .nav')), 'the app shows bottom tabs instead of the top menu');
   ok(await p.evaluate(() => document.getElementById('langButton').parentElement.classList.contains('toprow')) && await p.isVisible('#langButton'), 'the language button moves into the header');
+  ok(!(await p.isVisible('#welcomeUser')), 'the header Sign in button gives way to the Account tab');
   ok((await tab(p)) === 'tabHome', 'Home tab starts active', await tab(p));
   await p.click('#tabAsk'); ok((await screen(p)) === 'ask' && (await tab(p)) === 'tabAsk', 'Ask Krishna tab opens the chat', await screen(p));
   await p.click('#tabExplore'); ok((await screen(p)) === 'explore' && (await tab(p)) === 'tabExplore', 'Explore tab opens the chapters', await screen(p));

@@ -1386,6 +1386,38 @@ function appendWithRefs(parent,text){
   });
   parent.appendChild(p);return p;
 }
+// Talking Krishna (paid): Krishna's portrait speaks the answer. The reply's
+// paragraphs and closing question are spoken, without the verse references.
+function spokenAnswer(d){
+  return [...(d.paragraphs||[d.opening,d.explanation]),d.follow_up].filter(Boolean).join(' ')
+    .replace(/\s*\((?:BG \d+\.\d+[,;\s]*)+\)/g,'').replace(/\s*BG \d+\.\d+/g,'').replace(/\s+/g,' ').trim();
+}
+// "Auto" replies are English, Hindi or Hinglish; Hinglish is read with the Hindi voice.
+function spokenLanguage(text){
+  if(chatLanguage!=='auto')return chatLanguage;
+  if(/[\u0900-\u097F]/.test(text))return 'hi';
+  return (text.toLowerCase().match(/\b(hai|hain|mein|tum|tumhe|aap|kya|nahi|nahin|karo|apne|apni|jo|bhi|ko|se|ka|ki|ke)\b/g)||[]).length>=4?'hi':'en';
+}
+let avatarAudio=null,avatarScript=null;
+function hearKrishna(d,button){
+  stopSpeech();logEvent('hear_krishna');
+  // The audio context is made during the tap so phones let it play later.
+  try{avatarAudio??=new (window.AudioContext||window.webkitAudioContext)();avatarAudio.resume()}catch(e){toast('Audio is not available on this device');return}
+  const text=spokenAnswer(d),language=spokenLanguage(text);
+  d.voice??=(async()=>{
+    await freshSession();
+    const r=await fetch(SUPA+'/functions/v1/tts-krishna',{method:'POST',headers:authHeaders(authSession?.access_token||''),cache:'no-store',
+      body:JSON.stringify({text,kind:'meaning',language,translated:true,timestamps:true})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.audio_base64)throw new Error(j.error||'Could not play Krishna\'s voice. Please try again.');
+    return j;
+  })();
+  const voice=d.voice;voice.catch(()=>{if(d.voice===voice)d.voice=null});
+  avatarScript??=new Promise((ok,fail)=>{const sc=document.createElement('script');sc.src='krishna-avatar.js?v=1';sc.onload=ok;sc.onerror=()=>{avatarScript=null;fail(new Error('Could not load. Please check your connection.'))};document.head.appendChild(sc)});
+  button.disabled=true;
+  avatarScript.then(()=>KrishnaAvatar.open({ctx:avatarAudio,title:d.title,load:()=>voice,onClose:()=>{button.disabled=false}}))
+    .catch(e=>{button.disabled=false;toast(e.message)});
+}
 function replyText(d){
   return [d.title,...(d.paragraphs||[d.opening,d.explanation]),...(d.actions||[]),d.follow_up].filter(Boolean).join('\n');
 }
@@ -1422,6 +1454,7 @@ async function sendAsk(){
     answer.textContent='';answer.dir='auto';if(language)answer.lang=language;
     if(d.style==='krishna_inspired'){
       appendText(answer,'small','Sri Krishna says');if(d.title)appendText(answer,'h3',d.title);
+      if(hasLifetimeAccess()&&spokenAnswer(d)){const hear=appendText(answer,'button','▶ Hear Krishna say this','hear-krishna');hear.type='button';hear.onclick=()=>hearKrishna(d,hear);}
       (d.paragraphs||[d.opening,d.explanation]).filter(Boolean).forEach(t=>appendWithRefs(answer,t));
       if(d.actions?.length){appendText(answer,'strong','What to do now');const ul=document.createElement('ul');d.actions.forEach(x=>appendText(ul,'li',x));answer.appendChild(ul)}
       if(d.follow_up)appendWithRefs(answer,d.follow_up).className='chat-follow-up';
