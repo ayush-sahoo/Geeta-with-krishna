@@ -1,9 +1,10 @@
 // Talking Krishna: paid members can hear an Ask Krishna answer spoken by the
-// animated portrait. The voice and letter timings come from tts-krishna.
+// animated portrait, and talk to Krishna voice to voice in the Talk tab. The
+// voice, letter timings and speech-to-text come from tts-krishna.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8768';
 const ok = (c, m, d = '') => console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' : ' -> ' + d));
-const b = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const b = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 
 // A short tone as WAV, so the browser can decode it like the real voice.
 function wav(seconds) {
@@ -22,7 +23,7 @@ function voiceFor(text) {
 const HINDI = { style: 'krishna_inspired', title: 'भविष्य की चिंता से मुक्ति', paragraphs: ['मेरे प्रिय, मैं तुम्हारी दुविधा समझता हूँ।', 'तुम्हारा अधिकार केवल कर्म पर है (BG 2.47)।'], actions: ['गहरी साँस लें।'], follow_up: 'क्या चिंता है?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] };
 const ENGLISH = { style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear your worry.', 'Act without clinging to results (BG 2.47).'], actions: [], follow_up: 'What worries you most?', verses: [] };
 
-async function open({ paid, reply, ttsStatus = 200 }) {
+async function open({ paid, reply, ttsStatus = 200, ask = true }) {
   const S = { calls: [] };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   const user = { id: 'u1', email: 't@example.com', app_metadata: { provider: 'email' } };
@@ -41,6 +42,7 @@ async function open({ paid, reply, ttsStatus = 200 }) {
     if (p === '/functions/v1/ask-krishna') return json(paid ? reply : { ...reply, free_question: true });
     if (p === '/functions/v1/tts-krishna') {
       const body = JSON.parse(req.postData() || '{}');
+      if (body.operation === 'transcribe') return json({ text: 'मुझे अपने भविष्य की चिंता है', language: 'hi' });
       if (ttsStatus !== 200) return json({ error: 'Narration failed. Please try again.' }, ttsStatus);
       return json(voiceFor(body.text));
     }
@@ -52,6 +54,7 @@ async function open({ paid, reply, ttsStatus = 200 }) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto(BASE + '/'); await p.waitForTimeout(600);
   await p.evaluate(() => showScreen('ask'));
+  if (!ask) return { ctx, p, S, errs };
   await p.fill('#askInput', 'I worry about my future'); await p.click('#sendAskButton');
   await p.waitForSelector('#chat .bubble.assistant h3', { timeout: 5000 });
   return { ctx, p, S, errs };
@@ -68,7 +71,7 @@ console.log('\n# Paid member, Hindi answer');
   ok(await p.isVisible('.hear-krishna'), 'paid members see "Hear Krishna say this" on the answer');
   await p.click('.hear-krishna');
   await p.waitForSelector('.ka', { timeout: 3000 });
-  ok(await p.isVisible('.ka .ka-card'), 'tapping it opens Krishna\'s portrait');
+  ok(await p.isVisible('.ka .ka-stage'), 'tapping it opens Krishna\'s portrait');
   await p.waitForFunction(() => document.querySelectorAll('.ka-words span').length > 0, null, { timeout: 8000 }).catch(() => {});
   const [req] = ttsCalls(S);
   ok(req && req.timestamps === true && req.translated === true && req.kind === 'meaning', 'asks tts-krishna for the voice with letter timings', JSON.stringify(req));
@@ -76,7 +79,7 @@ console.log('\n# Paid member, Hindi answer');
   ok(req && !/BG|\(|\)/.test(req.text) && req.text.includes('क्या चिंता है?') && !req.text.includes('गहरी साँस'), 'speaks the paragraphs and closing question, without verse references', req?.text);
   const words = await p.locator('.ka-words span').count();
   ok(words === req.text.split(' ').length, 'every spoken word is shown', `${words} vs ${req.text.split(' ').length}`);
-  ok(await p.evaluate(() => !!document.querySelector('.ka-card canvas')), 'the animated portrait is drawn (WebGL)');
+  ok(await p.evaluate(() => !!document.querySelector('.ka .ka-stage canvas')), 'the animated portrait is drawn (WebGL)');
   await p.waitForTimeout(1200);
   const lit = await p.evaluate(() => document.querySelectorAll('.ka-words span.done,.ka-words span.now').length);
   ok(lit > 0 && lit < words, 'words light up as Krishna speaks', `${lit}/${words}`);
@@ -105,5 +108,38 @@ console.log('\n# Voice unavailable');
   ok((await p.textContent('.ka-status')).includes('Narration failed'), 'a voice error is explained on the portrait screen', await p.textContent('.ka-status'));
   await p.click('.ka-close'); await p.click('.hear-krishna'); await p.waitForTimeout(800);
   ok(await p.isVisible('.ka'), 'the member can try again after an error');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+console.log('\n# Talk to Krishna');
+{ const { ctx, p, errs } = await open({ paid: false, reply: HINDI, ask: false });
+  ok(await p.isVisible('#modeChat') && await p.isVisible('#modeTalk'), 'Ask Krishna has two sections: Chat with Krishna and Talk to Krishna');
+  await p.click('#modeTalk'); await p.waitForTimeout(600);
+  ok(!(await p.isVisible('#chatMode')) && await p.isVisible('#talkStage'), 'Talk to Krishna shows Krishna\'s portrait instead of the chat');
+  ok(await p.isVisible('#talkLocked') && !(await p.isVisible('#talkMic')), 'free members see what Talk to Krishna is and a way to join, not the mic');
+  await p.click('#modeChat');
+  ok(await p.isVisible('#chatMode') && !(await p.isVisible('#talkMode')), 'Chat with Krishna brings the text chat back');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+{ const { ctx, p, S, errs } = await open({ paid: true, reply: HINDI, ask: false });
+  await p.click('#modeTalk'); await p.waitForTimeout(800);
+  ok(await p.isVisible('#talkMic') && !(await p.isVisible('#talkLocked')), 'paid members get the mic');
+  ok(await p.evaluate(() => !!document.querySelector('#talkStage canvas')), 'the portrait is animated while waiting (WebGL)');
+  await p.click('#talkMic'); await p.waitForTimeout(1500);
+  ok((await p.textContent('#talkStatus')).startsWith('Listening'), 'tapping the mic starts listening', await p.textContent('#talkStatus'));
+  await p.click('#talkMic');
+  await p.waitForFunction(() => document.getElementById('talkStatus').textContent.includes('speaking'), null, { timeout: 8000 }).catch(() => {});
+  const calls = S.calls.filter(c => /tts-krishna|ask-krishna/.test(c.p)).map(c => ({ p: c.p.split('/').pop(), b: JSON.parse(c.body || '{}') }));
+  const stt = calls.find(c => c.b.operation === 'transcribe'), ask = calls.find(c => c.p === 'ask-krishna'), voice = calls.find(c => c.b.timestamps);
+  ok(stt && stt.b.audio_base64.length > 100 && /^audio\//.test(stt.b.mime_type), 'the recording is sent for speech-to-text', JSON.stringify(stt?.b.mime_type));
+  ok(ask && ask.b.voice === true && ask.b.question === 'मुझे अपने भविष्य की चिंता है' && ask.b.language === 'hi', 'the spoken question goes to Krishna for a short spoken reply, in the language spoken', JSON.stringify(ask?.b));
+  ok(voice && voice.b.language === 'hi' && !/BG/.test(voice.b.text), 'the reply is voiced in that language', JSON.stringify(voice?.b.language));
+  ok((await p.textContent('#talkStatus')).includes('speaking'), 'Krishna speaks the reply', await p.textContent('#talkStatus'));
+  ok((await p.textContent('#talkYou')).includes('भविष्य') && (await p.locator('#talkWords span').count()) > 3, 'the screen shows what was heard and Krishna\'s words');
+  ok((await p.textContent('#chat')).includes('🎙️ मुझे') && (await p.locator('#chat .bubble.assistant h3').count()) === 1, 'the spoken turn is added to the chat as well');
+  await p.click('#talkMic'); await p.waitForTimeout(500);
+  ok((await p.textContent('#talkStatus')).startsWith('Listening'), 'tapping the mic while Krishna speaks interrupts him and listens');
+  await p.click('#modeChat'); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => talkState) === 'idle', 'switching to Chat stops listening');
+  await p.click('#modeTalk'); await p.click('#talkMic'); await p.waitForTimeout(500);
+  await p.evaluate(() => showScreen('home')); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => talkState) === 'idle', 'leaving Ask Krishna stops the conversation');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 await b.close();

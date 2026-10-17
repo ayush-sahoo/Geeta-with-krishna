@@ -194,7 +194,11 @@ function validateModelReply(parsed:any, verses:Verse[]){
   return shapeReply({title:parsed.title,paragraphs,actions,follow_up:parsed.follow_up},[...cited].map(ref=>byRef.get(ref)!));
 }
 
-async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:number, withThinking:boolean, language=""){
+// Talk to Krishna: the reply is heard, not read, so keep it short and spoken.
+const VOICE_PROMPT=`
+VOICE CONVERSATION: The user is speaking aloud and will hear your reply in Krishna's voice. Answer like a short spoken reply: 1-2 short paragraphs, under about 90 words in total, simple sentences that sound natural when heard. Refer to verses in words (for example "as I told Arjuna"), still citing them in BG chapter.verse format. At most one action. Keep follow_up to one short question.`;
+
+async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:number, withThinking:boolean, language="", voice=false){
   const generationConfig:Record<string,unknown>={
     responseMimeType:"application/json",
     temperature:0.8,
@@ -207,14 +211,14 @@ async function geminiRequest(apiKey:string, contents:unknown[], maxOutputTokens:
     signal:AbortSignal.timeout(25000),
     headers:{ "x-goog-api-key":apiKey, "Content-Type":"application/json" },
     body:JSON.stringify({
-      systemInstruction:{ parts:[{text:SYSTEM_PROMPT+(language?`\nRESPONSE LANGUAGE: ${GITA_LANGUAGES[language]}. Use its native script for all prose, including actions and follow_up. Keep references in exactly BG chapter.verse format. This overrides language inferred from the user message.`:"")}] },
+      systemInstruction:{ parts:[{text:SYSTEM_PROMPT+(voice?VOICE_PROMPT:"")+(language?`\nRESPONSE LANGUAGE: ${GITA_LANGUAGES[language]}. Use its native script for all prose, including actions and follow_up. Keep references in exactly BG chapter.verse format. This overrides language inferred from the user message.`:"")}] },
       contents,
       generationConfig,
     }),
   });
 }
 
-async function callGemini(question:string, history:Turn[], verses:Verse[], language=""){
+async function callGemini(question:string, history:Turn[], verses:Verse[], language="", voice=false){
   const apiKey=Deno.env.get("GEMINI_API_KEY") ?? "";
   if(!apiKey) return null;
 
@@ -231,7 +235,7 @@ async function callGemini(question:string, history:Turn[], verses:Verse[], langu
   let budget=4096;
   for(let attempt=0; attempt<3; attempt++){
     let r:Response;
-    try{r=await geminiRequest(apiKey,contents,budget,withThinking,language);}
+    try{r=await geminiRequest(apiKey,contents,budget,withThinking,language,voice);}
     catch{console.error("Gemini request failed");return null;}
     if(!r.ok){
       console.error("Gemini error",r.status);
@@ -327,7 +331,7 @@ async function askAnonymously(req:Request, body:any, question:string, language:s
   let ai=null;
   try{
     const verses=await retrieveVerses(admin,question,[]);
-    ai=await callGemini(question,[],verses,language);
+    ai=await callGemini(question,[],verses,language,body?.voice===true);
   }finally{
     if(!ai){
       const {error:refundError}=await admin.rpc("refund_anon_question",{p_visitor_id:visitorId});
@@ -393,7 +397,7 @@ Deno.serve(async (req:Request)=>{
     let ai=null;
     try{
       const verses=await retrieveVerses(supabase,question,history);
-      ai=await callGemini(question,history,verses,language);
+      ai=await callGemini(question,history,verses,language,body?.voice===true);
     }finally{
       if(!ai&&freeQuestion){
         const {error}=await adminClient()!.rpc("refund_free_question",{p_user_id:userId});
