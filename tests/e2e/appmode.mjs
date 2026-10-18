@@ -21,6 +21,7 @@ console.log('\n# Website (not the app)');
 { const { ctx, p, errs } = await open('/');
   ok(!(await p.isVisible('.tabbar')) && await p.isVisible('.topbar .nav'), 'the website keeps its top menu and shows no bottom tabs');
   ok(await p.isVisible('#welcomeUser'), 'the website keeps its Sign in button');
+  ok(!(await p.getAttribute('meta[name=viewport]', 'content')).includes('user-scalable=no'), 'the website can still be zoomed');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 
 console.log('\n# Android app');
@@ -36,6 +37,7 @@ console.log('\n# Android app');
   const backs = [];
   for (let i = 0; i < 4; i++) { await p.goBack(); await p.waitForTimeout(250); backs.push(await screen(p)); }
   ok(backs.join(',') === 'chapter,explore,ask,home', 'the back button walks back through screens', backs.join(','));
+  ok((await p.getAttribute('meta[name=viewport]', 'content')).includes('user-scalable=no') && await p.evaluate(() => getComputedStyle(document.body).touchAction) === 'pan-x pan-y', 'the app cannot be zoomed in or out (pinch or double-tap)');
   ok(await p.evaluate(() => sessionStorage.getItem('gitaAppMode')) === '1', 'app layout is remembered for this app session');
   const box = await p.locator('.tabbar').boundingBox();
   ok(box && Math.abs(box.y + box.height - 844) < 2, 'tabs sit at the bottom of the screen', JSON.stringify(box));

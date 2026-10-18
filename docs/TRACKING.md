@@ -15,7 +15,7 @@ Loaded in `index.html`. The campaign is optimised for **Purchase**; don't rename
 | `InitiateCheckout` | standard | When the Razorpay checkout opens | ₹499 INR (annual) or ₹149 (1 month), `content_ids` `gita_annual` / `gita_monthly`; `Purchase` uses the plan paid. |
 | `Purchase` | standard | Access confirmed after returning from Razorpay | `trackConfirmedPurchase`. eventID `gita_purchase_<payment id>`, fires once per payment. Value is the amount actually paid. Also sent from the server by `razorpay-webhook` (Conversions API, same event id, deduplicated by Meta) once `META_CAPI_TOKEN` is set; the checkout passes `_fbp`/`_fbc` and the user agent in the Razorpay notes for matching. |
 | `ViewContent` | standard | Opening a verse | |
-| `Login`, `ScreenView`, `AskKrishnaUsed`, `CheckoutClick`, `CheckoutError`, `SaveVerse`, `RegistrationSubmitted`, `GoogleBlockedInApp`, `OpenInBrowser`, `OpenedFromInApp` | custom | As named | Diagnostics only. |
+| `Login`, `ScreenView`, `AskKrishnaUsed`, `CheckoutClick`, `CheckoutError`, `RegistrationSubmitted`, `GoogleBlockedInApp`, `OpenInBrowser`, `OpenedFromInApp` | custom | As named | Diagnostics only. |
 
 **Advanced matching.** When someone is signed in, the pixel is initialised with `{external_id, em | ph}`. The pixel hashes these (SHA-256) in the browser. `index.html` does this on page load for a stored session; `setMetaUser` in `app.js` does it when someone signs in during the visit. The privacy policy describes this.
 
