@@ -249,7 +249,7 @@ function stage(container){
       try{
         d=await clip;if(speech!==s)return'stopped';
         buffer=await ctx.decodeAudioData(Uint8Array.from(atob(d.audio_base64),c=>c.charCodeAt(0)).buffer);
-      }catch(e){if(speech!==s)return'stopped';stop();throw new Error('Audio stopped before the full reply finished. Please close and try again.')}
+      }catch(e){if(speech!==s)return'stopped';const partial=s.segs.length>0;stop();if(!partial)throw e;throw new Error('Audio stopped before the full reply finished. Please close and try again.')}
       if(speech!==s)return'stopped';
       const start=Math.max(next,ctx.currentTime+.05),source=ctx.createBufferSource();
       source.buffer=buffer;source.connect(ctx.destination);source.start(start);
