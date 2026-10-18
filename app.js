@@ -265,7 +265,41 @@ function renderVersePage(ch,container){const c=chapters[ch-1],start=(currentPage
 function changeVersePage(ch,page){if(page<1)return;const c=chapters[ch-1];if((page-1)*PAGE_SIZE>=c[1])return;currentPage=page;const el=document.getElementById(`ch-${ch}`);renderVersePage(ch,el.querySelector('.verse-list'));}
 function filterChapters(){const q=document.getElementById('chapterSearch').value.toLowerCase().trim();let count=0;document.querySelectorAll('.chapter-item').forEach((el,i)=>{const match=!q||chapters[i][0].toLowerCase().includes(q)||String(i+1)===q||String(i+1).padStart(2,'0')===q;el.hidden=!match;if(match)count++});document.getElementById('chapterResults').textContent=`${count} chapter${count===1?'':'s'}`;document.getElementById('emptyResults').hidden=count>0}
 
-function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1];document.getElementById('chapterKicker').textContent=`CHAPTER ${n}`;document.getElementById('chapterTitle').textContent=c[0];document.getElementById('chapterCount').textContent=`${c[1]} verses · ${c[2]}`;renderChapterPage();showScreen('chapter')}
+function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1];document.getElementById('chapterKicker').textContent=`CHAPTER ${n}`;document.getElementById('chapterTitle').textContent=c[0];document.getElementById('chapterCount').textContent=`${c[1]} verses · ${c[2]}`;renderChapterPage();renderChapterVideo(n);showScreen('chapter')}
+// Chapter explainer videos (animation by Spiritual Point, used with
+// permission). Chapter 1 is free; the rest are for members. The chapter-video
+// function returns a private link to the video in Cloudflare R2 for 3 hours.
+const CHAPTER_VIDEO_LENGTH=['6:58','9:12','7:54','8:59','7:20','8:35','8:35','9:04','10:10','11:12','9:59','8:22','8:20','9:03','9:41','7:18','8:38','10:45'];
+const CHAPTER_VIDEO_PAYWALL='Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.';
+function renderChapterVideo(n){
+  const box=document.getElementById('chapterVideo'),playing=box.querySelector('video');
+  if(playing&&box.dataset.chapter===String(n))return;
+  box.dataset.chapter=n;box.replaceChildren();
+  const open=n===1||hasLifetimeAccess(),poster=document.createElement('button');
+  poster.type='button';poster.className='chapter-video-poster';poster.style.backgroundImage=`url(assets/chapter-video/poster-${n}.webp)`;
+  poster.innerHTML=`<span class="cv-play" aria-hidden="true">${open?'▶':'🔒'}</span><span class="cv-label"><b>Watch this chapter explained</b><small><span>${CHAPTER_VIDEO_LENGTH[n-1]}</span> · <span>${open?'Animated video':'For members'}</span></small></span>`;
+  poster.setAttribute('aria-label','Watch this chapter explained');
+  poster.onclick=()=>playChapterVideo(n,poster);
+  const credit=document.createElement('small');credit.className='cv-credit';credit.textContent='Animation: Spiritual Point';
+  box.append(poster,credit);
+}
+async function playChapterVideo(n,poster){
+  if(n!==1&&!hasLifetimeAccess()){showPaywall('Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.');return}
+  logEvent('chapter_video_play');stopSpeech();poster.disabled=true;
+  try{
+    if(authSession?.access_token)await freshSession();
+    const r=await fetch(SUPA+'/functions/v1/chapter-video',{method:'POST',cache:'no-store',
+      headers:authSession?.access_token?authHeaders(authSession.access_token):{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({chapter:n})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===403&&d.paywall){showPaywall(CHAPTER_VIDEO_PAYWALL);return}
+    if(!r.ok||!d.url)throw new Error(d.error||'Could not load the video. Please try again.');
+    if(currentChapter!==n||!poster.isConnected)return;
+    const video=document.createElement('video');
+    Object.assign(video,{className:'chapter-video-player',controls:true,playsInline:true,preload:'metadata',poster:`assets/chapter-video/poster-${n}.webp`,src:d.url});
+    poster.replaceWith(video);video.play().catch(()=>{});
+  }catch(e){toast(e.message||'Could not load the video. Please try again.')}
+  finally{poster.disabled=false}
+}
 function renderChapterPage(){document.getElementById('chapterBannerArt').src=chapterArtwork[chapterArtMap[currentChapter-1]];const c=chapters[currentChapter-1],start=(currentPage-1)*PAGE_SIZE+1,end=Math.min(start+PAGE_SIZE-1,c[1]);document.getElementById('verseRange').textContent=`${start}–${end} of ${c[1]}`;document.getElementById('pageStatus').textContent=`${currentPage} / ${Math.ceil(c[1]/PAGE_SIZE)}`;document.getElementById('prevPage').disabled=currentPage===1;document.getElementById('nextPage').disabled=end===c[1];document.getElementById('chapterVerseGrid').innerHTML=Array.from({length:end-start+1},(_,k)=>{const v=start+k;return `<button class="verse-link" onclick="openVerse(${currentChapter},${v})"><strong>Verse ${v}</strong><span aria-hidden="true">↗</span></button>`}).join('')}
 function chapterPrev(){if(currentPage>1){currentPage--;renderChapterPage()}}
 function chapterNext(){const c=chapters[currentChapter-1];if(currentPage*PAGE_SIZE<c[1]){currentPage++;renderChapterPage()}}
@@ -1009,6 +1043,7 @@ function showScreen(id,fromHistory=false){
   if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
   if(id!=='detail')stopSpeech();
   if(id!=='ask')talkCancel();
+  if(id!=='chapter')document.querySelectorAll('#chapterVideo video').forEach(v=>v.pause());
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   const nav=id==='home'?'homeNav':id==='ask'?'askNav':['explore','chapter','detail'].includes(id)?'exploreNav':null;
@@ -1044,6 +1079,7 @@ function showPaywall(lead="Keep Krishna's guidance with you every day."){
 function closeOffer(){showScreen(offerReturnScreen||'home');}
 function renderAccessState(){
   renderTalkAccess();
+  if($('chapter').classList.contains('active'))renderChapterVideo(currentChapter);
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
   const signedOut=!authSession?.access_token,oneMore=freeLeft&&signedOut&&anonQuestionUsed();
