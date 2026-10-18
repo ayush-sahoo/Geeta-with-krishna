@@ -58,7 +58,6 @@ The app is a single page. `showScreen(id)` switches between `<section class="scr
 | `gitaVisitorId` | Anonymous visitor id used by the first-party analytics. |
 | `gitaMetaRegistration:<user id>` | Marks that the Meta sign-up event was sent for this account. |
 | `gitaMetaPurchase:<payment id>`, `metaPurchaseTracked` | Stop the Meta Purchase event from firing twice. |
-| `savedVerses` | Saved verses (kept in the browser only). |
 | `gitaAdminSession` | The admin dashboard's own session. |
 
 ## Backend (Supabase project `bkwvuckznpaawmqrjjgk`, Mumbai)

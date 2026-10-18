@@ -293,16 +293,23 @@ for (const t of ['deep', 'today', 'meaning']) { await page.click(`#meaningTabs b
 check((await page.textContent('#panelTitle')).trim() === 'MEANING', 'meaning tabs switch');
 await page.click('#nextVerse'); await wait(300);
 check((await page.textContent('#detailKicker')).includes('12.20'), 'next verse works', await page.textContent('#detailKicker'));
-await page.click('#saveVerse'); await wait(100);
-check((await page.textContent('#saveVerse')).includes('Saved'), 'save verse works');
+check(!(await page.$('#saveVerse')), 'the verse page has no Save button');
 await shot('04-verse-detail');
-await page.evaluate(() => { window.playBlob = async () => {}; }); // headless can't decode the fake mp3
+await page.evaluate(() => { window.playBlob = () => new Promise(() => {}); }); // headless can't decode the fake mp3; a clip "plays" until stopped
 await page.click('#audioBtn'); await wait(800);
 const tts = S.calls.find(c => c.p === '/functions/v1/tts-krishna');
 check(!!tts && tts.auth === 'Bearer tok_u1', 'narration request carries the user\'s login (required by new tts-krishna)', tts?.auth);
 await wait(600); const spoken = S.calls.filter(c => c.p === '/functions/v1/tts-krishna').map(c => JSON.parse(c.body)).find(b => b.kind === 'meaning' && b.operation !== 'translate');
 check(!!spoken && spoken.language === 'hi' && spoken.text.startsWith('[hi] '), 'default narration speaks the meaning in Hindi (as before)', JSON.stringify(spoken));
-await page.evaluate(() => stopSpeech());
+const player = () => page.evaluate(() => ({ btn: $('audioBtn').textContent, label: $('audioBtn').getAttribute('aria-label'), status: $('audioStatus').textContent, controls: !$('audioControls').hidden }));
+let np = await player();
+check(np.btn === '❚❚' && np.label === 'Pause' && np.status === 'Chanting the verse' && np.controls, 'while playing: a pause button, restart and stop, and what is playing', JSON.stringify(np));
+await page.click('#audioBtn'); np = await player();
+check(np.btn === '▶' && np.label === 'Resume' && np.status.startsWith('Paused') && await page.evaluate(() => speaking), 'tapping it pauses without losing the place', JSON.stringify(np));
+await page.click('#audioBtn'); np = await player();
+check(np.btn === '❚❚' && np.status === 'Chanting the verse', 'tapping again resumes', JSON.stringify(np));
+await page.click('#audioStop'); np = await player();
+check(np.btn === '▶' && np.label === 'Play verse and meaning' && !np.controls && np.status.includes('Female chant'), 'stop ends the narration and resets the player', JSON.stringify(np));
 
 // Chat
 await page.evaluate(() => showScreen('ask')); await wait(200);

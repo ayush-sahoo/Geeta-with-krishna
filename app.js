@@ -119,7 +119,6 @@ let authSession=null,accountProfile=null,authPageMode='login',selectedVerse=null
 let accountRequestGeneration=0;
 let speaking=false,currentAudio=null,ambientAudio=null,audioUrl=null,chatBusy=false,verseRequest=0;
 const verseCache=new Map();
-let saved;try{saved=new Set(JSON.parse(localStorage.getItem('savedVerses')||'[]'))}catch(e){saved=new Set()}
     const LIFE_TOPICS={
       love:{
         label:'Love',icon:'♥',kicker:'Love without possession',
@@ -1178,7 +1177,7 @@ async function openVerse(ch,v){
   $('detailKicker').textContent='BHAGAVAD GITA '+ch+'.'+v;
   document.querySelector('#detail h1').textContent='';
   $('detailSanskrit').textContent='Loading verse…';$('detailTranslit').textContent='';
-  $('detailMeaning').textContent='';$('audioBtn').disabled=true;$('saveVerse').disabled=true;
+  $('detailMeaning').textContent='';$('audioBtn').disabled=true;
   try{
     let rows=verseCache.get(Number(ch));
     if(!rows){rows=await api('gita_verses?select=*&chapter_id=eq.'+Number(ch)+'&order=verse_number.asc');verseCache.set(Number(ch),rows)}
@@ -1192,8 +1191,7 @@ async function openVerse(ch,v){
     document.querySelector('#detail h1').textContent=speaker?speaker[1]:'';
     $('detailSanskrit').textContent=speaker?text.slice(speaker[0].length).trim():text;
     $('detailTranslit').textContent=verse.transliteration||'';
-    $('audioBtn').disabled=false;$('saveVerse').disabled=false;
-    $('saveVerse').textContent=saved.has(verse.id)?'★ Saved':'☆ Save';
+    $('audioBtn').disabled=false;
     $('prevVerse').disabled=Number(v)<=1;
     $('nextVerse').disabled=Number(v)>=chapters[ch-1][1];
     renderTab('meaning');
@@ -1330,21 +1328,40 @@ function renderTab(tab){
 }
 
 function stepVerse(delta){if(selectedVerse)openVerse(Number(selectedVerse.chapter_id),Number(selectedVerse.verse_number)+delta)}
-function toggleSave(){
-  if(!selectedVerse)return;const id=selectedVerse.id;
-  saved.has(id)?saved.delete(id):saved.add(id);
-  if(saved.has(id))trackMeta('SaveVerse',{content_category:'verse'},true);
-  localStorage.setItem('savedVerses',JSON.stringify([...saved]));
-  $('saveVerse').textContent=saved.has(id)?'★ Saved':'☆ Save';
-  toast(saved.has(id)?'Verse saved':'Removed from saved');
+const AUDIO_ABOUT='Female chant → male meaning · Indian Classical Raga';
+// Hear this verse: the main button plays, pauses and resumes; ↺ starts again
+// and ■ stops. The line under the title says what is playing.
+let narrationPaused=false,narrationStatus='',resumeNarration=null;
+function narrationUI(){
+  const btn=$('audioBtn');if(!btn)return;
+  const playing=speaking&&!narrationPaused;
+  btn.textContent=playing?'❚❚':'▶';
+  btn.setAttribute('aria-label',!speaking?'Play verse and meaning':playing?'Pause':'Resume');
+  $('audioControls').hidden=!speaking;
+  $('audioStatus').textContent=!speaking?AUDIO_ABOUT:narrationPaused?'Paused · '+narrationStatus:narrationStatus;
 }
+function setNarration(status){narrationStatus=status;narrationUI();}
+function pauseSpeech(){
+  if(!speaking||narrationPaused)return;narrationPaused=true;
+  currentAudio?.pause();ambientAudio?.pause();narrationUI();
+}
+function resumeSpeech(){
+  if(!speaking||!narrationPaused)return;narrationPaused=false;
+  currentAudio?.play().catch(()=>{});ambientAudio?.play().catch(()=>{});
+  resumeNarration?.();narrationUI();
+}
+function restartSpeech(){stopSpeech();speak();}
 function stopSpeech(){
   narrationGeneration++;cancelPlayback?.();cancelPlayback=null;
-  speaking=false;
+  speaking=false;narrationPaused=false;resumeNarration?.();
   if(currentAudio){currentAudio.pause();currentAudio=null;}
   if(ambientAudio){ambientAudio.pause();ambientAudio=null;}
   if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null;}
-  if($('audioBtn')){$('audioBtn').textContent='▶';$('audioBtn').setAttribute('aria-label','Play verse and meaning');}
+  narrationUI();
+}
+// Waits while the narration is paused (a clip that arrives during a pause starts on resume).
+function untilResumed(){
+  return narrationPaused?new Promise(ok=>{resumeNarration=()=>{resumeNarration=null;ok()}}):Promise.resolve();
 }
 // Safari (iPhone and Mac) only lets audio start close to a tap. Narration
 // clips arrive seconds later, so one player is unlocked during the tap
@@ -1355,7 +1372,7 @@ function unlockVoice(){
   voicePlayer=voicePlayer||new Audio();
   voicePlayer.src=SILENT_AUDIO;voicePlayer.play().catch(()=>{});
 }
-function playBlob(blob){return new Promise((resolve,reject)=>{
+async function playBlob(blob){await untilResumed();if(!speaking)return;return new Promise((resolve,reject)=>{
   const url=URL.createObjectURL(blob),a=voicePlayer||new Audio();a.src=url;audioUrl=url;currentAudio=a;
   const clean=()=>{URL.revokeObjectURL(url);if(currentAudio===a){currentAudio=null;audioUrl=null;}cancelPlayback=null;};
   cancelPlayback=()=>{a.onended=a.onerror=null;a.pause();clean();resolve()};
@@ -1394,18 +1411,19 @@ async function playText(text,language,generation,firstClip){
   for(let i=0;i<clips.length;i++){
     const blob=await next;
     if(generation!==narrationGeneration)return;
+    setNarration(clips.length>1?`Meaning · part ${i+1} of ${clips.length}`:'Meaning');
     next=i+1<clips.length?fetchTTS(clips[i+1],'meaning',null,language):null;next?.catch(()=>{});
     await playBlob(blob);
     if(generation!==narrationGeneration)return;
   }
 }
 async function speak(){
-  if(speaking){stopSpeech();return}logOnce('play_verse');if(!selectedVerse||!hasLifetimeAccess())return;
+  if(speaking){narrationPaused?resumeSpeech():pauseSpeech();return}logOnce('play_verse');if(!selectedVerse||!hasLifetimeAccess())return;
   stopSpeech();const generation=narrationGeneration,v=selectedVerse,ready=meaningReady;
   // Start both players inside the tap so Safari allows them to play later.
   unlockVoice();
   ambientAudio=new Audio('/alex-morgan-indian-classical-raga-537491.mp3');ambientAudio.loop=true;ambientAudio.volume=.18;ambientAudio.play().catch(()=>{});
-  speaking=true;$('audioBtn').textContent='■';$('audioBtn').setAttribute('aria-label','Stop narration');
+  speaking=true;setNarration('Getting the verse ready…');
   try{
     // The chant is Sanskrit whatever the chosen language.
     const chantClip=fetchTTS(v.sanskrit,'verse',v,'hi');chantClip.catch(()=>{});
@@ -1415,6 +1433,7 @@ async function speak(){
     // Fetch the meaning audio while the chant plays.
     const meaningClip=fetchTTS(textClips(text)[0],'meaning',null,language);meaningClip.catch(()=>{});
     const chant=await chantClip;if(generation!==narrationGeneration)return;
+    setNarration('Chanting the verse');
     await playBlob(chant);if(generation!==narrationGeneration)return;
     await playText(text,language,generation,meaningClip);
   }catch(e){if(generation===narrationGeneration)toast(e.message||'Narration could not be played');}
