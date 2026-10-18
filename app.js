@@ -315,6 +315,8 @@ async function playChapterVideo(n,part){
     if(!video){
       video=document.createElement('video');
       Object.assign(video,{className:'chapter-video-player',controls:true,playsInline:true,preload:'metadata',poster:`assets/chapter-video/poster-${n}.webp`});
+      // No download button or long-press "Save video" (members-only videos).
+      video.setAttribute('controlsList','nodownload');video.oncontextmenu=e=>e.preventDefault();
       video.onended=()=>{const next=Number(video.dataset.part)+1;if(next<links.length)playChapterVideo(n,next)};
       box.querySelector('.chapter-video-poster').replaceWith(video);
     }

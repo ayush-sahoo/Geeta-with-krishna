@@ -22,11 +22,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
+import com.google.androidbrowserhelper.trusted.TwaLauncher;
+
 
 
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
     private static final int ASK_NOTIFICATIONS = 1;
+    private static final String CHROME = "com.android.chrome";
 
     // On Android 13 and later the daily verse notification needs permission.
     // Ask once, on the first launch, and open the site after the answer.
@@ -34,6 +37,19 @@ public class LauncherActivity
         if (Build.VERSION.SDK_INT < 33) return false;
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return false;
         return !getSharedPreferences("app", MODE_PRIVATE).getBoolean("askedNotifications", false);
+    }
+
+    // Open the site in Chrome when it is installed, even if another browser is
+    // the default: Samsung Internet's dark mode recolours the site, while
+    // Chrome respects its light-only design (color-scheme: only light).
+    @Override
+    protected TwaLauncher createTwaLauncher() {
+        try {
+            if (getPackageManager().getApplicationInfo(CHROME, 0).enabled) return new TwaLauncher(this, CHROME);
+        } catch (PackageManager.NameNotFoundException e) {
+            // No Chrome: use the default browser.
+        }
+        return super.createTwaLauncher();
     }
 
     @Override
