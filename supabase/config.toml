@@ -42,6 +42,10 @@ verify_jwt = false
 [functions.meta-purchase-retry]
 verify_jwt = false
 
+# Chapter explainer videos: chapter 1 for everyone, the rest checked for paid access in code.
+[functions.chapter-video]
+verify_jwt = false
+
 # The one function that keeps gateway JWT checking on: the site calls it with
 # the publishable key, and it only returns the fixed UI translation catalog.
 [functions.website-language]
