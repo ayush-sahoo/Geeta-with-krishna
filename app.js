@@ -1152,7 +1152,17 @@ async function loadDailyVerse(){
     if(line)$('dailySanskrit').textContent=line;
     $('dailyMeaning').textContent=meaning.length>150?meaning.slice(0,meaning.lastIndexOf(' ',147))+'…':meaning;
     $('dailyRead').onclick=()=>openVerse(ch,n);
+    try{localStorage.setItem('gitaDailyVerse',JSON.stringify({ch,n,line,meaning}))}catch(e){}
   }catch(e){}
+}
+// Links into a screen, used by the Android app's shortcuts and its daily
+// verse notification: ?open=ask, ?open=talk, or ?open=verse (today's verse).
+function openFromLink(){
+  const q=new URLSearchParams(location.search),open=q.get('open');
+  if(!open)return;
+  q.delete('open');history.replaceState(history.state,'',location.pathname+(q.size?'?'+q:'')+location.hash);
+  if(open==='ask'||open==='talk'){showScreen('ask');setAskMode(open)}
+  else if(open==='verse')document.querySelector('#home .verse-mini')?.scrollIntoView({block:'center'});
 }
 async function openVerse(ch,v){
   logOnce('open_verse');
@@ -1779,7 +1789,9 @@ logVisit();
 setupInAppAuth();
 let hadSession=false;try{hadSession=!!localStorage.getItem('gitaAuthSession')}catch(e){}
 if(typeof setupChatHistory==='function')setupChatHistory();
-setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();
+setAuthPageMode(IN_APP_NAME&&!hadSession?'signup':'login');updateAccountUI();showScreen('home');loadDailyVerse();openFromLink();
+// Offline screen (sw.js): shown instead of the browser's error when there is no connection.
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 if(new URLSearchParams(location.search).get('from')==='inapp'){trackMeta('OpenedFromInApp',{},true);history.replaceState({},document.title,location.pathname+location.hash)}
 (async()=>{const oauth=await consumeOAuthHash().catch(()=>false);if(!oauth)await refreshAuthSession();await handlePaymentReturn().catch(()=>false)})();
 

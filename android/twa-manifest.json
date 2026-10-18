@@ -20,7 +20,7 @@
     "path": "../gitaverse-upload.jks (keep outside the repo)",
     "alias": "upload"
   },
-  "appVersionCode": 2,
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-core",
   "fallbackType": "customtabs",
@@ -37,5 +37,5 @@
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "displayOverride": [],
-  "appVersionName": "1.0.1"
+  "appVersionName": "1.0.2"
 }
