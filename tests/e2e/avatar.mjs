@@ -152,6 +152,12 @@ console.log('\n# Talk to Krishna');
   ok(voices.length === 1 && voices[0].b.language === 'hi' && !voices[0].b.text.startsWith('मेरे प्रिय'), 'the first sentence comes voiced with the reply; only the rest is voiced by the app, in the language spoken', JSON.stringify(voices.map(v => v.b.text)));
   ok((await p.textContent('#talkStatus')).includes('speaking'), 'Krishna speaks the reply', await p.textContent('#talkStatus'));
   ok((await p.textContent('#talkYou')).includes('भविष्य') && (await p.locator('#talkWords span').count()) > 3, 'the screen shows what was heard and Krishna\'s words');
+  const fit = await p.evaluate(() => {
+    const box = r => document.querySelector(r).getBoundingClientRect(), card = box('.talk-card'), text = box('.talk-text'), you = box('#talkYou');
+    const lh = parseFloat(getComputedStyle(document.getElementById('talkWords')).lineHeight);
+    return { inCard: text.bottom <= card.bottom + 1 && you.top >= card.top, lines: text.height / lh, micOnScreen: box('#talkMic').bottom <= innerHeight };
+  });
+  ok(fit.inCard && Math.abs(fit.lines - 3) < 0.05 && fit.micOnScreen, 'the question and reply sit over the portrait as subtitles (exactly 3 lines) and the mic stays on screen', JSON.stringify(fit));
   ok((await p.textContent('#chat')).includes('🎙️ मुझे') && (await p.locator('#chat .bubble.assistant h3').count()) === 1, 'the spoken turn is added to the chat as well');
   await p.click('#talkMic'); await p.waitForTimeout(500);
   ok((await p.textContent('#talkStatus')).startsWith('Listening'), 'tapping the mic while Krishna speaks interrupts him and listens');
