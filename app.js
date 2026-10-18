@@ -273,7 +273,7 @@ function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1]
 // parts in Cloudflare R2 for 3 hours; each part plays on into the next.
 const CHAPTER_VIDEO_LENGTH=['6:58','9:12','7:54','8:59','7:20','8:35','8:35','9:04','10:10','11:12','9:59','8:22','8:20','9:03','9:41','7:18','8:38','10:45'];
 // Parts per chapter. Must match PARTS in the chapter-video function.
-const CHAPTER_VIDEO_PARTS=[6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6];
+const CHAPTER_VIDEO_PARTS=[6,8,7,7,6,7,7,7,8,9,8,7,7,7,8,6,7,9];
 const CHAPTER_VIDEO_PAYWALL='Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.';
 function renderChapterVideo(n){
   const box=document.getElementById('chapterVideo');

@@ -15,7 +15,7 @@ const corsHeaders = {
 const FREE_CHAPTERS = new Set([1]);
 const LINK_SECONDS = 3 * 60 * 60;
 // Parts per chapter. Must match CHAPTER_VIDEO_PARTS in app.js.
-const PARTS = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6];
+const PARTS = [6,8,7,7,6,7,7,7,8,9,8,7,7,7,8,6,7,9];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
