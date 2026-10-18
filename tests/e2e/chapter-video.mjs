@@ -66,6 +66,7 @@ console.log('\n# Visitor (not a member)');
   ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-1-part-4.mp4') && await p.evaluate(() => document.querySelectorAll('#chapterVideo .cv-part')[3].classList.contains('active')), 'tapping a part number plays that part');
   ok(videoCalls(S).length === 1, 'the links are fetched once for the whole chapter', String(videoCalls(S).length));
   ok(await p.evaluate(() => { const v = document.querySelector('#chapterVideo video'); return v.controls && v.playsInline; }), 'the player has controls and plays inline on phones');
+  ok(await p.evaluate(() => { const v = document.querySelector('#chapterVideo video'); return v.getAttribute('controlslist') === 'nodownload' && v.dispatchEvent(new MouseEvent('contextmenu', { cancelable: true })) === false; }), 'the player has no download button or long-press save menu');
   await p.evaluate(() => showScreen('home')); await p.evaluate(() => showChapterPage(1)); await p.waitForTimeout(100);
   ok(await p.isVisible('#chapterVideo'), 'returning to the chapter keeps the video card');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
