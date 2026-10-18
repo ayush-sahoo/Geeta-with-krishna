@@ -1,8 +1,11 @@
 // Chapter explainer videos: chapter 1 plays for everyone, other chapters for
-// members. chapter-video returns a short-lived private link to the video.
+// members. Each chapter is in short parts; chapter-video returns short-lived
+// private links to all of them, and each part plays on into the next.
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8768';
 const ok = (c, m, d = '') => console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' : ' -> ' + d));
+const PARTS = JSON.parse(readFileSync(new URL('../../app.js', import.meta.url), 'utf8').match(/const CHAPTER_VIDEO_PARTS=(\[[\d,]+\])/)[1]);
 const b = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 
 async function open({ paid, signedIn = paid, videoStatus = 200 }) {
@@ -24,7 +27,8 @@ async function open({ paid, signedIn = paid, videoStatus = 200 }) {
     if (p === '/functions/v1/chapter-video') {
       const { chapter } = JSON.parse(req.postData() || '{}');
       if (videoStatus !== 200) return json({ error: 'This video is not available yet.' }, videoStatus);
-      return json({ url: `https://videos.example/gita-chapter-${chapter}.mp4?X-Amz-Signature=test`, expires_in: 10800 });
+      const count = PARTS[chapter - 1];
+      return json({ parts: Array.from({ length: count }, (_, k) => `https://videos.example/gita-chapter-${chapter}-part-${k + 1}.mp4?X-Amz-Signature=test`), expires_in: 10800 });
     }
     return json([]);
   });
@@ -46,12 +50,21 @@ console.log('\n# Visitor (not a member)');
   ok((await p.getAttribute('#chapterVideo .chapter-video-poster', 'style')).includes('poster-2.webp'), 'the card shows a still from that chapter');
   await p.click('#chapterVideo .chapter-video-poster'); await p.waitForTimeout(300);
   ok((await screen(p)) === 'offerScreen' && !videoCalls(S).length, 'tapping a members-only video opens the plans, without asking for the video', await screen(p));
+  await p.evaluate(() => showChapterPage(2)); await p.waitForTimeout(200);
+  await p.click('#chapterVideo .cv-part:nth-of-type(2)'); await p.waitForTimeout(300);
+  ok((await screen(p)) === 'offerScreen' && !videoCalls(S).length, 'members-only part numbers open the plans too', await screen(p));
   await p.evaluate(() => showChapterPage(1)); await p.waitForTimeout(200);
   ok((await p.textContent('#chapterVideo')).includes('Animated video') && (await p.textContent('#chapterVideo')).includes('6:58'), 'chapter 1 is free and shows its length');
   await p.click('#chapterVideo .chapter-video-poster'); await p.waitForSelector('#chapterVideo video', { timeout: 4000 }).catch(() => {});
   const [call] = videoCalls(S);
   ok(call && JSON.parse(call.body).chapter === 1 && !call.auth, 'chapter 1 plays without signing in', JSON.stringify(call));
-  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-1.mp4'), 'the video player loads the private link');
+  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-1-part-1.mp4'), 'the video player starts with part 1');
+  ok(await p.evaluate(() => document.querySelectorAll('#chapterVideo .cv-part').length === CHAPTER_VIDEO_PARTS[0] && document.querySelector('#chapterVideo .cv-part').classList.contains('active')), 'the parts are listed and part 1 is marked');
+  await p.evaluate(() => document.querySelector('#chapterVideo video').dispatchEvent(new Event('ended'))); await p.waitForTimeout(200);
+  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-1-part-2.mp4'), 'when a part ends the next part plays');
+  await p.click('#chapterVideo .cv-part:nth-of-type(4)'); await p.waitForTimeout(200);
+  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-1-part-4.mp4') && await p.evaluate(() => document.querySelectorAll('#chapterVideo .cv-part')[3].classList.contains('active')), 'tapping a part number plays that part');
+  ok(videoCalls(S).length === 1, 'the links are fetched once for the whole chapter', String(videoCalls(S).length));
   ok(await p.evaluate(() => { const v = document.querySelector('#chapterVideo video'); return v.controls && v.playsInline; }), 'the player has controls and plays inline on phones');
   await p.evaluate(() => showScreen('home')); await p.evaluate(() => showChapterPage(1)); await p.waitForTimeout(100);
   ok(await p.isVisible('#chapterVideo'), 'returning to the chapter keeps the video card');
@@ -64,7 +77,7 @@ console.log('\n# Member');
   await p.click('#chapterVideo .chapter-video-poster'); await p.waitForSelector('#chapterVideo video', { timeout: 4000 }).catch(() => {});
   const [call] = videoCalls(S);
   ok(call && JSON.parse(call.body).chapter === 5 && call.auth === 'Bearer tok_u1', 'the video request carries the member login', JSON.stringify(call));
-  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-5.mp4'), 'chapter 5 video loads');
+  ok((await p.getAttribute('#chapterVideo video', 'src') || '').includes('gita-chapter-5-part-1.mp4'), 'chapter 5 video loads');
   await p.evaluate(() => showChapterPage(6)); await p.waitForTimeout(100);
   ok(!(await p.isVisible('#chapterVideo video')) && (await p.getAttribute('#chapterVideo .chapter-video-poster', 'style')).includes('poster-6.webp'), 'another chapter shows its own video card');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
