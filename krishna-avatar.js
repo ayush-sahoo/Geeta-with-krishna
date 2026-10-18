@@ -4,7 +4,8 @@
 // voice, the eyes blink and the head sways a little. Loaded on first use.
 (()=>{
 // Landmarks are in pixels of the original 1254 px portrait; the shipped image
-// is the 800 px square starting at (250,120).
+// is the 800 px square starting at (250,120). The flute and the hand holding it
+// were painted out below the chin (the face is the original, pixel for pixel).
 const TEX={x:250,y:120,s:800},VIEW={x:270,y:140,s:760};
 const SEAM=[[TEX.x,611],[599,611],[625,604],[650,600],[675,590],[700,580],[710,576],[TEX.x+TEX.s,576]];
 const XL=599,XR=710,XC=(XL+XR)/2,HW=(XR-XL)/2;
