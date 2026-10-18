@@ -265,7 +265,65 @@ function renderVersePage(ch,container){const c=chapters[ch-1],start=(currentPage
 function changeVersePage(ch,page){if(page<1)return;const c=chapters[ch-1];if((page-1)*PAGE_SIZE>=c[1])return;currentPage=page;const el=document.getElementById(`ch-${ch}`);renderVersePage(ch,el.querySelector('.verse-list'));}
 function filterChapters(){const q=document.getElementById('chapterSearch').value.toLowerCase().trim();let count=0;document.querySelectorAll('.chapter-item').forEach((el,i)=>{const match=!q||chapters[i][0].toLowerCase().includes(q)||String(i+1)===q||String(i+1).padStart(2,'0')===q;el.hidden=!match;if(match)count++});document.getElementById('chapterResults').textContent=`${count} chapter${count===1?'':'s'}`;document.getElementById('emptyResults').hidden=count>0}
 
-function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1];document.getElementById('chapterKicker').textContent=`CHAPTER ${n}`;document.getElementById('chapterTitle').textContent=c[0];document.getElementById('chapterCount').textContent=`${c[1]} verses · ${c[2]}`;renderChapterPage();showScreen('chapter')}
+function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1];document.getElementById('chapterKicker').textContent=`CHAPTER ${n}`;document.getElementById('chapterTitle').textContent=c[0];document.getElementById('chapterCount').textContent=`${c[1]} verses · ${c[2]}`;renderChapterPage();renderChapterVideo(n);showScreen('chapter')}
+// Chapter explainer videos (Spiritual Point's animation, licensed and
+// rebranded with the creator's agreement), each chapter in short parts of
+// about 1-1.5 minutes cut at sentence ends. Chapter 1 is free; the rest are
+// for members. The chapter-video function returns private links to the
+// parts in Cloudflare R2 for 3 hours; each part plays on into the next.
+const CHAPTER_VIDEO_LENGTH=['6:58','9:12','7:54','8:59','7:20','8:35','8:35','9:04','10:10','11:12','9:59','8:22','8:20','9:03','9:41','7:18','8:38','10:45'];
+// Parts per chapter. Must match PARTS in the chapter-video function.
+const CHAPTER_VIDEO_PARTS=[6,8,7,7,6,7,7,7,8,9,8,7,7,7,8,6,7,9];
+const CHAPTER_VIDEO_PAYWALL='Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.';
+function renderChapterVideo(n){
+  const box=document.getElementById('chapterVideo');
+  if(box.querySelector('video')&&box.dataset.chapter===String(n))return;
+  box.dataset.chapter=n;box.replaceChildren();
+  const open=n===1||hasLifetimeAccess(),poster=document.createElement('button'),parts=document.createElement('div');
+  poster.type='button';poster.className='chapter-video-poster';poster.style.backgroundImage=`url(assets/chapter-video/poster-${n}.webp)`;
+  poster.innerHTML=`<span class="cv-play" aria-hidden="true">${open?'▶':'🔒'}</span><span class="cv-label"><b>Watch this chapter explained</b><small><span>${CHAPTER_VIDEO_LENGTH[n-1]}</span> · <span>${open?'Animated video':'For members'}</span></small></span>`;
+  poster.setAttribute('aria-label','Watch this chapter explained');
+  poster.onclick=()=>playChapterVideo(n,0);
+  parts.className='cv-parts';
+  parts.innerHTML=`<span class="cv-parts-title">Parts</span>`+Array.from({length:CHAPTER_VIDEO_PARTS[n-1]},(_,k)=>`<button type="button" class="cv-part" aria-label="Part ${k+1}">${k+1}</button>`).join('');
+  parts.querySelectorAll('.cv-part').forEach((b,k)=>b.onclick=()=>playChapterVideo(n,k));
+  box.append(poster,parts);
+}
+// Links for the chapter on screen, reused while they are fresh.
+let chapterVideoLinks=null;
+async function chapterVideoParts(n){
+  if(chapterVideoLinks?.chapter===n&&chapterVideoLinks.until>Date.now())return chapterVideoLinks.parts;
+  if(authSession?.access_token)await freshSession();
+  const r=await fetch(SUPA+'/functions/v1/chapter-video',{method:'POST',cache:'no-store',
+    headers:authSession?.access_token?authHeaders(authSession.access_token):{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({chapter:n})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===403&&d.paywall){showPaywall(CHAPTER_VIDEO_PAYWALL);return null}
+  if(!r.ok||!Array.isArray(d.parts)||!d.parts.length)throw new Error(d.error||'Could not load the video. Please try again.');
+  chapterVideoLinks={chapter:n,parts:d.parts,until:Date.now()+(Number(d.expires_in||0)-600)*1000};
+  return d.parts;
+}
+async function playChapterVideo(n,part){
+  if(n!==1&&!hasLifetimeAccess()){showPaywall('Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.');return}
+  const box=document.getElementById('chapterVideo');
+  if(box.dataset.busy)return;
+  if(!box.querySelector('video'))logEvent('chapter_video_play');
+  stopSpeech();box.dataset.busy='1';
+  try{
+    const links=await chapterVideoParts(n);
+    if(!links||currentChapter!==n||box.dataset.chapter!==String(n))return;
+    let video=box.querySelector('video');
+    if(!video){
+      video=document.createElement('video');
+      Object.assign(video,{className:'chapter-video-player',controls:true,playsInline:true,preload:'metadata',poster:`assets/chapter-video/poster-${n}.webp`});
+      video.onended=()=>{const next=Number(video.dataset.part)+1;if(next<links.length)playChapterVideo(n,next)};
+      box.querySelector('.chapter-video-poster').replaceWith(video);
+    }
+    video.dataset.part=part;video.src=links[part];
+    box.querySelectorAll('.cv-part').forEach((b,k)=>b.classList.toggle('active',k===part));
+    video.play().catch(()=>{});
+  }catch(e){toast(e.message||'Could not load the video. Please try again.')}
+  finally{delete box.dataset.busy}
+}
 function renderChapterPage(){document.getElementById('chapterBannerArt').src=chapterArtwork[chapterArtMap[currentChapter-1]];const c=chapters[currentChapter-1],start=(currentPage-1)*PAGE_SIZE+1,end=Math.min(start+PAGE_SIZE-1,c[1]);document.getElementById('verseRange').textContent=`${start}–${end} of ${c[1]}`;document.getElementById('pageStatus').textContent=`${currentPage} / ${Math.ceil(c[1]/PAGE_SIZE)}`;document.getElementById('prevPage').disabled=currentPage===1;document.getElementById('nextPage').disabled=end===c[1];document.getElementById('chapterVerseGrid').innerHTML=Array.from({length:end-start+1},(_,k)=>{const v=start+k;return `<button class="verse-link" onclick="openVerse(${currentChapter},${v})"><strong>Verse ${v}</strong><span aria-hidden="true">↗</span></button>`}).join('')}
 function chapterPrev(){if(currentPage>1){currentPage--;renderChapterPage()}}
 function chapterNext(){const c=chapters[currentChapter-1];if(currentPage*PAGE_SIZE<c[1]){currentPage++;renderChapterPage()}}
@@ -1009,6 +1067,7 @@ function showScreen(id,fromHistory=false){
   if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
   if(id!=='detail')stopSpeech();
   if(id!=='ask')talkCancel();
+  if(id!=='chapter')document.querySelectorAll('#chapterVideo video').forEach(v=>v.pause());
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   const nav=id==='home'?'homeNav':id==='ask'?'askNav':['explore','chapter','detail'].includes(id)?'exploreNav':null;
@@ -1044,6 +1103,7 @@ function showPaywall(lead="Keep Krishna's guidance with you every day."){
 function closeOffer(){showScreen(offerReturnScreen||'home');}
 function renderAccessState(){
   renderTalkAccess();
+  if($('chapter').classList.contains('active'))renderChapterVideo(currentChapter);
   $('offer').style.display=$('home').classList.contains('active')&&!hasLifetimeAccess()?'flex':'none';
   const freeLeft=!hasLifetimeAccess()&&(!authSession?.access_token||accountProfile?.free_question_available);
   const signedOut=!authSession?.access_token,oneMore=freeLeft&&signedOut&&anonQuestionUsed();
