@@ -1,6 +1,6 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import { adminClient, GEMINI_URL } from "../_shared/server.ts";
-import { speechChunks, spokenText, transcribe, voiceWithTimestamps, VoiceError } from "../_shared/voice.ts";
+import { speechChunks, spokenText, transcribe, voiceWithTimestamps, VoiceError, claimVoiceBudget, VoiceQuotaError } from "../_shared/voice.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -389,6 +389,7 @@ Deno.serve(async (req:Request)=>{
     // it can play straight away; the app voices the rest while it plays.
     if(talk){
       if(!annualActive) return json({error:"Annual Access required",paywall:true},403);
+      try{await claimVoiceBudget(userData.user.id,1500);}catch(e){if(e instanceof VoiceQuotaError)return json({error:e.message},e.status);throw e;}
       let heard;
       try{heard=await transcribe(body.audio_base64,String(body?.mime_type ?? ""));}
       catch(e){if(e instanceof VoiceError) return json({error:e.message},502);throw e;}

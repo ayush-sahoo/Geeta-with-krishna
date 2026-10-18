@@ -1,6 +1,6 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import { adminClient, GEMINI_URL } from "../_shared/server.ts";
-import { MEANING_VOICE_ID, transcribe, voiceWithTimestamps, VoiceError } from "../_shared/voice.ts";
+import { MEANING_VOICE_ID, transcribe, voiceWithTimestamps, VoiceError, claimVoiceBudget, VoiceQuotaError } from "../_shared/voice.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -128,7 +128,7 @@ async function hasActiveAccess(authHeader: string) {
     && account?.plan_status === "annual"
     && account?.payment_status === "paid"
     && !!account?.access_expires_at
-    && new Date(account.access_expires_at).getTime() > Date.now();
+    && new Date(account.access_expires_at).getTime() > Date.now() ? userData.user.id : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -139,11 +139,13 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     // Talk to Krishna wakes the function up before it is needed.
     if (body?.warm === true) return json({ ok: true }, 200);
-    if (!(await hasActiveAccess(req.headers.get("Authorization") ?? ""))) {
+    const voiceUser = await hasActiveAccess(req.headers.get("Authorization") ?? "");
+    if (!voiceUser) {
       return json({ error: "Annual Access required" }, 403);
     }
 
     if (body?.operation === "transcribe") {
+      await claimVoiceBudget(voiceUser,1500);
       try { return json(await transcribe(String(body?.audio_base64 ?? ""), String(body?.mime_type ?? "")), 200); }
       catch (e) { if (e instanceof VoiceError) return json({ error: e.message }, 502); throw e; }
     }
@@ -153,6 +155,7 @@ Deno.serve(async (req: Request) => {
     const rawText = String(body?.text ?? "").trim();
     if(!rawText)return json({error:"Text is required"},400);
     if(rawText.length>12000)return json({error:"Text is too long"},400);
+    if(body?.operation!=="translate")await claimVoiceBudget(voiceUser,rawText.length);
     const text = kind === "verse" ? chantText(rawText)
       : body?.translated === true ? rawText : await storedOrTranslate(rawText,language);
     if(body?.operation==="translate")return json({text,language},200);
@@ -207,6 +210,7 @@ Deno.serve(async (req: Request) => {
       },
     });
   } catch (e) {
+    if(e instanceof VoiceQuotaError)return json({error:e.message},e.status);
     console.error(e);
     return json({ error: "Narration failed. Please try again." }, 500);
   }

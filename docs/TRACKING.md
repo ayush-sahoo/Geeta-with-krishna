@@ -50,3 +50,5 @@ Anonymous visitor id: `gitaVisitorId` in localStorage.
 A visitor counts as coming from Meta when their first visit has `has_fbclid`, a Facebook/Instagram `utm_source`, or an in-app browser. Sign-ups are matched through `user_accounts.signup_visitor_id`.
 
 Exclude the owner's test accounts: the list is `DEFAULT_TEST_USERS` in `supabase/functions/admin-stats/index.ts` (can be overridden with the `TEST_USER_IDS` secret).
+
+`plan_view` counts entry into the offer screen, including reentry, but not rerenders while it remains open. Admin “Saw the plans” uses it; `paywall_view` also includes signup gates and is not a plan-view count.

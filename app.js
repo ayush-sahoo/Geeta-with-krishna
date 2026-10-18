@@ -1006,9 +1006,9 @@ function showScreen(id,fromHistory=false){
     if(!screenHistoryReady){history.replaceState(state,'');screenHistoryReady=true;}
     else if(history.state?.screen!==id)history.pushState(state,'');
   }
-  if(!next.classList.contains('active'))trackMeta('ScreenView',{screen_name:id},true);
+  if(!next.classList.contains('active')){trackMeta('ScreenView',{screen_name:id},true);if(id==='offerScreen')logEvent('plan_view');}
   if(id!=='detail')stopSpeech();
-  if(id!=='ask')talkCancel();
+  if(id!=='ask'){talkCancel();talkStage?.setActive(false);window.KrishnaAvatar?.close();}else if(askMode==='talk')talkStage?.setActive(true);
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   const nav=id==='home'?'homeNav':id==='ask'?'askNav':['explore','chapter','detail'].includes(id)?'exploreNav':null;
@@ -1018,7 +1018,7 @@ function showScreen(id,fromHistory=false){
   window.scrollTo({top:0,behavior:'instant'});
 }
 if(APP_MODE){
-  window.addEventListener('popstate',e=>{if(e.state?.screen)showScreen(e.state.screen,true);});
+  window.addEventListener('popstate',e=>{if(window.KrishnaAvatar?.isOpen()){KrishnaAvatar.close();return}if(e.state?.screen)showScreen(e.state.screen,true);});
   // The top menu is hidden in the app; its language button moves into the header.
   document.querySelector('.toprow')?.insertBefore($('langButton'),$('welcomeUser'));
   // Hide the tabs only while the on-screen keyboard is up (the visible area
@@ -1373,6 +1373,7 @@ function restoreAnonymousConversation(snapshot){
   }
 }
 function clearChatConversation(){
+  talkCancel();window.KrishnaAvatar?.close();
   if(typeof resetSavedChatState==='function')resetSavedChatState();
   stopSpeech();translationGeneration++;translationCache.clear();
   chatGeneration++;chatRequest?.abort();chatRequest=null;chatHistory.length=0;
@@ -1466,13 +1467,15 @@ function keepVoice(d,clips){
   return clips;
 }
 function hearKrishna(d,button){
+  if(!hasLifetimeAccess()){showPaywall();return}
   stopSpeech();logEvent('hear_krishna');
   // The audio context is made during the tap so phones let it play later.
   try{avatarAudio??=new (window.AudioContext||window.webkitAudioContext)();avatarAudio.resume()}catch(e){toast('Audio is not available on this device');return}
+  const generation=talkGeneration,owner=authSession?.user?.id;
   const text=spokenAnswer(d),language=d.lang||spokenLanguage(text);
   const clips=d.voice||keepVoice(d,voiceQueue(speechChunks(text),language));
   button.disabled=true;
-  loadAvatar().then(()=>KrishnaAvatar.open({ctx:avatarAudio,title:d.title,clips,onClose:()=>{button.disabled=false}}))
+  loadAvatar().then(()=>{if(generation!==talkGeneration||owner!==authSession?.user?.id){button.disabled=false;return}const overlay=APP_MODE;if(overlay)history.pushState({...history.state,avatar:true},'');return KrishnaAvatar.open({ctx:avatarAudio,title:d.title,clips,onClose:()=>{button.disabled=false;if(overlay&&history.state?.avatar)history.back();}})})
     .catch(e=>{button.disabled=false;toast(e.message)});
 }
 // Talk to Krishna (paid): voice to voice. The member speaks; one ask-krishna
@@ -1501,7 +1504,6 @@ function setTalk(state,message){
   $('talkMic').setAttribute('aria-label',state==='listening'?'Finish speaking':'Speak to Krishna');
 }
 function talkCancel(){
-  if(talkState==='idle'&&!talkRec&&!talkStage?.speaking)return;
   talkGeneration++;talkRec?.finish();talkRec=null;talkStage?.stop();setTalk('idle',TALK_IDLE);
 }
 function talkMicTap(){
@@ -1514,10 +1516,10 @@ function talkMicTap(){
   startListening();
 }
 async function startListening(){
-  const generation=++talkGeneration;
+  const generation=++talkGeneration;setTalk('thinking','Opening microphone…');
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
-  catch(e){setTalk('idle',e?.name==='NotAllowedError'?'Please allow the microphone so Krishna can hear you.':'The microphone is not available here. Please open the site in Chrome.');return}
+  catch(e){if(generation!==talkGeneration)return;setTalk('idle',e?.name==='NotAllowedError'?'Please allow the microphone so Krishna can hear you.':'The microphone is not available here. Please open the site in Chrome.');return}
   if(generation!==talkGeneration){stream.getTracks().forEach(t=>t.stop());return}
   const type=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t=>window.MediaRecorder?.isTypeSupported?.(t))||'';
   let rec;
@@ -1562,7 +1564,7 @@ async function talkTurn(blob,generation){
   const live=()=>generation===talkGeneration;
   setTalk('thinking','Krishna is listening…');
   try{
-    await freshSession();
+    await freshSession();if(!live())return;
     if(!authSession?.access_token)throw new Error('Please sign in again to talk to Krishna.');
     logEvent('talk_turn');
     const r=await fetch(SUPA+'/functions/v1/ask-krishna',{method:'POST',headers:authHeaders(authSession.access_token),cache:'no-store',
@@ -1579,7 +1581,7 @@ async function talkTurn(blob,generation){
     renderReply(appendText($('chat'),'div','','bubble assistant'),q,d,language,true);
     d.lang=language||spokenLanguage(spokenAnswer(d));
     const clips=keepVoice(d,voiceQueue(d.speech?.chunks||speechChunks(spokenAnswer(d)),d.lang,d.speech?.first));
-    await loadAvatar();talkStage??=KrishnaAvatar.stage($('talkStage'));
+    await loadAvatar();if(!live())return;talkStage??=KrishnaAvatar.stage($('talkStage'));
     setTalk('speaking','Krishna is speaking · tap the mic to reply');
     const result=await talkStage.speak(clips,{ctx:avatarAudio,wordsBox:$('talkWords')});
     if(live()&&result!=='stopped')setTalk('idle','Tap the mic to reply');

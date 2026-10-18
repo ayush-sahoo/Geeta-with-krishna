@@ -139,7 +139,13 @@ async function openSavedChat(thread){
     for(const message of messages){
       if(!['user','assistant'].includes(message.role))continue;
       const bubble=appendText($('chat'),'div','','bubble '+(message.role==='user'?'user':'assistant'));bubble.dir='auto';
-      if(message.role==='assistant')appendWithRefs(bubble,message.content);else bubble.textContent=message.content;
+      if(message.role==='assistant'){
+        appendWithRefs(bubble,message.content);
+        if(hasLifetimeAccess()){
+          const d={paragraphs:[message.content]};
+          const hear=appendText(bubble,'button','▶ Hear Krishna say this','hear-krishna');hear.type='button';hear.onclick=()=>hearKrishna(d,hear);
+        }
+      }else bubble.textContent=message.content;
       chatHistory.push({role:message.role,text:message.content});
     }
     if(chatHistory.length>16)chatHistory.splice(0,chatHistory.length-16);

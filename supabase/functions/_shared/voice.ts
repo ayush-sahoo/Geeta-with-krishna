@@ -1,3 +1,4 @@
+import { adminClient } from "./server.ts";
 import { GITA_LANGUAGES } from "./languages.ts";
 
 // Krishna's voice (ElevenLabs), shared by tts-krishna and ask-krishna's
@@ -86,4 +87,17 @@ export function speechChunks(text: string) {
   }
   if (current) chunks.push(current);
   return chunks;
+}
+
+// Shared persistent budget, reserved atomically before spending provider credits.
+export class VoiceQuotaError extends Error {
+  status: number;
+  constructor(message: string, status: number) { super(message); this.status = status; }
+}
+export async function claimVoiceBudget(userId: string, units: number) {
+  const admin = adminClient();
+  if (!admin) throw new VoiceQuotaError("Voice is temporarily unavailable. Please try again later.", 503);
+  const { data, error } = await admin.rpc("claim_voice_budget", { p_user_id: userId, p_units: units });
+  if (error) throw new VoiceQuotaError("Voice is temporarily unavailable. Please try again later.", 503);
+  if (data !== true) throw new VoiceQuotaError("Voice usage limit reached. Please try again later.", 429);
 }
