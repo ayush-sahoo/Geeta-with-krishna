@@ -203,7 +203,7 @@ function stage(container){
   addStyle();container.classList.add('ka-stage');
   const tag=el('div','ka-tag'),bars=el('div','ka-bars');for(let i=0;i<5;i++)bars.append(el('i'));
   tag.append(el('b',null,'श्रीकृष्ण'),bars);container.append(tag);
-  let renderer=null,canvas=null,raf=0,active=true,speech=null,dead=false;
+  let renderer=null,canvas=null,raf=0,active=true,speech=null,dead=false,speakGeneration=0;
   const barEls=[...bars.children],t0=performance.now();
   function frame(){
     raf=0;if(!active||dead)return;
@@ -231,13 +231,13 @@ function stage(container){
     container.prepend(renderer?canvas:img.cloneNode());
     if(active&&!raf)raf=requestAnimationFrame(frame);
   });
-  function stop(){const s=speech;speech=null;if(s){for(const g of s.segs)try{g.source.stop()}catch(e){}s.done('stopped')}}
+  function stop(invalidate=true){if(invalidate)speakGeneration++;const s=speech;speech=null;if(s){for(const g of s.segs)try{g.source.stop()}catch(e){}s.done('stopped')}}
   // clips: one or more {audio_base64, alignment} (or promises of them, in
   // order) from tts-krishna. Each clip plays as soon as it is ready, right
   // after the one before; wordsBox gets the spoken words. Resolves when
   // Krishna finishes, or 'stopped' if interrupted.
   async function speak(clips,{ctx,wordsBox}){
-    stop();await ready;
+    const request=++speakGeneration;stop(false);await ready;if(dead||request!==speakGeneration)return'stopped';
     let done;const finished=new Promise(r=>done=r);
     const s=speech={ctx,segs:[],words:[],wordsBox,scroll:0,end:0,pending:true,done};
     wordsBox.replaceChildren();wordsBox.style.transform='';
@@ -249,7 +249,7 @@ function stage(container){
       try{
         d=await clip;if(speech!==s)return'stopped';
         buffer=await ctx.decodeAudioData(Uint8Array.from(atob(d.audio_base64),c=>c.charCodeAt(0)).buffer);
-      }catch(e){if(speech!==s)return'stopped';if(!s.segs.length){speech=null;throw e}break}
+      }catch(e){if(speech!==s)return'stopped';const partial=s.segs.length>0;stop();if(!partial)throw e;throw new Error('Audio stopped before the full reply finished. Please close and try again.')}
       if(speech!==s)return'stopped';
       const start=Math.max(next,ctx.currentTime+.05),source=ctx.createBufferSource();
       source.buffer=buffer;source.connect(ctx.destination);source.start(start);
@@ -305,5 +305,5 @@ async function open(opts){
   Promise.resolve(opts.clips[0]).then(()=>{if(view===v)status.textContent=''},()=>{});
   await play();
 }
-window.KrishnaAvatar={open,close,stage,_test:{mouthKeys,devanagari}};
+window.KrishnaAvatar={open,close,isOpen:()=>!!view,stage,_test:{mouthKeys,devanagari}};
 })();

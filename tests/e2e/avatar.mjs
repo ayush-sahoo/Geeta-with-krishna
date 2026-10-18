@@ -31,7 +31,7 @@ const HEARD = 'मुझे अपने भविष्य की चिंत�
 const HINDI = { style: 'krishna_inspired', title: 'भविष्य की चिंता से मुक्ति', paragraphs: ['मेरे प्रिय, मैं तुम्हारी दुविधा समझता हूँ।', 'तुम्हारा अधिकार केवल कर्म पर है (BG 2.47)।'], actions: ['गहरी साँस लें।'], follow_up: 'क्या चिंता है?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] };
 const ENGLISH = { style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear your worry.', 'Act without clinging to results (BG 2.47).'], actions: [], follow_up: 'What worries you most?', verses: [] };
 
-async function open({ paid, reply, ttsStatus = 200, ask = true }) {
+async function open({ paid, reply, ttsStatus = 200,app = false, ask = true }) {
   const S = { calls: [] };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   const user = { id: 'u1', email: 't@example.com', app_metadata: { provider: 'email' } };
@@ -68,7 +68,7 @@ async function open({ paid, reply, ttsStatus = 200, ask = true }) {
   await ctx.route(/facebook|fonts\.g/, r => r.fulfill({ status: 204, body: '' }));
   const p = await ctx.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/'); await p.waitForTimeout(600);
+  await p.goto(BASE + (app ? '/?app=1' : '/')); await p.waitForTimeout(600);
   await p.evaluate(() => showScreen('ask'));
   if (!ask) return { ctx, p, S, errs };
   await p.fill('#askInput', 'I worry about my future'); await p.click('#sendAskButton');
@@ -160,5 +160,12 @@ console.log('\n# Talk to Krishna');
   await p.click('#modeTalk'); await p.click('#talkMic'); await p.waitForTimeout(500);
   await p.evaluate(() => showScreen('home')); await p.waitForTimeout(200);
   ok(await p.evaluate(() => talkState) === 'idle', 'leaving Ask Krishna stops the conversation');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+console.log('\n# Android Back closes the portrait');
+{ const { ctx, p, errs } = await open({ paid: true, reply: HINDI, app: true });
+  await p.click('.hear-krishna'); await p.waitForSelector('.ka');
+  await p.goBack(); await p.waitForTimeout(200);
+  ok(!(await p.isVisible('.ka')), 'Android Back closes the portrait before leaving the chat');
+  ok(await p.evaluate(() => document.querySelector('.screen.active')?.id) === 'ask', 'Back from the portrait keeps the chat screen');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 await b.close();

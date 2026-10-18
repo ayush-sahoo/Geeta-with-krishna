@@ -102,3 +102,11 @@ The Play Store app is a Trusted Web Activity: it opens https://gitaverse.co.in i
 ## Atomic payment processing
 
 `razorpay-webhook` calls the server-only `apply_annual_payment` RPC. It locks the account row, deduplicates payments, and records the transaction and annual entitlement together. Database failures return HTTP 500 so Razorpay can retry. Apply migration `20260930164133_atomic_annual_payment.sql` before deploying the webhook. `tests/annual-payment.sql` tests renewals and duplicate deliveries on the test account inside a rolled-back transaction.
+
+## Voice reliability and usage budget
+
+Apply the voice_limits_and_plan_views migration BEFORE deploying ask-krishna, tts-krishna and the frontend. Missing quota RPC fails closed with HTTP 503. No production migration is applied by this PR.
+
+Voice usage is reserved atomically per verified account across both endpoints: 40 requests per rolling one-minute window anchored at the first reservation, 600 per UTC day, and 120,000 text units per UTC day. TTS reserves input character count; transcription/Talk reserves 1,500 units (including its initial sentence). Failed provider calls still consume the reservation to prevent retry abuse. Cached browser replay spends no new credits. Limits return HTTP 429 with a retry message. This bounds usage, rather than promising unlimited audio.
+
+Saved answers regain replay buttons for paid members. Legacy saved text includes titles/actions; replay reads the saved answer text. The overlay uses a browser-history entry so Android Back closes it first. Interrupted sentence queues show an explicit error.
