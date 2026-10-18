@@ -65,9 +65,9 @@ There is no automatic schedule; runs are started by hand. The 13 Indian language
 
 ## Chapter videos
 
-Each chapter page has an animated explainer video (from Spiritual Point's "Bhagavad Gita: The Ultimate Guide To Life", used with the owner's permission from the channel; credited under the player). Chapter 1 plays for everyone; chapters 2-18 for members, others see a lock that opens the plans.
+Each chapter page has an animated explainer video (from Spiritual Point's "Bhagavad Gita: The Ultimate Guide To Life", licensed by the owner from the channel, with their agreement to rebrand: the channel's corner logo is replaced by a Gita Verse badge and the channel-logo shot near the end of chapter 18 is replaced by a hold on the preceding frame; the narration is unchanged). Chapter 1 plays for everyone; chapters 2-18 for members, others see a lock that opens the plans.
 
-- **Files.** 18 MP4s (720p, H.264, AAC, `+faststart`), cut from the creator's video at each chapter title card, named `gita-chapter-1.mp4` … `gita-chapter-18.mp4`, in the private Cloudflare R2 bucket `gita-chapter-videos`. Posters: `assets/chapter-video/poster-N.webp`. Lengths shown on the card: `CHAPTER_VIDEO_LENGTH` in `app.js`.
+- **Files.** 18 MP4s (720p, H.264, AAC, `+faststart`), cut from the creator's video at each chapter title card, named `gita-chapter-1.mp4` … `gita-chapter-18.mp4`, in the private Cloudflare R2 bucket `gita-chapter-videos`. Posters: `assets/chapter-video/poster-N.webp`. The Gita Verse badge (244×120 at 1080p) is overlaid at x 1670, y 956, over the channel logo (x 1681-1899, y 967-1061). Lengths shown on the card: `CHAPTER_VIDEO_LENGTH` in `app.js`.
 - **Access.** The `chapter-video` edge function checks access (chapter 1 free, others need active paid access) and returns a signed R2 link that works for 3 hours. R2 has no download charges, so the videos never use Supabase's bandwidth.
 - **Secrets** (Supabase → Edge Functions → Secrets): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (an R2 API token with Object Read on the bucket), optional `R2_BUCKET`. Until they are set, the card says the video is not available yet.
 - **Replacing a video.** Upload a file with the same name to the bucket; no deploy needed. Plays are counted as `chapter_video_play`.

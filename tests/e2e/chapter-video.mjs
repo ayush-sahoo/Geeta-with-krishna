@@ -42,7 +42,7 @@ console.log('\n# Visitor (not a member)');
   await p.evaluate(() => showChapterPage(2)); await p.waitForTimeout(200);
   ok(await p.isVisible('#chapterVideo .chapter-video-poster'), 'the chapter page shows the explainer video card');
   ok((await p.textContent('#chapterVideo')).includes('For members') && (await p.textContent('#chapterVideo .cv-play')).includes('🔒'), 'chapter 2 is marked for members');
-  ok((await p.textContent('#chapterVideo')).includes('Animation: Spiritual Point'), 'the video credits Spiritual Point');
+  ok(!(await p.textContent('#chapterVideo')).includes('Spiritual Point'), 'the card carries Gita Verse branding only (no third-party credit)');
   ok((await p.getAttribute('#chapterVideo .chapter-video-poster', 'style')).includes('poster-2.webp'), 'the card shows a still from that chapter');
   await p.click('#chapterVideo .chapter-video-poster'); await p.waitForTimeout(300);
   ok((await screen(p)) === 'offerScreen' && !videoCalls(S).length, 'tapping a members-only video opens the plans, without asking for the video', await screen(p));

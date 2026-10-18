@@ -266,8 +266,9 @@ function changeVersePage(ch,page){if(page<1)return;const c=chapters[ch-1];if((pa
 function filterChapters(){const q=document.getElementById('chapterSearch').value.toLowerCase().trim();let count=0;document.querySelectorAll('.chapter-item').forEach((el,i)=>{const match=!q||chapters[i][0].toLowerCase().includes(q)||String(i+1)===q||String(i+1).padStart(2,'0')===q;el.hidden=!match;if(match)count++});document.getElementById('chapterResults').textContent=`${count} chapter${count===1?'':'s'}`;document.getElementById('emptyResults').hidden=count>0}
 
 function showChapterPage(n){currentChapter=n;currentPage=1;const c=chapters[n-1];document.getElementById('chapterKicker').textContent=`CHAPTER ${n}`;document.getElementById('chapterTitle').textContent=c[0];document.getElementById('chapterCount').textContent=`${c[1]} verses · ${c[2]}`;renderChapterPage();renderChapterVideo(n);showScreen('chapter')}
-// Chapter explainer videos (animation by Spiritual Point, used with
-// permission). Chapter 1 is free; the rest are for members. The chapter-video
+// Chapter explainer videos (Spiritual Point's animation, licensed and
+// rebranded with the creator's agreement). Chapter 1 is free; the rest are
+// for members. The chapter-video
 // function returns a private link to the video in Cloudflare R2 for 3 hours.
 const CHAPTER_VIDEO_LENGTH=['6:58','9:12','7:54','8:59','7:20','8:35','8:35','9:04','10:10','11:12','9:59','8:22','8:20','9:03','9:41','7:18','8:38','10:45'];
 const CHAPTER_VIDEO_PAYWALL='Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.';
@@ -280,8 +281,7 @@ function renderChapterVideo(n){
   poster.innerHTML=`<span class="cv-play" aria-hidden="true">${open?'▶':'🔒'}</span><span class="cv-label"><b>Watch this chapter explained</b><small><span>${CHAPTER_VIDEO_LENGTH[n-1]}</span> · <span>${open?'Animated video':'For members'}</span></small></span>`;
   poster.setAttribute('aria-label','Watch this chapter explained');
   poster.onclick=()=>playChapterVideo(n,poster);
-  const credit=document.createElement('small');credit.className='cv-credit';credit.textContent='Animation: Spiritual Point';
-  box.append(poster,credit);
+  box.append(poster);
 }
 async function playChapterVideo(n,poster){
   if(n!==1&&!hasLifetimeAccess()){showPaywall('Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.');return}
