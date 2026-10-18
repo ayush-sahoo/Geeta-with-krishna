@@ -19,6 +19,7 @@ Razorpay ──webhook──> razorpay-webhook ──> user_accounts (unlocks An
 | --- | --- |
 | `index.html` | All screens, inline styles, the Meta Pixel snippet. |
 | `app.js` | All behaviour (~1,250 lines, plain browser JavaScript, no framework). |
+| `sw.js`, `offline.html` | Offline screen: shown instead of the browser's error when a page opens without internet (only these two files and the logo are cached). |
 | `krishna-avatar.js` | Talking Krishna (paid): the portrait that speaks an Ask Krishna answer, full screen (`KrishnaAvatar.open`) or inside Talk to Krishna (`KrishnaAvatar.stage`). Loaded on first use. WebGL animation of `assets/krishna-avatar.webp` (mouth from letter timings and voice loudness, blinks, head sway), with the spoken words lit up in turn. Falls back to the still image without WebGL2. |
 | `languages.js` | The 74 supported languages (`GITA_LANGUAGES`). Must match `supabase/functions/_shared/languages.ts`; a unit test checks this. |
 | `connected.css` | Extra styles for the main app. |

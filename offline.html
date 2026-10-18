@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F9BD51">
+<meta name="robots" content="noindex">
+<title>Gita Verse · Offline</title>
+<!-- Shown by sw.js when there is no internet connection. Self-contained:
+     no fonts, scripts or images from the network. -->
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 18px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 0,#ffe7b0 0,#fff7e8 55%);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#4a220c;text-align:center}
+main{width:100%;max-width:400px}
+.logo{width:72px;height:72px;border-radius:20px;box-shadow:0 8px 22px #7a48172e}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:26px;margin:16px 0 6px}
+.sub{margin:0 0 20px;color:#765b49;font-size:15px;line-height:1.5}
+.verse{background:#fffaf0;border:1px solid #f1d3a3;border-radius:20px;padding:16px 16px 18px;box-shadow:0 8px 24px #7a481714;text-align:left}
+.tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;color:#a0521c;margin-bottom:8px}
+.sanskrit{font-family:"Noto Serif Devanagari","Tiro Devanagari Sanskrit",Georgia,serif;font-size:19px;line-height:1.6;margin:0 0 8px;color:#5a260e}
+.meaning{margin:0;font-size:15px;line-height:1.55;color:#5f4636}
+button{margin-top:22px;width:100%;border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:800;background:linear-gradient(180deg,#ffd968,#f6bf42);color:#4a220c;box-shadow:0 6px 16px #7a481729}
+.hint{margin-top:10px;font-size:12px;color:#8b6a52}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/assets/app/icon-192.png" alt="Gita Verse">
+  <h1>You're offline</h1>
+  <p class="sub">Connect to the internet to read the Gita and talk with Krishna. Until then, here is a verse to reflect on.</p>
+  <article class="verse">
+    <span class="tag" id="tag">VERSE TO REFLECT ON · 2.47</span>
+    <p class="sanskrit" id="sanskrit">कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।</p>
+    <p class="meaning" id="meaning">Your focus is on the action before you — not on controlling its result.</p>
+  </article>
+  <button id="retry" type="button">Reconnect</button>
+  <p class="hint">This page opens again by itself when you are back online.</p>
+</main>
+<script>
+// The last verse of the day this phone saw (saved by app.js).
+try {
+  const v = JSON.parse(localStorage.getItem('gitaDailyVerse') || 'null');
+  if (v && v.ch && v.n && (v.line || v.meaning)) {
+    document.getElementById('tag').textContent = 'VERSE TO REFLECT ON · ' + v.ch + '.' + v.n;
+    if (v.line) document.getElementById('sanskrit').textContent = v.line;
+    if (v.meaning) document.getElementById('meaning').textContent = v.meaning;
+  }
+} catch (e) {}
+const reconnect = () => location.reload();
+document.getElementById('retry').onclick = reconnect;
+addEventListener('online', reconnect);
+</script>
+</body>
+</html>
