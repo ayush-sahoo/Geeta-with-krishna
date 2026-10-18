@@ -15,6 +15,7 @@ const DEFAULT_TEST_USERS = [
   "d4dd8e62-ccb3-49c1-82af-76f4b367f059", // ayush@edumoprh.in
   "67471da2-2513-4e93-b101-503e2a36f88b", // ayush@edumorph.in (admin)
   "863890b1-9aca-4072-ac02-19837807278b", // +91 63701 08331 (mobile sign-in test)
+  "35a8820a-754b-469e-bdc2-50db02b5b02f", // test.member@gitaverse.co.in (paid test member, password login)
 ];
 
 const cors = {
