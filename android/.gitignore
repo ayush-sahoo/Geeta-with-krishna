@@ -6,3 +6,7 @@ local.properties
 *.aab
 *.apk
 *.idsig
+
+# Signed release builds to share for testing and Play upload (never the keystore).
+!releases/*.apk
+!releases/*.aab
