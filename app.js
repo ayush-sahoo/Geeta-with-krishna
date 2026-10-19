@@ -1171,6 +1171,14 @@ function openFromLink(){
   if(open==='ask'||open==='talk'){showScreen('ask');setAskMode(open)}
   else if(open==='verse')document.querySelector('#home .verse-mini')?.scrollIntoView({block:'center'});
 }
+// The stored verses mark line ends with "|" (Sanskrit) or "." (transliteration)
+// and the verse end with "||2-47||". Show them as । and ॥ 2.47 ॥, kept on the
+// line they end so a danda never wraps onto a line of its own.
+function verseMarks(text,roman=false){
+  return String(text).split('\n').map(line=>line
+    .replace(/\s*\|\|\s*([०-९0-9]+)\s*-\s*([०-९0-9]+)\s*\|\|\s*$/,'\u00a0॥\u00a0$1.$2\u00a0॥')
+    .replace(roman?/\s+\.\s*$/:/\s*\|\s*$/,'\u00a0।')).join('\n');
+}
 async function openVerse(ch,v){
   logOnce('open_verse');
   if(!hasLifetimeAccess()){showPaywall('Read every verse of the Gita with its meaning, reflection and audio.');return}
@@ -1195,8 +1203,8 @@ async function openVerse(ch,v){
     const text=verse.sanskrit||'';
     const speaker=text.match(/^\s*((?:धृतराष्ट्र|सञ्जय|संजय|अर्जुन)\s+उवाच\s*[।॥]?|श्रीभगवानुवाच\s*[।॥]?)/);
     document.querySelector('#detail h1').textContent=speaker?speaker[1]:'';
-    $('detailSanskrit').textContent=speaker?text.slice(speaker[0].length).trim():text;
-    $('detailTranslit').textContent=verse.transliteration||'';
+    $('detailSanskrit').textContent=verseMarks(speaker?text.slice(speaker[0].length).trim():text);
+    $('detailTranslit').textContent=verseMarks(verse.transliteration||'',true);
     $('audioBtn').disabled=false;
     $('prevVerse').disabled=Number(v)<=1;
     $('nextVerse').disabled=Number(v)>=chapters[ch-1][1];
