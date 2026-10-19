@@ -277,6 +277,7 @@ const CHAPTER_VIDEO_PAYWALL='Watch the animated explanation of every chapter, pl
 function renderChapterVideo(n){
   const box=document.getElementById('chapterVideo');
   if(box.querySelector('video')&&box.dataset.chapter===String(n))return;
+  chapterVideoGeneration++;delete box.dataset.busy;
   box.dataset.chapter=n;box.replaceChildren();
   const open=n===1||hasLifetimeAccess(),poster=document.createElement('button'),parts=document.createElement('div');
   poster.type='button';poster.className='chapter-video-poster';poster.style.backgroundImage=`url(assets/chapter-video/poster-${n}.webp)`;
@@ -289,7 +290,7 @@ function renderChapterVideo(n){
   box.append(poster,parts);
 }
 // Links for the chapter on screen, reused while they are fresh.
-let chapterVideoLinks=null;
+let chapterVideoLinks=null,chapterVideoGeneration=0;
 async function chapterVideoParts(n){
   if(chapterVideoLinks?.chapter===n&&chapterVideoLinks.until>Date.now())return chapterVideoLinks.parts;
   if(authSession?.access_token)await freshSession();
@@ -304,12 +305,14 @@ async function chapterVideoParts(n){
 async function playChapterVideo(n,part){
   if(n!==1&&!hasLifetimeAccess()){showPaywall('Watch the animated explanation of every chapter, plus all 701 verses and Ask Krishna.');return}
   const box=document.getElementById('chapterVideo');
-  if(box.dataset.busy)return;
+  if(box.dataset.busy||!$('chapter').classList.contains('active'))return;
+  const generation=++chapterVideoGeneration,owner=authSession?.user?.id;
+  const current=()=>generation===chapterVideoGeneration&&owner===authSession?.user?.id&&$('chapter').classList.contains('active')&&currentChapter===n&&box.dataset.chapter===String(n);
   if(!box.querySelector('video'))logEvent('chapter_video_play');
-  stopSpeech();box.dataset.busy='1';
+  stopSpeech();box.dataset.busy=String(generation);
   try{
     const links=await chapterVideoParts(n);
-    if(!links||currentChapter!==n||box.dataset.chapter!==String(n))return;
+    if(!links||!current()||(n!==1&&!hasLifetimeAccess()))return;
     let video=box.querySelector('video');
     if(!video){
       video=document.createElement('video');
@@ -322,8 +325,8 @@ async function playChapterVideo(n,part){
     video.dataset.part=part;video.src=links[part];
     box.querySelectorAll('.cv-part').forEach((b,k)=>b.classList.toggle('active',k===part));
     video.play().catch(()=>{});
-  }catch(e){toast(e.message||'Could not load the video. Please try again.')}
-  finally{delete box.dataset.busy}
+  }catch(e){if(current())toast(e.message||'Could not load the video. Please try again.')}
+  finally{if(box.dataset.busy===String(generation))delete box.dataset.busy}
 }
 function renderChapterPage(){document.getElementById('chapterBannerArt').src=chapterArtwork[chapterArtMap[currentChapter-1]];const c=chapters[currentChapter-1],start=(currentPage-1)*PAGE_SIZE+1,end=Math.min(start+PAGE_SIZE-1,c[1]);document.getElementById('verseRange').textContent=`${start}–${end} of ${c[1]}`;document.getElementById('pageStatus').textContent=`${currentPage} / ${Math.ceil(c[1]/PAGE_SIZE)}`;document.getElementById('prevPage').disabled=currentPage===1;document.getElementById('nextPage').disabled=end===c[1];document.getElementById('chapterVerseGrid').innerHTML=Array.from({length:end-start+1},(_,k)=>{const v=start+k;return `<button class="verse-link" onclick="openVerse(${currentChapter},${v})"><strong>Verse ${v}</strong><span aria-hidden="true">↗</span></button>`}).join('')}
 function chapterPrev(){if(currentPage>1){currentPage--;renderChapterPage()}}
@@ -1071,7 +1074,7 @@ function showScreen(id,fromHistory=false){
   if(!next.classList.contains('active')){trackMeta('ScreenView',{screen_name:id},true);if(id==='offerScreen')logEvent('plan_view');}
   if(id!=='detail')stopSpeech();
 if(id!=='ask'){talkCancel();talkStage?.setActive(false);window.KrishnaAvatar?.close();}else if(askMode==='talk')talkStage?.setActive(true);
-  if(id!=='chapter')document.querySelectorAll('#chapterVideo video').forEach(v=>v.pause());
+  if(id!=='chapter'){chapterVideoGeneration++;delete $('chapterVideo').dataset.busy;document.querySelectorAll('#chapterVideo video').forEach(v=>v.pause());}
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   const nav=id==='home'?'homeNav':id==='ask'?'askNav':['explore','chapter','detail'].includes(id)?'exploreNav':null;
@@ -1375,10 +1378,10 @@ function unlockVoice(){
   voicePlayer=voicePlayer||new Audio();
   voicePlayer.src=SILENT_AUDIO;voicePlayer.play().catch(()=>{});
 }
-async function playBlob(blob){await untilResumed();if(!speaking)return;return new Promise((resolve,reject)=>{
+async function playBlob(blob,generation=narrationGeneration){await untilResumed();if(!speaking||generation!==narrationGeneration)return;return new Promise((resolve,reject)=>{
   const url=URL.createObjectURL(blob),a=voicePlayer||new Audio();a.src=url;audioUrl=url;currentAudio=a;
-  const clean=()=>{URL.revokeObjectURL(url);if(currentAudio===a){currentAudio=null;audioUrl=null;}cancelPlayback=null;};
-  cancelPlayback=()=>{a.onended=a.onerror=null;a.pause();clean();resolve()};
+  const clean=()=>{URL.revokeObjectURL(url);if(currentAudio===a&&audioUrl===url){currentAudio=null;audioUrl=null;}if(cancelPlayback===cancel)cancelPlayback=null;};
+  const cancel=()=>{a.onended=a.onerror=null;a.pause();clean();resolve()};cancelPlayback=cancel;
   a.onended=()=>{a.onended=a.onerror=null;clean();resolve()};a.onerror=()=>{a.onended=a.onerror=null;clean();reject(new Error('Audio playback failed'))};
   a.play().catch(e=>{clean();reject(e)});
 })}
@@ -1416,7 +1419,7 @@ async function playText(text,language,generation,firstClip){
     if(generation!==narrationGeneration)return;
     setNarration(clips.length>1?`Meaning · part ${i+1} of ${clips.length}`:'Meaning');
     next=i+1<clips.length?fetchTTS(clips[i+1],'meaning',null,language):null;next?.catch(()=>{});
-    await playBlob(blob);
+    await playBlob(blob,generation);
     if(generation!==narrationGeneration)return;
   }
 }
@@ -1437,7 +1440,7 @@ async function speak(){
     const meaningClip=fetchTTS(textClips(text)[0],'meaning',null,language);meaningClip.catch(()=>{});
     const chant=await chantClip;if(generation!==narrationGeneration)return;
     setNarration('Chanting the verse');
-    await playBlob(chant);if(generation!==narrationGeneration)return;
+    await playBlob(chant,generation);if(generation!==narrationGeneration)return;
     await playText(text,language,generation,meaningClip);
   }catch(e){if(generation===narrationGeneration)toast(e.message||'Narration could not be played');}
   finally{if(generation===narrationGeneration)stopSpeech();}
