@@ -17,7 +17,7 @@ test('quota rejects limits and database failures instead of spending credits',as
 });
 test('offer screen entries count once per entry and again after leaving',()=>{
   const nodes={home:{classList:{contains:()=>false}},offerScreen:{classList:{contains:()=>active==='offerScreen'}}};let active='home',count=0;
-  const c=vm.createContext({$:id=>nodes[id],APP_MODE:false,askMode:'chat',talkStage:null,window:{KrishnaAvatar:null,scrollTo(){}},document:{querySelectorAll:sel=>sel==='.screen'?[...Object.keys(nodes)].map(id=>({id,classList:{toggle:(cls,on)=>{if(on)active=id}}})):[]},trackMeta(){},logEvent:()=>count++,stopSpeech(){},talkCancel(){},hasLifetimeAccess:()=>false});nodes.offer={style:{}};nodes.homeNav={classList:{add(){}}};
+  const c=vm.createContext({$:id=>nodes[id],APP_MODE:false,chapterVideoGeneration:0,askMode:'chat',talkStage:null,window:{KrishnaAvatar:null,scrollTo(){}},document:{querySelectorAll:sel=>sel==='.screen'?[...Object.keys(nodes)].map(id=>({id,classList:{toggle:(cls,on)=>{if(on)active=id}}})):[]},trackMeta(){},logEvent:()=>count++,stopSpeech(){},talkCancel(){},hasLifetimeAccess:()=>false});nodes.chapterVideo={dataset:{}};nodes.offer={style:{}};nodes.homeNav={classList:{add(){}}};
   vm.runInContext(app.slice(app.indexOf('function showScreen('),app.indexOf('\nif(APP_MODE){')),c);
   c.showScreen('offerScreen');c.showScreen('offerScreen');assert.equal(count,1);c.showScreen('home');c.showScreen('offerScreen');assert.equal(count,2);
 });
