@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   const admin = createClient(url, adminKey);
   const { data: account, error } = await admin
     .from("user_accounts")
-    .select("email,plan_status,payment_status,payment_provider,payment_id,amount_paid_paise,purchased_at,access_expires_at,auth_provider,free_questions_used")
+    .select("email,plan_status,payment_status,payment_provider,payment_id,amount_paid_paise,purchased_at,access_expires_at,auth_provider,free_questions_used,free_talks_used")
     .eq("user_id", userData.user.id)
     .single();
 
@@ -52,6 +52,8 @@ Deno.serve(async (req) => {
     ...account,
     access_active: !!accessActive,
     free_question_available: !accessActive && (account?.free_questions_used ?? 0) < FREE_QUESTIONS,
+    // One free Talk to Krishna turn (claim_free_talk).
+    free_talk_available: !accessActive && (account?.free_talks_used ?? 0) < 1,
     user_id: userData.user.id,
     auth_email: userData.user.email || null,
   }, { headers: { ...cors, "Content-Type": "application/json" } });
