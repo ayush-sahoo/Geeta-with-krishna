@@ -1,4 +1,4 @@
-import { adminClient } from "./server.ts";
+import { adminClient, serviceKey } from "./server.ts";
 import { GITA_LANGUAGES } from "./languages.ts";
 
 // Krishna's voice (ElevenLabs), shared by tts-krishna and ask-krishna's
@@ -100,4 +100,31 @@ export async function claimVoiceBudget(userId: string, units: number) {
   const { data, error } = await admin.rpc("claim_voice_budget", { p_user_id: userId, p_units: units });
   if (error) throw new VoiceQuotaError("Voice is temporarily unavailable. Please try again later.", 503);
   if (data !== true) throw new VoiceQuotaError("Voice usage limit reached. Please try again later.", 429);
+}
+
+// Free talk: a free account's one Talk reply is voiced like a member's (first
+// sentence with the answer, the rest by tts-krishna while it plays). The pass
+// lets tts-krishna voice exactly those sentences, for that account, for 10
+// minutes. Signed with the server key, so it can't be made or changed by a client.
+const PASS_MINUTES = 10;
+const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function sha256(text: string) {
+  return b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))));
+}
+async function sign(payload: string) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode("free-talk:" + serviceKey()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload))));
+}
+export async function freeTalkPass(userId: string, chunks: string[]) {
+  const payload = b64url(new TextEncoder().encode(JSON.stringify({ u: userId, e: Date.now() + PASS_MINUTES * 60000, h: await Promise.all(chunks.map(sha256)) })));
+  return payload + "." + await sign(payload);
+}
+export async function freeTalkPassAllows(pass: unknown, userId: string, text: string) {
+  if (typeof pass !== "string" || pass.length > 4000 || !serviceKey()) return false;
+  const [payload, sig] = pass.split(".");
+  if (!payload || !sig || sig !== await sign(payload)) return false;
+  try {
+    const p = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))));
+    return p.u === userId && Number(p.e) > Date.now() && Array.isArray(p.h) && p.h.includes(await sha256(text));
+  } catch { return false; }
 }

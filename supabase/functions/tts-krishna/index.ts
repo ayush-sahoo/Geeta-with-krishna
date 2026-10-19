@@ -1,6 +1,6 @@
 import { GITA_LANGUAGES } from "../_shared/languages.ts";
 import { adminClient, GEMINI_URL } from "../_shared/server.ts";
-import { MEANING_VOICE_ID, transcribe, voiceWithTimestamps, VoiceError, claimVoiceBudget, VoiceQuotaError } from "../_shared/voice.ts";
+import { MEANING_VOICE_ID, transcribe, voiceWithTimestamps, VoiceError, claimVoiceBudget, VoiceQuotaError, freeTalkPassAllows } from "../_shared/voice.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -108,8 +108,9 @@ function json(body: unknown, status: number) {
 
 // Narration is an Annual Access feature and each call spends ElevenLabs
 // credits, so require a signed-in user with active access (same rule as
-// ask-krishna and get-my-access).
-async function hasActiveAccess(authHeader: string) {
+// ask-krishna and get-my-access). Returns the user id, or null; with
+// signedIn, the id of any signed-in user (for a free talk pass).
+async function hasActiveAccess(authHeader: string, signedIn = false) {
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   if (!url || !anon || !authHeader.startsWith("Bearer ")) return false;
@@ -117,6 +118,7 @@ async function hasActiveAccess(authHeader: string) {
   const supabase = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) return false;
+  if (signedIn) return userData.user.id;
 
   const { data: account, error } = await supabase
     .from("user_accounts")
@@ -139,7 +141,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     // Talk to Krishna wakes the function up before it is needed.
     if (body?.warm === true) return json({ ok: true }, 200);
-    const voiceUser = await hasActiveAccess(req.headers.get("Authorization") ?? "");
+    let voiceUser = await hasActiveAccess(req.headers.get("Authorization") ?? "");
+    // A free account's one Talk reply: only the sentences its pass names.
+    if (!voiceUser && body?.free_talk_pass && body?.timestamps === true && body?.translated === true && body?.kind !== "verse") {
+      const userId = await hasActiveAccess(req.headers.get("Authorization") ?? "", true);
+      if (userId && await freeTalkPassAllows(body.free_talk_pass, userId, String(body?.text ?? "").trim())) voiceUser = userId;
+    }
     if (!voiceUser) {
       return json({ error: "Annual Access required" }, 403);
     }
