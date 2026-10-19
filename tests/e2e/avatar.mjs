@@ -53,12 +53,11 @@ async function open({ paid, reply, ttsStatus = 200,app = false, ask = true, free
       if (body.warm) return json({ ok: true });
       if (body.audio_base64) {
         const chunks = speechChunks(spokenAnswer(reply));
-        // Free accounts: one turn, with the whole reply voiced by the server.
+        // Free accounts: one turn; the rest of the reply is voiced with its pass.
         if (!paid) {
           if (freeTalks < 1) return json({ error: 'Annual Access required', paywall: true, free_talk_used: true }, 403);
           freeTalks--;
-          const voiced = chunks.map(voiceFor);
-          return json({ ...reply, heard: { text: HEARD, language: 'hi' }, free_talk: true, speech: { language: 'hi', chunks, first: voiced[0], voiced } });
+          return json({ ...reply, heard: { text: HEARD, language: 'hi' }, free_talk: true, speech: { language: 'hi', chunks, first: voiceFor(chunks[0]), pass: 'pass_u1' } });
         }
         return json({ ...reply, heard: { text: HEARD, language: 'hi' }, speech: { language: 'hi', chunks, first: voiceFor(chunks[0]) } });
       }
@@ -68,6 +67,7 @@ async function open({ paid, reply, ttsStatus = 200,app = false, ask = true, free
       const body = JSON.parse(req.postData() || '{}');
       if (body.warm) return json({ ok: true });
       if (ttsStatus !== 200) return json({ error: 'Narration failed. Please try again.' }, ttsStatus);
+      if (!paid && body.free_talk_pass !== 'pass_u1') return json({ error: 'Annual Access required' }, 403);
       return json(voiceFor(body.text));
     }
     if (/chat_threads|chat_messages/.test(p)) return req.method() === 'GET' ? json([]) : r.fulfill({ status: 201, headers: H, body: '' });
@@ -151,7 +151,8 @@ console.log('\n# Talk to Krishna: one free talk');
   await p.click('#talkMic'); await p.waitForTimeout(1500); await p.click('#talkMic');
   await p.waitForFunction(() => document.getElementById('talkStatus').textContent.includes('speaking'), null, { timeout: 8000 }).catch(() => {});
   ok((await p.textContent('#talkStatus')).includes('speaking') && (await p.locator('#talkWords span').count()) > 3, 'Krishna answers the free talk aloud', await p.textContent('#talkStatus'));
-  ok(!S.calls.some(c => c.p === '/functions/v1/tts-krishna' && !JSON.parse(c.body || '{}').warm), 'the whole free reply comes voiced with the answer (no member-only voice requests)');
+  const rest = S.calls.filter(c => c.p === '/functions/v1/tts-krishna' && !JSON.parse(c.body || '{}').warm).map(c => JSON.parse(c.body));
+  ok(rest.length >= 1 && rest.every(b => b.free_talk_pass === 'pass_u1'), 'Krishna starts after the first sentence; the rest is voiced with the free talk pass, like a member\'s reply', JSON.stringify(rest.map(b => b.free_talk_pass)));
   await p.waitForFunction(() => /free talk/.test(document.getElementById('talkStatus').textContent), null, { timeout: 20000 }).catch(() => {});
   ok(await p.isVisible('#talkLocked') && !(await p.isVisible('#talkMic')), 'after the free talk, the plans are shown instead of the mic', await p.textContent('#talkStatus'));
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }

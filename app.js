@@ -1535,23 +1535,23 @@ function speechChunks(text){
   if(current)chunks.push(current);
   return chunks;
 }
-async function fetchVoice(text,language){
+async function fetchVoice(text,language,pass){
   await freshSession();
   const r=await fetch(SUPA+'/functions/v1/tts-krishna',{method:'POST',headers:authHeaders(authSession?.access_token||''),cache:'no-store',
-    body:JSON.stringify({text,kind:'meaning',language,translated:true,timestamps:true})});
+    body:JSON.stringify({text,kind:'meaning',language,translated:true,timestamps:true,free_talk_pass:pass})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.audio_base64)throw new Error(j.error||'Could not play Krishna\'s voice. Please try again.');
   return j;
 }
 // Voices the pieces in order, at most two at a time (ElevenLabs allows only a
 // few requests at once per account). first: a piece already voiced.
-function voiceQueue(chunks,language,first,voiced){
+// pass: a free talk's permission to voice the rest of its one reply.
+function voiceQueue(chunks,language,first,pass){
   const clips=[];
   chunks.forEach((text,i)=>{
     if(i===0&&first){clips.push(Promise.resolve(first));return}
-    if(voiced?.[i]){clips.push(Promise.resolve(voiced[i]));return}
     const wait=i>=2?clips[i-2].catch(()=>{}):Promise.resolve();
-    clips.push(wait.then(()=>fetchVoice(text,language)));
+    clips.push(wait.then(()=>fetchVoice(text,language,pass)));
   });
   return clips;
 }
@@ -1686,7 +1686,7 @@ async function talkTurn(blob,generation){
     const language=d.speech?.language||(chatLanguage!=='auto'?chatLanguage:d.heard?.language)||undefined;
     renderReply(appendText($('chat'),'div','','bubble assistant'),q,d,language,true);
     d.lang=language||spokenLanguage(spokenAnswer(d));
-    const clips=keepVoice(d,voiceQueue(d.speech?.chunks||speechChunks(spokenAnswer(d)),d.lang,d.speech?.first,d.speech?.voiced));
+    const clips=keepVoice(d,voiceQueue(d.speech?.chunks||speechChunks(spokenAnswer(d)),d.lang,d.speech?.first,d.speech?.pass));
     await loadAvatar();if(!live())return;talkStage??=KrishnaAvatar.stage($('talkStage'));
     setTalk('speaking','Krishna is speaking · tap the mic to reply');
     const result=await talkStage.speak(clips,{ctx:avatarAudio,wordsBox:$('talkWords')});
