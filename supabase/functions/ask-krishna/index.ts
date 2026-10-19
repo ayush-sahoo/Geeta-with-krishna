@@ -387,22 +387,48 @@ Deno.serve(async (req:Request)=>{
     // Talk to Krishna, one turn in one call: the recording becomes text, Krishna
     // answers briefly, and the first sentence of the answer is voiced here so
     // it can play straight away; the app voices the rest while it plays.
+    // Without Annual Access, each account gets one free turn (claim_free_talk),
+    // refunded if the turn fails; tts-krishna is for members only, so the whole
+    // free reply is voiced here.
     if(talk){
-      if(!annualActive) return json({error:"Annual Access required",paywall:true},403);
-      try{await claimVoiceBudget(userData.user.id,1500);}catch(e){if(e instanceof VoiceQuotaError)return json({error:e.message},e.status);throw e;}
-      let heard;
-      try{heard=await transcribe(body.audio_base64,String(body?.mime_type ?? ""));}
-      catch(e){if(e instanceof VoiceError) return json({error:e.message},502);throw e;}
-      if(!heard.text) return json({heard});
-      question=heard.text.slice(0,MAX_QUESTION);
-      if(!language&&heard.language) language=heard.language;
-      const verses=await retrieveVerses(supabase,question,history);
-      const ai=await callGemini(question,history,verses,language,true);
-      if(!ai) return json({heard,error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
-      const chunks=speechChunks(spokenText(ai)),speechLanguage=language||(/[\u0900-\u097F]/.test(chunks.join(""))?"hi":"en");
-      let first=null;
-      if(chunks.length) try{first=await voiceWithTimestamps(chunks[0],speechLanguage);}catch(e){console.error("first sentence voice failed",String(e));}
-      return json({...ai,heard,speech:{language:speechLanguage,chunks,first}});
+      const userId=userData.user.id;
+      let freeTalk=false,done=false;
+      if(!annualActive){
+        const admin=adminClient();
+        const {data:claimed,error:claimError}=admin?await admin.rpc("claim_free_talk",{p_user_id:userId}):{data:false,error:null};
+        if(claimError) console.error("claim_free_talk failed",claimError.message);
+        if(claimed!==true) return json({error:"Annual Access required",paywall:true,free_talk_used:true},403);
+        freeTalk=true;
+      }
+      try{
+        try{await claimVoiceBudget(userId,freeTalk?3000:1500);}catch(e){if(e instanceof VoiceQuotaError)return json({error:e.message},e.status);throw e;}
+        let heard;
+        try{heard=await transcribe(body.audio_base64,String(body?.mime_type ?? ""));}
+        catch(e){if(e instanceof VoiceError) return json({error:e.message},502);throw e;}
+        if(!heard.text) return json({heard});
+        question=heard.text.slice(0,MAX_QUESTION);
+        if(!language&&heard.language) language=heard.language;
+        const verses=await retrieveVerses(supabase,question,history);
+        const ai=await callGemini(question,history,verses,language,true);
+        if(!ai) return json({heard,error:"The guide is temporarily unavailable. Please try your question again.",retryable:true},503);
+        const chunks=speechChunks(spokenText(ai)),speechLanguage=language||(/[\u0900-\u097F]/.test(chunks.join(""))?"hi":"en");
+        if(freeTalk){
+          // ElevenLabs allows a few requests at once; voiceWithTimestamps retries on 429.
+          const voiced=await Promise.all(chunks.map((c)=>voiceWithTimestamps(c,speechLanguage).catch((e)=>{console.error("free talk voice failed",String(e));return null;})));
+          if(chunks.length&&!voiced[0]) return json({heard,error:"Krishna's voice is not available right now. Please try again.",retryable:true},503);
+          done=true;
+          return json({...ai,heard,free_talk:true,speech:{language:speechLanguage,chunks,first:voiced[0],voiced}});
+        }
+        let first=null;
+        if(chunks.length) try{first=await voiceWithTimestamps(chunks[0],speechLanguage);}catch(e){console.error("first sentence voice failed",String(e));}
+        done=true;
+        return json({...ai,heard,speech:{language:speechLanguage,chunks,first}});
+      }finally{
+        if(freeTalk&&!done){
+          const {error}=await adminClient()!.rpc("refund_free_talk",{p_user_id:userId});
+          if(error) console.error("refund_free_talk failed",error.message);
+        }
+      }
     }
 
     // Without Annual Access, each account gets one free question. It is

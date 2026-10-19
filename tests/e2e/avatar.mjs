@@ -31,12 +31,13 @@ const HEARD = 'मुझे अपने भविष्य की चिंत�
 const HINDI = { style: 'krishna_inspired', title: 'भविष्य की चिंता से मुक्ति', paragraphs: ['मेरे प्रिय, मैं तुम्हारी दुविधा समझता हूँ।', 'तुम्हारा अधिकार केवल कर्म पर है (BG 2.47)।'], actions: ['गहरी साँस लें।'], follow_up: 'क्या चिंता है?', verses: [{ ref: 'BG 2.47', chapter: 2, verse: 47, translation: 'Thy right is to work only' }] };
 const ENGLISH = { style: 'krishna_inspired', title: 'Be steady', paragraphs: ['Dear one, I hear your worry.', 'Act without clinging to results (BG 2.47).'], actions: [], follow_up: 'What worries you most?', verses: [] };
 
-async function open({ paid, reply, ttsStatus = 200,app = false, ask = true }) {
+async function open({ paid, reply, ttsStatus = 200,app = false, ask = true, freeTalk = false, signedIn = true }) {
   const S = { calls: [] };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   const user = { id: 'u1', email: 't@example.com', app_metadata: { provider: 'email' } };
   const session = { access_token: 'tok_u1', refresh_token: 'ref_u1', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user };
-  await ctx.addInitScript(s => localStorage.setItem('gitaAuthSession', JSON.stringify(s)), session);
+  if (signedIn) await ctx.addInitScript(s => localStorage.setItem('gitaAuthSession', JSON.stringify(s)), session);
+  let freeTalks = freeTalk ? 1 : 0;
   await ctx.route(/supabase\.co/, async r => {
     const req = r.request(), p = new URL(req.url()).pathname, H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'content-type': 'application/json' };
     if (req.method() === 'OPTIONS') return r.fulfill({ status: 200, headers: H });
@@ -46,12 +47,19 @@ async function open({ paid, reply, ttsStatus = 200,app = false, ask = true }) {
     if (p === '/auth/v1/user') return json(user);
     if (p === '/functions/v1/get-my-access') return json(paid
       ? { email: user.email, plan_status: 'annual', payment_status: 'paid', access_active: true, access_expires_at: new Date(Date.now() + 864e5 * 30).toISOString(), user_id: 'u1' }
-      : { email: user.email, plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: true, user_id: 'u1' });
+      : { email: user.email, plan_status: 'free', payment_status: 'unpaid', access_active: false, free_question_available: true, free_talk_available: freeTalks > 0, user_id: 'u1' });
     if (p === '/functions/v1/ask-krishna') {
       const body = JSON.parse(req.postData() || '{}');
       if (body.warm) return json({ ok: true });
       if (body.audio_base64) {
         const chunks = speechChunks(spokenAnswer(reply));
+        // Free accounts: one turn, with the whole reply voiced by the server.
+        if (!paid) {
+          if (freeTalks < 1) return json({ error: 'Annual Access required', paywall: true, free_talk_used: true }, 403);
+          freeTalks--;
+          const voiced = chunks.map(voiceFor);
+          return json({ ...reply, heard: { text: HEARD, language: 'hi' }, free_talk: true, speech: { language: 'hi', chunks, first: voiced[0], voiced } });
+        }
         return json({ ...reply, heard: { text: HEARD, language: 'hi' }, speech: { language: 'hi', chunks, first: voiceFor(chunks[0]) } });
       }
       return json(paid ? reply : { ...reply, free_question: true });
@@ -135,6 +143,23 @@ console.log('\n# Talk to Krishna');
   ok(await p.isVisible('#talkLocked') && !(await p.isVisible('#talkMic')), 'free members see what Talk to Krishna is and a way to join, not the mic');
   await p.click('#modeChat');
   ok(await p.isVisible('#chatMode') && !(await p.isVisible('#talkMode')), 'Chat with Krishna brings the text chat back');
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+console.log('\n# Talk to Krishna: one free talk');
+{ const { ctx, p, S, errs } = await open({ paid: false, freeTalk: true, reply: HINDI, ask: false });
+  await p.click('#modeTalk'); await p.waitForTimeout(800);
+  ok(await p.isVisible('#talkMic') && !(await p.isVisible('#talkLocked')) && (await p.textContent('#talkHint')).includes('free talk'), 'a free account gets the mic for one free talk', await p.textContent('#talkHint'));
+  await p.click('#talkMic'); await p.waitForTimeout(1500); await p.click('#talkMic');
+  await p.waitForFunction(() => document.getElementById('talkStatus').textContent.includes('speaking'), null, { timeout: 8000 }).catch(() => {});
+  ok((await p.textContent('#talkStatus')).includes('speaking') && (await p.locator('#talkWords span').count()) > 3, 'Krishna answers the free talk aloud', await p.textContent('#talkStatus'));
+  ok(!S.calls.some(c => c.p === '/functions/v1/tts-krishna' && !JSON.parse(c.body || '{}').warm), 'the whole free reply comes voiced with the answer (no member-only voice requests)');
+  await p.waitForFunction(() => /free talk/.test(document.getElementById('talkStatus').textContent), null, { timeout: 20000 }).catch(() => {});
+  ok(await p.isVisible('#talkLocked') && !(await p.isVisible('#talkMic')), 'after the free talk, the plans are shown instead of the mic', await p.textContent('#talkStatus'));
+  ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
+{ const { ctx, p, errs } = await open({ paid: false, signedIn: false, reply: HINDI, ask: false });
+  await p.click('#modeTalk'); await p.waitForTimeout(600);
+  ok(await p.isVisible('#talkMic') && (await p.textContent('#talkHint')).includes('Sign up free'), 'a signed-out visitor sees the mic and an invitation to sign up');
+  await p.click('#talkMic'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.querySelector('.screen.active')?.id) === 'authScreen' && await p.evaluate(() => !!localStorage.getItem('gitaTalkAfterSignIn')), 'tapping it opens sign-up and remembers to return to Talk');
   ok(!errs.length, 'no JS errors', errs.join('|')); await ctx.close(); }
 { const { ctx, p, S, errs } = await open({ paid: true, reply: HINDI, ask: false });
   await p.click('#modeTalk'); await p.waitForTimeout(800);
